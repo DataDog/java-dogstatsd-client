@@ -24,4 +24,6 @@ public final class NoOpStatsDClient implements StatsDClient {
     @Override public void histogram(String aspect, double value, String... tags) { }
     @Override public void recordHistogramValue(String aspect, long value, String... tags) { }
     @Override public void histogram(String aspect, long value, String... tags) { }
+    @Override public void recordServiceCheckRun(ServiceCheck sc) { }
+    @Override public void serviceCheck(ServiceCheck sc) { }
 }

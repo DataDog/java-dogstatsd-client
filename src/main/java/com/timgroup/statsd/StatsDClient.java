@@ -178,4 +178,21 @@ public interface StatsDClient {
      */
     void histogram(String aspect, long value, String... tags);
 
+    /**
+     * Records a run status for the specified named service check.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param sc
+     *     the service check object
+     */
+    void recordServiceCheckRun(ServiceCheck sc);
+
+    /**
+     * Convenience method equivalent to {@link #recordServiceCheckRun(ServiceCheck sc)}.
+     */
+    void serviceCheck(ServiceCheck sc);
+
 }

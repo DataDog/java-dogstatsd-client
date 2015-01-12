@@ -437,6 +437,28 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         recordHistogramValue(aspect, value, tags);
     }
 
+    /**
+     * Records a run status for the specified named service check.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param sc
+     *     the service check object
+     */
+    @Override public void recordServiceCheckRun(ServiceCheck sc) {
+        send(sc.toStatsDString());
+    }
+
+    /**
+     * Convenience method equivalent to {@link #recordServiceCheckRun(ServiceCheck sc)}.
+     */
+    @Override
+    public void serviceCheck(ServiceCheck sc) {
+        recordServiceCheckRun(sc);
+    }
+
     private void send(String message) {
         queue.offer(message);
     }
