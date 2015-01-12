@@ -22,8 +22,14 @@ public class ServiceCheck {
      * @param status
      */
     public ServiceCheck(String name, int status) {
-            this.name = name;
-            this.status = status;
+        this(name, status, null, null);
+    }
+
+    public ServiceCheck(String name, int status, String message, String[] tags) {
+        this.name = name;
+        this.status = status;
+        this.message = message;
+        this.tags = tags;
     }
 
     /**
@@ -135,7 +141,6 @@ public class ServiceCheck {
             for(int i=1;i<tags.length;i++) {
                 sb.append(',').append(tags[i]);
             }
-            sb.append(String.format("", hostname));
         }
         if (message != null) {
             sb.append(String.format("|m:%s", this.getEscapedMessage()));
