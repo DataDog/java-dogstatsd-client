@@ -93,20 +93,6 @@ public class ServiceCheck {
     /**
      * @return
      */
-    public int checkRunId() {
-        return checkRunId;
-    }
-
-    /**
-     * @param checkRunId
-     */
-    public void setCheckRunId(int checkRunId) {
-        this.checkRunId = checkRunId;
-    }
-
-    /**
-     * @return
-     */
     public int getTimestamp() {
         return timestamp;
     }
@@ -140,9 +126,6 @@ public class ServiceCheck {
         sb.append(String.format("_sc|%s|%d", name, status));
         if (timestamp > 0) {
             sb.append(String.format("|d:%d", timestamp));
-        }
-        if (checkRunId > 0) {
-            sb.append(String.format("|i:%d", checkRunId));
         }
         if (hostname != null) {
             sb.append(String.format("|h:%s", hostname));

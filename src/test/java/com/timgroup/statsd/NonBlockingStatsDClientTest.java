@@ -298,7 +298,6 @@ public class NonBlockingStatsDClientTest {
     sends_service_check() throws Exception {
         ServiceCheck sc = new ServiceCheck("my_check.name", 1);
         sc.setHostname("i-abcd1234");
-        sc.setCheckRunId(1);
         sc.setTimestamp(1420740000);
         sc.setMessage("♬ †øU \n†øU ¥ºu|m: T0µ ♪");
         sc.setTags("key1:val1", "key2:val2");
@@ -306,7 +305,7 @@ public class NonBlockingStatsDClientTest {
         client.serviceCheck(sc);
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains(String.format("_sc|my_check.name|1|d:1420740000|i:1|h:i-abcd1234|#key1:val1,key2:val2|m:%s",
+        assertThat(server.messagesReceived(), contains(String.format("_sc|my_check.name|1|d:1420740000|h:i-abcd1234|#key1:val1,key2:val2|m:%s",
                 "♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")));
     }
 }
