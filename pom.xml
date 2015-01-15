@@ -7,7 +7,7 @@
         <version>5</version>
     </parent>
 
-    <groupId>com.indeed</groupId>
+    <groupId>com.datadog</groupId>
     <artifactId>java-dogstatsd-client</artifactId>
     <packaging>jar</packaging>
     <name>java-dogstatsd-client</name>
