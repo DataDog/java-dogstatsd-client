@@ -22,13 +22,18 @@ public class ServiceCheck {
      * @param status
      */
     public ServiceCheck(String name, int status) {
-        this(name, status, null, null);
+        this(name, status, null, null, null);
     }
 
     public ServiceCheck(String name, int status, String message, String[] tags) {
+        this(name, status, message, null, tags);
+    }
+
+    public ServiceCheck(String name, int status, String message, String hostname, String[] tags) {
         this.name = name;
         this.status = status;
         this.message = message;
+        this.hostname = hostname;
         this.tags = tags;
     }
 
