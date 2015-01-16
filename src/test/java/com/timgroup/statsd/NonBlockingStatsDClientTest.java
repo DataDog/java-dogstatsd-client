@@ -297,8 +297,7 @@ public class NonBlockingStatsDClientTest {
     @Test public void
     sends_service_check() throws Exception {
         String[] tags = {"key1:val1", "key2:val2"};
-        ServiceCheck sc = new ServiceCheck("my_check.name", 1, "♬ †øU \n†øU ¥ºu|m: T0µ ♪", tags);
-        sc.setHostname("i-abcd1234");
+        ServiceCheck sc = new ServiceCheck("my_check.name", 1, "♬ †øU \n†øU ¥ºu|m: T0µ ♪", "i-abcd1234", tags);
         sc.setTimestamp(1420740000);
 
         client.serviceCheck(sc);
