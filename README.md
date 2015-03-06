@@ -51,3 +51,10 @@ public class Foo {
 }
 ```
 
+
+Change Log
+----------
+
+- 2.1.0
+    - Fork from https://github.com/indeedeng/java-dogstatsd-client (2.0.7)
+    - Add support for Datadog service checks
