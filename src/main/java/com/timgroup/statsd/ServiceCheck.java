@@ -5,6 +5,10 @@ package com.timgroup.statsd;
  * sent to the datadog agent
  */
 public class ServiceCheck {
+    public static final int OK = 0;
+    public static final int WARNING = 1;
+    public static final int CRITICAL = 2;
+    public static final int UNKNOWN = 3;
 
     private String name, hostname, message;
 
