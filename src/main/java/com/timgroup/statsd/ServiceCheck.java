@@ -152,8 +152,4 @@ public class ServiceCheck {
         }
         return sb.toString();
     }
-
-    public String test() {
-        return "Test";
-    }
 }
