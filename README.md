@@ -3,9 +3,7 @@ java-dogstatsd-client
 
 A statsd client library implemented in Java.  Allows for Java applications to easily communicate with statsd.
 
-This version is forked from the upstream [java-statsd-client](https://github.com/youdevise/java-statsd-client) project, adding support for [DataDog](http://datadoghq.com/) extensions for use with [dogstatsd](http://docs.datadoghq.com/guides/dogstatsd/).
-
-This version also adds support for empty or null prefixes, to allow a client to send arbitrary statistic names.
+This version is forked from the upstream [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) project (which is, in turn, forked from [java-statsd-client](https://github.com/youdevise/java-statsd-client)), adding additional support for [DataDog](http://datadoghq.com/) extensions for use with [dogstatsd](http://docs.datadoghq.com/guides/dogstatsd/).
 
 Downloads
 ---------
@@ -13,9 +11,9 @@ The client jar is distributed via maven central, and can be downloaded [here](ht
 
 ```xml
 <dependency>
-    <groupId>com.indeed</groupId>
+    <groupId>com.datadog</groupId>
     <artifactId>java-dogstatsd-client</artifactId>
-    <version>2.0.7</version>
+    <version>2.1.0</version>
 </dependency>
 ```
 
@@ -41,6 +39,9 @@ public class Foo {
     statsd.recordHistogram("qux", 15)     /* DataDog extension: histograms */
     statsd.recordHistogram("qux", 15.5)   /* ...also floating-point */
 
+    ServiceCheck sc = new ServiceCheck("my.check.name", ServiceCheck.OK);
+    statsd.serviceCheck(sc); /* Datadog extension: send service check status */
+
     /* Compatibility note: Unlike upstream statsd, DataDog expects execution times to be a
      * floating-point value in seconds, not a millisecond value. This library
      * does the conversion from ms to fractional seconds.
@@ -50,3 +51,10 @@ public class Foo {
 }
 ```
 
+
+Change Log
+----------
+
+- 2.1.0
+    - Fork from https://github.com/indeedeng/java-dogstatsd-client (2.0.7)
+    - Add support for Datadog service checks
