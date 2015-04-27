@@ -448,7 +448,23 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      *     the service check object
      */
     @Override public void recordServiceCheckRun(ServiceCheck sc) {
-        send(sc.toStatsDString());
+        send(toStatsDString(sc));
+    }
+    
+    private String toStatsDString(ServiceCheck sc) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("_sc|%s|%d", sc.getName(), sc.getStatus()));
+        if (sc.getTimestamp() > 0) {
+            sb.append(String.format("|d:%d", sc.getTimestamp()));
+        }
+        if (sc.getHostname() != null) {
+            sb.append(String.format("|h:%s", sc.getHostname()));
+        }
+        sb.append(tagString(sc.getTags()));
+        if (sc.getMessage() != null) {
+            sb.append(String.format("|m:%s", sc.getEscapedMessage()));
+        }
+        return sb.toString();
     }
 
     /**

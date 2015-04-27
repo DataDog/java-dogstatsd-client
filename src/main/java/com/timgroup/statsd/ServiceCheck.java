@@ -132,28 +132,4 @@ public class ServiceCheck {
     public void setTags(String... tags) {
         this.tags = tags;
     }
-
-    /**
-     * @return
-     */
-    public String toStatsDString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("_sc|%s|%d", name, status));
-        if (timestamp > 0) {
-            sb.append(String.format("|d:%d", timestamp));
-        }
-        if (hostname != null) {
-            sb.append(String.format("|h:%s", hostname));
-        }
-        if (tags != null && tags.length > 0) {
-            sb.append(String.format("|#%s", tags[0]));
-            for(int i=1;i<tags.length;i++) {
-                sb.append(',').append(tags[i]);
-            }
-        }
-        if (message != null) {
-            sb.append(String.format("|m:%s", this.getEscapedMessage()));
-        }
-        return sb.toString();
-    }
 }
