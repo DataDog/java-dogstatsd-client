@@ -5,15 +5,17 @@ A statsd client library implemented in Java.  Allows for Java applications to ea
 
 This version is forked from the upstream [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) project (which is, in turn, forked from [java-statsd-client](https://github.com/youdevise/java-statsd-client)), adding additional support for [DataDog](http://datadoghq.com/) extensions for use with [dogstatsd](http://docs.datadoghq.com/guides/dogstatsd/).
 
+See [CHANGELOG.md](CHANGELOG.md) for changes.
+
 Downloads
 ---------
-The client jar is distributed via maven central, and can be downloaded [here](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.timgroup%20a%3Ajava-statsd-client).
+The client jar is distributed via maven central, and can be downloaded [here](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.datadoghq%20a%3Ajava-dogstatsd-client).
 
 ```xml
 <dependency>
     <groupId>com.datadoghq</groupId>
     <artifactId>java-dogstatsd-client</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.1</version>
 </dependency>
 ```
 
@@ -50,11 +52,3 @@ public class Foo {
   }
 }
 ```
-
-
-Change Log
-----------
-
-- 2.1.0
-    - Fork from https://github.com/indeedeng/java-dogstatsd-client (2.0.7)
-    - Add support for Datadog service checks
