@@ -9,6 +9,7 @@ import java.util.Locale;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.junit.Assert.assertEquals;
 
 public class NonBlockingStatsDClientTest {
 
@@ -257,7 +258,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_mixed_tags() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, new String[] {"instance:foo", "app:bar"});
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423, "baz");
         server.waitForMessage();
 
@@ -267,7 +268,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_constant_tags_only() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, new String[] {"instance:foo", "app:bar"});
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423);
         server.waitForMessage();
 
@@ -294,25 +295,12 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
     }
 
-    @Test public void
-    sends_service_check() throws Exception {
-        String[] tags = {"key1:val1", "key2:val2"};
-        ServiceCheck sc = new ServiceCheck("my_check.name", ServiceCheck.WARNING, "♬ †øU \n†øU ¥ºu|m: T0µ ♪", "i-abcd1234", tags);
-        sc.setTimestamp(1420740000);
-
-        client.serviceCheck(sc);
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains(String.format("_sc|my_check.name|1|d:1420740000|h:i-abcd1234|#key2:val2,key1:val1|m:%s",
-                "♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")));
-    }
-
     @Test(timeout=5000L) public void
     sends_event() throws Exception {
 
         final Event event = Event.builder()
                 .withTitle("title1")
-                .withText("text1")
+                .withText("text1\nline2")
                 .withDate(1234567000)
                 .withHostname("host1")
                 .withPriority(Event.Priority.LOW)
@@ -322,7 +310,7 @@ public class NonBlockingStatsDClientTest {
         client.recordEvent(event);
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("_e{16,5}:my.prefix.title1|text1|d:1234567|h:host1|k:key1|p:low|t:error"));
+        assertThat(server.messagesReceived(), contains("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error"));
     }
 
     @Test(timeout=5000L) public void
@@ -388,5 +376,57 @@ public class NonBlockingStatsDClientTest {
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_service_check() throws Exception {
+        final String inputMessage = "\u266c \u2020\u00f8U \n\u2020\u00f8U \u00a5\u00bau|m: T0\u00b5 \u266a"; // "♬ †øU \n†øU ¥ºu|m: T0µ ♪"
+        final String outputMessage = "\u266c \u2020\u00f8U \\n\u2020\u00f8U \u00a5\u00bau|m\\: T0\u00b5 \u266a"; // note the escaped colon
+        final String[] tags = {"key1:val1", "key2:val2"};
+        final ServiceCheck sc = ServiceCheck.builder()
+                .withName("my_check.name")
+                .withStatus(ServiceCheck.Status.WARNING)
+                .withMessage(inputMessage)
+                .withHostname("i-abcd1234")
+                .withTags(tags)
+                .withTimestamp(1420740000)
+                .build();
+
+        assertEquals(outputMessage, sc.getEscapedMessage());
+
+        client.serviceCheck(sc);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains(String.format("_sc|my_check.name|1|d:1420740000|h:i-abcd1234|#key2:val2,key1:val1|m:%s",
+                outputMessage)));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_nan_gauge_to_statsd() throws Exception {
+        client.recordGaugeValue("mygauge", Double.NaN);
+
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mygauge:NaN|g"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_set_to_statsd() throws Exception {
+        client.recordSetValue("myset", "myuserid");
+
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.myset:myuserid|s"));
+
+    }
+
+    @Test(timeout=5000L) public void
+    sends_set_to_statsd_with_tags() throws Exception {
+        client.recordSetValue("myset", "myuserid", "foo:bar", "baz");
+
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.myset:myuserid|s|#baz,foo:bar"));
+
     }
 }
