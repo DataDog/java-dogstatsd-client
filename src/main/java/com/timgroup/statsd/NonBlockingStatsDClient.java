@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
  * From the perspective of the application, these methods are non-blocking, with the resulting
  * IO operations being carried out in a separate thread. Furthermore, these methods are guaranteed
  * not to throw an exception which may disrupt application execution.
- * </p>
  *
  * <p>As part of a clean system shutdown, the {@link #stop()} method should be invoked
  * on any StatsD clients.</p>
@@ -642,7 +641,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordServiceCheckRun(final ServiceCheck sc) {
         send(toStatsDString(sc));
     }
-    
+
     private String toStatsDString(final ServiceCheck sc) {
         // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
         final StringBuilder sb = new StringBuilder();
@@ -763,7 +762,6 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      * @param hostname the host name of the targeted StatsD server
      * @param port     the port of the targeted StatsD server
      * @return a function to perform the lookup
-     * @see NonBlockingStatsDClient#NonBlockingStatsDClient(String, String[], StatsDClientErrorHandler, Callable)
      */
     public static Callable<InetSocketAddress> volatileAddressResolution(final String hostname, final int port) {
         return new Callable<InetSocketAddress>() {
