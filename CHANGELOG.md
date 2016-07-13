@@ -1,5 +1,9 @@
 # CHANGELOG
 
+2.2 / 2016.07.13
+================
+* [OTHER] Merged upstream from `indeedeng/java-dogstatsd-client`
+
 2.1.1 / 2015.04.27
 ==================
 * [BUGFIX] Constant tag support for service checks. See [#3][], thanks [@PatrickAuld][]
