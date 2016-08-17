@@ -3,7 +3,7 @@ java-dogstatsd-client
 
 A statsd client library implemented in Java.  Allows for Java applications to easily communicate with statsd.
 
-This version is forked from the upstream [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) project (which is, in turn, forked from [java-statsd-client](https://github.com/youdevise/java-statsd-client)), adding additional support for [DataDog](http://datadoghq.com/) extensions for use with [dogstatsd](http://docs.datadoghq.com/guides/dogstatsd/).
+This version was originally forked from [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) and [java-statsd-client](https://github.com/youdevise/java-statsd-client) but it is now the canonical home for the java-dogstatsd-client.  Collaborating with the former upstream projects we have now combined efforts to provide a single release.
 
 See [CHANGELOG.md](CHANGELOG.md) for changes.
 
