@@ -19,6 +19,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+
+
 /**
  * A simple StatsD client implementation facilitating metrics recording.
  *
@@ -393,6 +395,17 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void count(final String aspect, final long delta, final String... tags) {
         send(String.format("%s%s:%d|c%s", prefix, aspect, delta, tagString(tags)));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void count(final String aspect, final long delta, final double sampleRate, final String...tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+    	send(String.format("%s%s:%d|c|%f%s", prefix, aspect, delta, sampleRate, tagString(tags)));
+    }
 
     /**
      * Increments the specified counter by one.
@@ -408,6 +421,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void incrementCounter(final String aspect, final String... tags) {
         count(aspect, 1, tags);
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void incrementCounter(final String aspect, final double sampleRate, final String... tags) {
+    	count(aspect, 1, sampleRate, tags);
+    }
 
     /**
      * Convenience method equivalent to {@link #incrementCounter(String, String[])}.
@@ -415,6 +436,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void increment(final String aspect, final String... tags) {
         incrementCounter(aspect, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void increment(final String aspect, final double sampleRate, final String...tags ) {
+    	incrementCounter(aspect, sampleRate, tags);
     }
 
     /**
@@ -431,6 +460,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void decrementCounter(final String aspect, final String... tags) {
         count(aspect, -1, tags);
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void decrementCounter(String aspect, final double sampleRate, final String... tags) {
+        count(aspect, -1, sampleRate, tags);
+    }
 
     /**
      * Convenience method equivalent to {@link #decrementCounter(String, String[])}.
@@ -438,6 +475,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void decrement(final String aspect, final String... tags) {
         decrementCounter(aspect, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void decrement(final String aspect, final double sampleRate, final String... tags) {
+        decrementCounter(aspect, sampleRate, tags);
     }
 
     /**
@@ -458,6 +503,17 @@ public final class NonBlockingStatsDClient implements StatsDClient {
          * padding with extra 0s to represent precision */
         send(String.format("%s%s:%s|g%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), tagString(tags)));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordGaugeValue(final String aspect, final double value, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+        send(String.format("%s%s:%s|g|%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
+    }
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
@@ -465,6 +521,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void gauge(final String aspect, final double value, final String... tags) {
         recordGaugeValue(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void gauge(final String aspect, final double value, final double sampleRate, final String... tags) {
+        recordGaugeValue(aspect, value, sampleRate, tags);
     }
 
 
@@ -484,6 +548,17 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordGaugeValue(final String aspect, final long value, final String... tags) {
         send(String.format("%s%s:%d|g%s", prefix, aspect, value, tagString(tags)));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordGaugeValue(final String aspect, final long value, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+        send(String.format("%s%s:%d|g|%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+    }
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
@@ -491,6 +566,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void gauge(final String aspect, final long value, final String... tags) {
         recordGaugeValue(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void gauge(final String aspect, final long value, final double sampleRate, final String... tags) {
+        recordGaugeValue(aspect, value, sampleRate, tags);
     }
 
     /**
@@ -509,6 +592,17 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordExecutionTime(final String aspect, final long timeInMs, final String... tags) {
         send(String.format("%s%s:%d|ms%s", prefix, aspect, timeInMs, tagString(tags)));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordExecutionTime(final String aspect, final long timeInMs, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+        send(String.format("%s%s:%d|ms|%f%s", prefix, aspect, timeInMs, sampleRate, tagString(tags)));
+    }
 
     /**
      * Convenience method equivalent to {@link #recordExecutionTime(String, long, String[])}.
@@ -516,6 +610,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void time(final String aspect, final long value, final String... tags) {
         recordExecutionTime(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void time(final String aspect, final long value, final double sampleRate, final String... tags) {
+        recordExecutionTime(aspect, value, sampleRate, tags);
     }
 
     /**
@@ -536,6 +638,19 @@ public final class NonBlockingStatsDClient implements StatsDClient {
          * padding with extra 0s to represent precision */
         send(String.format("%s%s:%s|h%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), tagString(tags)));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordHistogramValue(final String aspect, final double value, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+    	  /* Intentionally using %s rather than %f here to avoid
+    	   * padding with extra 0s to represent precision */
+    	send(String.format("%s%s:%s|h|%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));        
+    }
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
@@ -543,6 +658,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void histogram(final String aspect, final double value, final String... tags) {
         recordHistogramValue(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void histogram(final String aspect, final double value, final double sampleRate, final String... tags) {
+        recordHistogramValue(aspect, value, sampleRate, tags);
     }
 
     /**
@@ -561,6 +684,17 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordHistogramValue(final String aspect, final long value, final String... tags) {
         send(String.format("%s%s:%d|h%s", prefix, aspect, value, tagString(tags)));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordHistogramValue(final String aspect, final long value, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+        send(String.format("%s%s:%d|h|%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+    }
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}.
@@ -568,6 +702,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void histogram(final String aspect, final long value, final String... tags) {
         recordHistogramValue(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void histogram(final String aspect, final long value, final double sampleRate, final String... tags) {
+        recordHistogramValue(aspect, value, sampleRate, tags);
     }
 
     private String eventMap(final Event event) {
@@ -696,6 +838,10 @@ public final class NonBlockingStatsDClient implements StatsDClient {
 
     private void send(final String message) {
         queue.offer(message);
+    }
+    
+    private boolean isInvalidSample(double sampleRate) {
+    	return sampleRate != 1 && Math.random() > sampleRate;
     }
 
     public static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");

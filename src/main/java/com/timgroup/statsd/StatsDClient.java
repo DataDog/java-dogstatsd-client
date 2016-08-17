@@ -40,6 +40,24 @@ public interface StatsDClient {
     void count(String aspect, long delta, String... tags);
 
     /**
+     * Adjusts the specified counter by a given delta.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param delta
+     *     the amount to adjust the counter by
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, long delta, double sampleRate, String... tags);
+    
+    /**
      * Increments the specified counter by one.
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
@@ -52,11 +70,32 @@ public interface StatsDClient {
      *     array of tags to be added to the data
      */
     void incrementCounter(String aspect, String... tags);
+    
+    /**
+     * Increments the specified counter by one.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to increment
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void incrementCounter(String aspect, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #incrementCounter(String, String[])}.
      */
     void increment(String aspect, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #incrementCounter(String, double, String[])}.
+     */
+    void increment(String aspect, double sampleRate, String...tags);
 
     /**
      * Decrements the specified counter by one.
@@ -71,11 +110,32 @@ public interface StatsDClient {
      *     array of tags to be added to the data
      */
     void decrementCounter(String aspect, String... tags);
+    
+    /**
+     * Decrements the specified counter by one.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to decrement
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void decrementCounter(String aspect, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #decrementCounter(String, String[])}.
      */
     void decrement(String aspect, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #decrementCounter(String, double, String[])}.
+     */
+    void decrement(String aspect, double sampleRate, String... tags);
 
     /**
      * Records the latest fixed value for the specified named gauge.
@@ -90,11 +150,32 @@ public interface StatsDClient {
      *     the new reading of the gauge
      */
     void recordGaugeValue(String aspect, double value, String... tags);
+    
+    /**
+     * Records the latest fixed value for the specified named gauge.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param value
+     *     the new reading of the gauge
+     */
+    void recordGaugeValue(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
      */
     void gauge(String aspect, double value, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, double, double, String[])}.
+     */
+    void gauge(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Records the latest fixed value for the specified named gauge.
@@ -109,11 +190,32 @@ public interface StatsDClient {
      *     the new reading of the gauge
      */
     void recordGaugeValue(String aspect, long value, String... tags);
+    
+    /**
+     * Records the latest fixed value for the specified named gauge.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param value
+     *     the new reading of the gauge
+     */
+    void recordGaugeValue(String aspect, long value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
      */
     void gauge(String aspect, long value, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, long, double, String[])}.
+     */
+    void gauge(String aspect, long value, double sampleRate, String... tags);
 
     /**
      * Records an execution time in milliseconds for the specified named operation.
@@ -130,11 +232,34 @@ public interface StatsDClient {
      *     array of tags to be added to the data
      */
     void recordExecutionTime(String aspect, long timeInMs, String... tags);
+    
+    /**
+     * Records an execution time in milliseconds for the specified named operation.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the timed operation
+     * @param timeInMs
+     *     the time in milliseconds
+     * @param sampleRate    
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordExecutionTime(String aspect, long timeInMs, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordExecutionTime(String, long, String[])}.
      */
     void time(String aspect, long value, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #recordExecutionTime(String, long, double, String[])}.
+     */
+    void time(String aspect, long value, double sampleRate, String... tags);
 
     /**
      * Records a value for the specified named histogram.
@@ -151,12 +276,35 @@ public interface StatsDClient {
      *     array of tags to be added to the data
      */
     void recordHistogramValue(String aspect, double value, String... tags);
+    
+    /**
+     * Records a value for the specified named histogram.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate    
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordHistogramValue(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
      */
     void histogram(String aspect, double value, String... tags);
 
+    /**
+     * Convenience method equivalent to {@link #recordHistogramValue(String, double, double, String[])}.
+     */
+    void histogram(String aspect, double value, double sampleRate, String... tags);
+    
     /**
      * Records a value for the specified named histogram.
      *
@@ -172,11 +320,34 @@ public interface StatsDClient {
      *     array of tags to be added to the data
      */
     void recordHistogramValue(String aspect, long value, String... tags);
+    
+    /**
+     * Records a value for the specified named histogram.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordHistogramValue(String aspect, long value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}.
      */
     void histogram(String aspect, long value, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #recordHistogramValue(String, long, double, String[])}.
+     */
+    void histogram(String aspect, long value, double sampleRate, String... tags);
 
     /**
      * Records an event
