@@ -31,7 +31,7 @@ public class Foo {
     "my.prefix",                          /* prefix to any stats; may be null or empty string */
     "statsd-host",                        /* common case: localhost */
     8125,                                 /* port */
-    new String[] {"tag:value"}            /* DataDog extension: Constant tags, always applied */
+    new String[] {"tag:value"}            /* Datadog extension: Constant tags, always applied */
   );
 
   public static final void main(String[] args) {
