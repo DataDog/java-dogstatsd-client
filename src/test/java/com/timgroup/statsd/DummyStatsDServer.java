@@ -51,4 +51,8 @@ final class DummyStatsDServer {
         server.close();
     }
 
+    public void clear() {
+        messagesReceived.clear();
+    }
+
 }

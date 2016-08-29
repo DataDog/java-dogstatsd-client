@@ -1,7 +1,8 @@
 package com.timgroup.statsd;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.net.SocketException;
@@ -14,18 +15,23 @@ import static org.junit.Assert.assertEquals;
 public class NonBlockingStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
-    private final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
-    private DummyStatsDServer server;
+    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
+    private static DummyStatsDServer server;
 
-    @Before
-    public void start() throws SocketException {
+    @BeforeClass
+    public static void start() throws SocketException {
         server = new DummyStatsDServer(STATSD_SERVER_PORT);
     }
 
-    @After
-    public void stop() throws Exception {
+    @AfterClass
+    public static void stop() throws Exception {
         client.stop();
         server.close();
+    }
+
+    @After
+    public void clear() {
+        server.clear();
     }
 
     @Test(timeout=5000L) public void
@@ -37,11 +43,11 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_counter_value_with_sample_rate_to_statsd() throws Exception {
 
-    	client.count("mycount", 24, 1);      
+    	client.count("mycount", 24, 1);
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|1.000000"));
@@ -76,7 +82,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_counter_value_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -107,7 +113,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_counter_increment_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -137,7 +143,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_counter_decrement_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -157,7 +163,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_gauge_with_sample_rate_to_statsd() throws Exception {
 
@@ -207,7 +213,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_gauge_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -256,7 +262,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:423|h|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -276,7 +282,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_double_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -332,7 +338,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.mytime:123|ms|#baz,foo:bar"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_timer_with_sample_rate_to_statsd_with_tags() throws Exception {
 
@@ -353,7 +359,7 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#app:bar,instance:foo,baz"));
     }
-    
+
     @Test(timeout=5000L) public void
     sends_gauge_mixed_tags_with_sample_rate() throws Exception {
 
