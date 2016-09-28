@@ -50,7 +50,7 @@ public class NonBlockingStatsDClientTest {
     	client.count("mycount", 24, 1);
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|1.000000"));
+        assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|@1.000000"));
     }
 
     @Test(timeout=5000L) public void
@@ -90,7 +90,7 @@ public class NonBlockingStatsDClientTest {
         client.count("mycount", 24, 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|@1.000000|#baz,foo:bar"));
     }
 
 
@@ -121,7 +121,7 @@ public class NonBlockingStatsDClientTest {
         client.incrementCounter("myinc", 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c|@1.000000|#baz,foo:bar"));
     }
 
     @Test(timeout=5000L) public void
@@ -151,7 +151,7 @@ public class NonBlockingStatsDClientTest {
         client.decrementCounter("mydec", 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c|@1.000000|#baz,foo:bar"));
     }
 
     @Test(timeout=5000L) public void
@@ -171,7 +171,7 @@ public class NonBlockingStatsDClientTest {
         client.recordGaugeValue("mygauge", 423, 1);
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|1.000000"));
+        assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|@1.000000"));
     }
 
     @Test(timeout=5000L) public void
@@ -221,7 +221,7 @@ public class NonBlockingStatsDClientTest {
         client.recordGaugeValue("mygauge", 423, 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|@1.000000|#baz,foo:bar"));
     }
 
     @Test(timeout=5000L) public void
@@ -270,7 +270,7 @@ public class NonBlockingStatsDClientTest {
         client.recordHistogramValue("myhistogram", 423, 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:423|h|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:423|h|@1.000000|#baz,foo:bar"));
     }
 
     @Test(timeout=5000L) public void
@@ -290,7 +290,7 @@ public class NonBlockingStatsDClientTest {
         client.recordHistogramValue("myhistogram", 0.423, 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h|@1.000000|#baz,foo:bar"));
     }
 
     @Test(timeout=5000L) public void
@@ -346,7 +346,7 @@ public class NonBlockingStatsDClientTest {
         client.recordExecutionTime("mytime", 123, 1, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.mytime:123|ms|1.000000|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("my.prefix.mytime:123|ms|@1.000000|#baz,foo:bar"));
     }
 
 
@@ -367,7 +367,7 @@ public class NonBlockingStatsDClientTest {
         empty_prefix_client.gauge("value", 423,1, "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|1.000000|#app:bar,instance:foo,baz"));
+        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz"));
     }
 
     @Test(timeout=5000L) public void
