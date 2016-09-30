@@ -404,7 +404,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-    	send(String.format("%s%s:%d|c|%f%s", prefix, aspect, delta, sampleRate, tagString(tags)));
+    	send(String.format("%s%s:%d|c|@%f%s", prefix, aspect, delta, sampleRate, tagString(tags)));
     }
 
     /**
@@ -512,7 +512,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%s|g|%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
+        send(String.format("%s%s:%s|g|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
     }
 
     /**
@@ -557,7 +557,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|g|%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+        send(String.format("%s%s:%d|g|@%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
     }
 
     /**
@@ -601,7 +601,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|ms|%f%s", prefix, aspect, timeInMs, sampleRate, tagString(tags)));
+        send(String.format("%s%s:%d|ms|@%f%s", prefix, aspect, timeInMs, sampleRate, tagString(tags)));
     }
 
     /**
@@ -649,7 +649,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	}
     	  /* Intentionally using %s rather than %f here to avoid
     	   * padding with extra 0s to represent precision */
-    	send(String.format("%s%s:%s|h|%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));        
+    	send(String.format("%s%s:%s|h|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
     }
 
     /**
@@ -693,7 +693,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|h|%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+        send(String.format("%s%s:%d|h|@%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
     }
 
     /**
