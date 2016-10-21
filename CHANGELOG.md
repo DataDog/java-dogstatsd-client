@@ -2,9 +2,9 @@
 
 2.3 / 2016.10.21
 ================
-* [BUGFIX] Reduce packet size to avoid fragmentation, see [#17][].
-* [BUGFIX] Prefix sample rate with an '@', see [#15][].
-* [FEATURE] Add support for sending `sample_rate` while submitting metrics, see [#11][].
+* [BUGFIX] Reduce packet size to avoid fragmentation, see [#17](https://github.com/DataDog/java-dogstatsd-client/pull/17).
+* [BUGFIX] Prefix sample rate with an '@', see [#15](https://github.com/DataDog/java-dogstatsd-client/pull/15).
+* [FEATURE] Add support for sending `sample_rate` while submitting metrics, see [#11](https://github.com/DataDog/java-dogstatsd-client/pull/11).
 
 2.2 / 2016.07.13
 ================
