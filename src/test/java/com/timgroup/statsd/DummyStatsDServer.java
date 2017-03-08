@@ -5,11 +5,15 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
 
 final class DummyStatsDServer {
+
+    private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
+
     private final List<String> messagesReceived = new ArrayList<String>();
     private final DatagramSocket server;
 
@@ -22,7 +26,7 @@ final class DummyStatsDServer {
                     try {
                         final DatagramPacket packet = new DatagramPacket(new byte[1500], 1500);
                         server.receive(packet);
-                        for(String msg : new String(packet.getData(), NonBlockingStatsDClient.MESSAGE_CHARSET).split("\n")) {
+                        for(String msg : new String(packet.getData(), MESSAGE_CHARSET).split("\n")) {
                             messagesReceived.add(msg.trim());
                         }
                     } catch (IOException e) {
