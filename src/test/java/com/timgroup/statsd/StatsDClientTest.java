@@ -1,22 +1,40 @@
 package com.timgroup.statsd;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.After;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.net.SocketException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Locale;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 
-public class NonBlockingStatsDClientTest {
+@RunWith(Parameterized.class)
+public class StatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
-    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
+    private final StatsDClient client;
     private static DummyStatsDServer server;
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(
+                new Object[]{ NonBlockingStatsDClient.class },
+                new Object[]{ BlockingStatsDClient.class} );
+    }
+
+    public StatsDClientTest(Class<? extends StatsDClient> client) throws Exception {
+        this.client = client
+                .getConstructor(String.class, String.class, Integer.TYPE)
+                .newInstance("my.prefix", "localhost", STATSD_SERVER_PORT);
+    }
 
     @BeforeClass
     public static void start() throws SocketException {
@@ -25,12 +43,12 @@ public class NonBlockingStatsDClientTest {
 
     @AfterClass
     public static void stop() throws Exception {
-        client.stop();
         server.close();
     }
 
     @After
     public void clear() {
+        client.stop();
         server.clear();
     }
 
