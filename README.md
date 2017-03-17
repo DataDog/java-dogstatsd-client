@@ -41,7 +41,11 @@ public class Foo {
     statsd.recordHistogram("qux", 15)     /* DataDog extension: histograms */
     statsd.recordHistogram("qux", 15.5)   /* ...also floating-point */
 
-    ServiceCheck sc = new ServiceCheck("my.check.name", ServiceCheck.OK);
+    ServiceCheck sc = ServiceCheck
+          .builder()
+          .withName("my.check.name")
+          .withStatus(ServiceCheck.Status.OK)
+          .build();
     statsd.serviceCheck(sc); /* Datadog extension: send service check status */
 
     /* Compatibility note: Unlike upstream statsd, DataDog expects execution times to be a
