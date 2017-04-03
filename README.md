@@ -22,6 +22,7 @@ The client jar is distributed via maven central, and can be downloaded [here](ht
 Usage
 -----
 ```java
+import com.timgroup.statsd.ServiceCheck;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 
@@ -38,8 +39,8 @@ public class Foo {
     statsd.incrementCounter("foo");
     statsd.recordGaugeValue("bar", 100);
     statsd.recordGaugeValue("baz", 0.01); /* DataDog extension: support for floating-point gauges */
-    statsd.recordHistogram("qux", 15)     /* DataDog extension: histograms */
-    statsd.recordHistogram("qux", 15.5)   /* ...also floating-point */
+    statsd.recordHistogramValue("qux", 15);     /* DataDog extension: histograms */
+    statsd.recordHistogramValue("qux", 15.5);   /* ...also floating-point */
 
     ServiceCheck sc = ServiceCheck
           .builder()
