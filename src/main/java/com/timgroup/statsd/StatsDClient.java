@@ -1,5 +1,7 @@
 package com.timgroup.statsd;
 
+import java.io.Closeable;
+
 /**
  * Describes a client connection to a StatsD server, which may be used to post metrics
  * in the form of counters, timers, and gauges.
@@ -15,13 +17,19 @@ package com.timgroup.statsd;
  * @author Tom Denley
  *
  */
-public interface StatsDClient {
+public interface StatsDClient extends Closeable {
 
     /**
      * Cleanly shut down this StatsD client. This method may throw an exception if
      * the socket cannot be closed.
      */
     void stop();
+
+    /**
+     * @see #stop()
+     */
+    @Override
+    void close();
 
     /**
      * Adjusts the specified counter by a given delta.

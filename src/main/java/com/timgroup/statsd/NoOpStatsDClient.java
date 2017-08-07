@@ -9,6 +9,7 @@ package com.timgroup.statsd;
  */
 public final class NoOpStatsDClient implements StatsDClient {
 	@Override public void stop() { }
+    @Override public void close() { }
     @Override public void count(String aspect, long delta, String... tags) { }
     @Override public void count(String aspect, long delta, double sampleRate, String... tags) { }
     @Override public void incrementCounter(String aspect, String... tags) { }

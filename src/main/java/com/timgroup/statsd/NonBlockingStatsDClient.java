@@ -345,6 +345,11 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
+    @Override
+    public void close() {
+        stop();
+    }
+
     /**
      * Generate a suffix conveying the given tag list to the client
      */
