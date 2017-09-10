@@ -413,6 +413,34 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     }
 
     /**
+     * Adjusts the specified counter by a given delta.
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param delta
+     *     the amount to adjust the counter by
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    @Override
+    public void count(final String aspect, final double delta, final String... tags) {
+        send(String.format("%s%s:%f|c%s", prefix, aspect, delta, tagString(tags)));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void count(final String aspect, final double delta, final double sampleRate, final String...tags) {
+        if(isInvalidSample(sampleRate)) {
+            return;
+        }
+        send(String.format("%s%s:%f|c|@%f%s", prefix, aspect, delta, sampleRate, tagString(tags)));
+    }
+
+    /**
      * Increments the specified counter by one.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>

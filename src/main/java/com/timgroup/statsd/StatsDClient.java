@@ -64,7 +64,41 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void count(String aspect, long delta, double sampleRate, String... tags);
-    
+
+    /**
+     * Adjusts the specified counter by a given delta.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param delta
+     *     the amount to adjust the counter by
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, double delta, String... tags);
+
+    /**
+     * Adjusts the specified counter by a given delta.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param delta
+     *     the amount to adjust the counter by
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, double delta, double sampleRate, String... tags);
+
     /**
      * Increments the specified counter by one.
      *
