@@ -426,7 +426,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final double delta, final String... tags) {
-        send(String.format("%s%s:%f|c%s", prefix, aspect, delta, tagString(tags)));
+        send(String.format("%s%s:%s|c%s", prefix, aspect, NUMBER_FORMATTERS.get().format(delta), tagString(tags)));
     }
 
     /**
@@ -437,7 +437,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         if(isInvalidSample(sampleRate)) {
             return;
         }
-        send(String.format("%s%s:%f|c|@%f%s", prefix, aspect, delta, sampleRate, tagString(tags)));
+        send(String.format("%s%s:%s|c|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(delta), sampleRate, tagString(tags)));
     }
 
     /**
