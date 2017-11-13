@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 
@@ -846,7 +847,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     }
     
     private boolean isInvalidSample(double sampleRate) {
-    	return sampleRate != 1 && Math.random() > sampleRate;
+        return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
     public static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
