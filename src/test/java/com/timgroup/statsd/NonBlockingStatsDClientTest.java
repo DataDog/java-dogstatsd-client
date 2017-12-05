@@ -316,7 +316,7 @@ public class NonBlockingStatsDClientTest {
     sends_distribution_to_statsd_with_tags() throws Exception {
 
 
-        client.recordHistogramValue("mydistribution", 423, "foo:bar", "baz");
+        client.recordDistributionValue("mydistribution", 423, "foo:bar", "baz");
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d|#baz,foo:bar"));
@@ -326,7 +326,7 @@ public class NonBlockingStatsDClientTest {
     sends_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
-        client.recordHistogramValue("mydistribution", 423, 1, "foo:bar", "baz");
+        client.recordDistributionValue("mydistribution", 423, 1, "foo:bar", "baz");
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d|@1.000000|#baz,foo:bar"));
