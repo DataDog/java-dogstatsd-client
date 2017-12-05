@@ -41,6 +41,8 @@ public class Foo {
     statsd.recordGaugeValue("baz", 0.01); /* DataDog extension: support for floating-point gauges */
     statsd.recordHistogramValue("qux", 15);     /* DataDog extension: histograms */
     statsd.recordHistogramValue("qux", 15.5);   /* ...also floating-point */
+    statsd.recordDistributionValue("qux", 15);     /* DataDog extension: global distributions */
+    statsd.recordDistributionValue("qux", 15.5);   /* ...also floating-point */
 
     ServiceCheck sc = ServiceCheck
           .builder()

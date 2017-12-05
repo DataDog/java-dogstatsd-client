@@ -746,6 +746,97 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         recordHistogramValue(aspect, value, sampleRate, tags);
     }
 
+     /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    @Override
+    public void recordDistributionValue(final String aspect, final double value, final String... tags) {
+        /* Intentionally using %s rather than %f here to avoid
+         * padding with extra 0s to represent precision */
+        send(String.format("%s%s:%s|d%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), tagString(tags)));
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordDistributionValue(final String aspect, final double value, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+    	  /* Intentionally using %s rather than %f here to avoid
+    	   * padding with extra 0s to represent precision */
+    	send(String.format("%s%s:%s|d|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
+    }
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double, String[])}.
+     */
+    @Override
+    public void distribution(final String aspect, final double value, final String... tags) {
+        recordDistributionValue(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void distribution(final String aspect, final double value, final double sampleRate, final String... tags) {
+        recordDistributionValue(aspect, value, sampleRate, tags);
+    }
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    @Override
+    public void recordDistributionValue(final String aspect, final long value, final String... tags) {
+        send(String.format("%s%s:%d|d%s", prefix, aspect, value, tagString(tags)));
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordDistributionValue(final String aspect, final long value, final double sampleRate, final String... tags) {
+    	if(isInvalidSample(sampleRate)) {
+    		return;
+    	}
+        send(String.format("%s%s:%d|d|@%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+    }
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, long, String[])}.
+     */
+    @Override
+    public void distribution(final String aspect, final long value, final String... tags) {
+        recordDistributionValue(aspect, value, tags);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void distribution(final String aspect, final long value, final double sampleRate, final String... tags) {
+        recordDistributionValue(aspect, value, sampleRate, tags);
+    }
+
     private String eventMap(final Event event) {
         final StringBuilder res = new StringBuilder("");
 

@@ -294,6 +294,65 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout=5000L) public void
+    sends_distribtuion_to_statsd() throws Exception {
+
+        client.recordDistributionValue("mydistribution", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_double_distribution_to_statsd() throws Exception {
+
+
+        client.recordDistributionValue("mydistribution", 0.423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_distribution_to_statsd_with_tags() throws Exception {
+
+
+        client.recordHistogramValue("mydistribution", 423, "foo:bar", "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d|#baz,foo:bar"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
+
+
+        client.recordHistogramValue("mydistribution", 423, 1, "foo:bar", "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d|@1.000000|#baz,foo:bar"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_double_distribution_to_statsd_with_tags() throws Exception {
+
+
+        client.recordDistributionValue("mydistribution", 0.423, "foo:bar", "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d|#baz,foo:bar"));
+    }
+
+    @Test(timeout=5000L) public void
+    sends_double_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
+
+
+        client.recordDistributionValue("mydistribution", 0.423, 1, "foo:bar", "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d|@1.000000|#baz,foo:bar"));
+    }
+
+    @Test(timeout=5000L) public void
     sends_timer_to_statsd() throws Exception {
 
 

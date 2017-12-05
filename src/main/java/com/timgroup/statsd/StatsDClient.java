@@ -392,6 +392,94 @@ public interface StatsDClient extends Closeable {
     void histogram(String aspect, long value, double sampleRate, String... tags);
 
     /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution 
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, double value, String... tags);
+    
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution 
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate    
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, double value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double, String[])}.
+     */
+    void distribution(String aspect, double value, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double, double, String[])}.
+     */
+    void distribution(String aspect, double value, double sampleRate, String... tags);
+    
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long value, String... tags);
+    
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     * 		percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, long, String[])}.
+     */
+    void distribution(String aspect, long value, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, long, double, String[])}.
+     */
+    void distribution(String aspect, long value, double sampleRate, String... tags);
+
+    /**
      * Records an event
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
