@@ -41,17 +41,7 @@ import java.util.concurrent.TimeUnit;
  * @author Tom Denley
  *
  */
-public final class NonBlockingStatsDClient extends DefaultStatsDClient {
-
-    private final ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-        final ThreadFactory delegate = Executors.defaultThreadFactory();
-        @Override public Thread newThread(final Runnable r) {
-            final Thread result = delegate.newThread(r);
-            result.setName("StatsD-" + result.getName());
-            result.setDaemon(true);
-            return result;
-        }
-    });
+public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
 
     private final BlockingQueue<String> queue;
 
@@ -245,22 +235,6 @@ public final class NonBlockingStatsDClient extends DefaultStatsDClient {
 
         queue = new LinkedBlockingQueue<String>(queueSize);
         executor.submit(new QueueConsumer(addressLookup));
-    }
-
-    /**
-     * Cleanly shut down this StatsD client. This method may throw an exception if
-     * the socket cannot be closed.
-     */
-    @Override
-    public void stop() {
-        try {
-            executor.shutdown();
-            executor.awaitTermination(30, TimeUnit.SECONDS);
-        } catch (final Exception e) {
-            handler.handle(e);
-        } finally {
-            super.stop();
-        }
     }
 
     @Override

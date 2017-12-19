@@ -1,21 +1,20 @@
 package com.timgroup.statsd;
 
-import java.util.Arrays;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.After;
-import org.junit.Test;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.junit.Assert.assertEquals;
 
 import java.net.SocketException;
+import java.util.Arrays;
 import java.util.Locale;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class NonBlockingStatsDClientTest {
@@ -23,14 +22,18 @@ public class NonBlockingStatsDClientTest {
     private static final int STATSD_SERVER_PORT = 17254;
 
     private static DummyStatsDServer server;
-    private final static NonBlockingStatsDClient nonBlockingClient= new NonBlockingStatsDClient
-        ("my.prefix", "localhost", STATSD_SERVER_PORT);
-    private final static BlockingStatsDClient blockingClient= new BlockingStatsDClient(
-        "my.prefix", "localhost", STATSD_SERVER_PORT);
+    public static final String LOCALHOST = "localhost";
+    public static final String PREFIX = "my.prefix";
+    private final static NonBlockingStatsDClient nonBlockingClient = new NonBlockingStatsDClient(
+        PREFIX, LOCALHOST, STATSD_SERVER_PORT);
+    private final static BlockingStatsDClient blockingClient = new BlockingStatsDClient(PREFIX,
+        LOCALHOST, STATSD_SERVER_PORT);
+    private final static ConcurrentStatsDClient concurrentClient = new ConcurrentStatsDClient(
+        PREFIX, LOCALHOST, STATSD_SERVER_PORT);
 
     @Parameters(name="{0}")
     public static Iterable<? extends StatsDClient> createClient() {
-        return Arrays.asList(nonBlockingClient,blockingClient);
+        return Arrays.asList(nonBlockingClient, blockingClient, concurrentClient);
     }
 
     @Parameter
@@ -431,7 +434,8 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_mixed_tags() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient(PREFIX,
+            LOCALHOST, STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423, "baz");
         server.waitForMessage();
 
@@ -441,7 +445,8 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_mixed_tags_with_sample_rate() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient(PREFIX,
+            LOCALHOST, STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423,1, "baz");
         server.waitForMessage();
 
@@ -451,7 +456,8 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_constant_tags_only() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient(PREFIX,
+            LOCALHOST, STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423);
         server.waitForMessage();
 
@@ -461,7 +467,8 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_empty_prefix() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("",
+            LOCALHOST, STATSD_SERVER_PORT);
         empty_prefix_client.gauge("top.level.value", 423);
         server.waitForMessage();
 
@@ -471,7 +478,8 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_gauge_null_prefix() throws Exception {
 
-        final NonBlockingStatsDClient null_prefix_client = new NonBlockingStatsDClient(null, "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient null_prefix_client = new NonBlockingStatsDClient(null,
+            LOCALHOST, STATSD_SERVER_PORT);
         null_prefix_client.gauge("top.level.value", 423);
         server.waitForMessage();
 
@@ -545,7 +553,8 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L) public void
     sends_event_empty_prefix() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("",
+            LOCALHOST, STATSD_SERVER_PORT);
         final Event event = Event.builder()
                 .withTitle("title1")
                 .withText("text1")
