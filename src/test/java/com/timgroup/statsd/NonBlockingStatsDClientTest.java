@@ -48,6 +48,7 @@ public class NonBlockingStatsDClientTest {
     public static void stop() throws Exception {
         nonBlockingClient.stop();
         blockingClient.stop();
+        concurrentClient.stop();
         server.close();
     }
 
