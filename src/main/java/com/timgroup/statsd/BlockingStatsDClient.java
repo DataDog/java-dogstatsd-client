@@ -22,8 +22,10 @@ public class BlockingStatsDClient extends DefaultStatsDClient {
   @Override
   protected void send(String message) {
     try {
-      sender.addToBuffer(message);
-      sender.blockingSend();
+      synchronized (sender) {
+        sender.addToBuffer(message);
+        sender.blockingSend();
+      }
     } catch (Exception e) {
       handler.handle(e);
     }
