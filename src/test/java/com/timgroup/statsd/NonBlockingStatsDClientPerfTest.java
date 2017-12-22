@@ -17,6 +17,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public final class NonBlockingStatsDClientPerfTest {
@@ -32,7 +33,7 @@ public final class NonBlockingStatsDClientPerfTest {
         LOCALHOST, STATSD_SERVER_PORT, false);
 
     private final static ConcurrentStatsDClient concurrentClient = new ConcurrentStatsDClient(
-        PREFIX, LOCALHOST, STATSD_SERVER_PORT);
+        PREFIX, LOCALHOST, STATSD_SERVER_PORT, 100);
 
     @Parameters(name="{0}")
     public static Iterable<? extends StatsDClient> createClient() {
@@ -58,6 +59,8 @@ public final class NonBlockingStatsDClientPerfTest {
 
     @After
     public void clearServer() {
+        executor.shutdownNow();
+        client.stop();
         server.clear();
     }
 
@@ -67,7 +70,7 @@ public final class NonBlockingStatsDClientPerfTest {
         for(int i = 0; i < testSize; ++i) {
             executor.submit(new Runnable() {
                 public void run() {
-                    client.count("mycount", RAND.nextInt());
+                client.count("mycount", RAND.nextInt());
                 }
             });
         }
@@ -77,13 +80,14 @@ public final class NonBlockingStatsDClientPerfTest {
         // Stop the client and ensure all IO is done. This is mostly for the blocking client,
         // since autoflush is set to false.
         client.stop();
-
         for(int i = 0; i < 20000 && server.messagesReceived().size() < testSize; i += 50) {
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ex) {}
         }
-        assertEquals(testSize, server.messagesReceived().size());
+        // Accept 1% error rate due to UDP packet loss. If the previous loop completes (20s), but
+        // this passes, this means there was some packet loss.
+        assertTrue(server.messagesReceived().size() >= testSize - (testSize/100));
     }
 
     private static class SynchronizedBlockingStatsDClient extends DefaultStatsDClient {

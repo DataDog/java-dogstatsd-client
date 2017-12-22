@@ -29,7 +29,7 @@ public class NonBlockingStatsDClientTest {
     private final static BlockingStatsDClient blockingClient = new BlockingStatsDClient(PREFIX,
         LOCALHOST, STATSD_SERVER_PORT);
     private final static ConcurrentStatsDClient concurrentClient = new ConcurrentStatsDClient(
-        PREFIX, LOCALHOST, STATSD_SERVER_PORT);
+        PREFIX, LOCALHOST, STATSD_SERVER_PORT, 10);
 
     @Parameters(name="{0}")
     public static Iterable<? extends StatsDClient> createClient() {
