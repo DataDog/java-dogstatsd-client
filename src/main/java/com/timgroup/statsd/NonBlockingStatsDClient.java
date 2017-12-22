@@ -251,7 +251,9 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
 
         @Override
         public void run() {
-            while (!executor.isShutdown()) {
+            // Ensure that even if the executor/client is stopped, we send all accumulated metric
+            // before stopping the background IO Thread.
+            while (!executor.isShutdown() || !queue.isEmpty()) {
                 try {
                     final String message = queue.poll(1, TimeUnit.SECONDS);
                     if (null != message) {
