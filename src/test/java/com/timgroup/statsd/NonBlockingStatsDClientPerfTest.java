@@ -29,13 +29,15 @@ public final class NonBlockingStatsDClientPerfTest {
     private final static NonBlockingStatsDClient nonBlockingClient = new NonBlockingStatsDClient(
         PREFIX, LOCALHOST, STATSD_SERVER_PORT);
     private final static BlockingStatsDClient blockingClient = new BlockingStatsDClient(PREFIX,
-        LOCALHOST, STATSD_SERVER_PORT);
+        LOCALHOST, STATSD_SERVER_PORT, false);
+
     private final static ConcurrentStatsDClient concurrentClient = new ConcurrentStatsDClient(
         PREFIX, LOCALHOST, STATSD_SERVER_PORT);
 
     @Parameters(name="{0}")
     public static Iterable<? extends StatsDClient> createClient() {
-        return Arrays.asList(nonBlockingClient, blockingClient, concurrentClient);
+        DefaultStatsDClient synchronizedBlockingClient = new SynchronizedBlockingStatsDClient();
+        return Arrays.asList(nonBlockingClient, synchronizedBlockingClient, concurrentClient);
     }
 
     @Parameter
@@ -51,9 +53,6 @@ public final class NonBlockingStatsDClientPerfTest {
 
     @AfterClass
     public static void stop() throws Exception {
-        nonBlockingClient.stop();
-        blockingClient.stop();
-        concurrentClient.stop();
         server.close();
     }
 
@@ -64,17 +63,20 @@ public final class NonBlockingStatsDClientPerfTest {
 
     @Test(timeout=30000)
     public void perf_test() throws Exception {
-        int testSize = 1000;
+        int testSize = 10000;
         for(int i = 0; i < testSize; ++i) {
             executor.submit(new Runnable() {
                 public void run() {
                     client.count("mycount", RAND.nextInt());
                 }
             });
-
         }
+
         executor.shutdown();
         executor.awaitTermination(20, TimeUnit.SECONDS);
+        // Stop the client and ensure all IO is done. This is mostly for the blocking client,
+        // since autoflush is set to false.
+        client.stop();
 
         for(int i = 0; i < 20000 && server.messagesReceived().size() < testSize; i += 50) {
             try {
@@ -82,5 +84,23 @@ public final class NonBlockingStatsDClientPerfTest {
             } catch (InterruptedException ex) {}
         }
         assertEquals(testSize, server.messagesReceived().size());
+    }
+
+    private static class SynchronizedBlockingStatsDClient extends DefaultStatsDClient {
+
+        public SynchronizedBlockingStatsDClient() {
+            super(NonBlockingStatsDClientPerfTest.PREFIX, null, null);
+        }
+
+        @Override
+        protected synchronized void send(String message) {
+            blockingClient.send(message);
+        }
+
+        @Override
+        public synchronized void stop() {
+            blockingClient.stop();
+            super.stop();
+        }
     }
 }
