@@ -1,6 +1,7 @@
 package com.timgroup.statsd;
 
 
+import java.io.IOException;
 import java.net.SocketException;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -22,7 +23,7 @@ public final class NonBlockingStatsDClientPerfTest {
     private static DummyStatsDServer server;
 
     @BeforeClass
-    public static void start() throws SocketException {
+    public static void start() throws IOException {
         server = new DummyStatsDServer(STATSD_SERVER_PORT);
     }
 

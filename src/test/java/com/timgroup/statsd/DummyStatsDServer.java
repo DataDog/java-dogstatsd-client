@@ -2,30 +2,54 @@
 package com.timgroup.statsd;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.List;
+import jnr.unixsocket.UnixDatagramChannel;
+import jnr.unixsocket.UnixSocketAddress;
+import java.nio.charset.StandardCharsets;
 
 
 final class DummyStatsDServer {
     private final List<String> messagesReceived = new ArrayList<String>();
-    private final DatagramSocket server;
+    private final DatagramChannel server;
+    private volatile Boolean freeze = false;
 
-    public DummyStatsDServer(int port) throws SocketException {
-        server = new DatagramSocket(port);
+    public DummyStatsDServer(int port) throws IOException {
+        server = DatagramChannel.open();
+        server.bind(new InetSocketAddress(port));
+        this.listen();
+    }
+
+    public DummyStatsDServer(String socketPath) throws IOException {
+        server = UnixDatagramChannel.open();
+        server.bind(new UnixSocketAddress(socketPath));
+        this.listen();
+    }
+
+    private void listen() {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                while(!server.isClosed()) {
-                    try {
-                        final DatagramPacket packet = new DatagramPacket(new byte[1500], 1500);
-                        server.receive(packet);
-                        for(String msg : new String(packet.getData(), NonBlockingStatsDClient.MESSAGE_CHARSET).split("\n")) {
-                            messagesReceived.add(msg.trim());
+                final ByteBuffer packet = ByteBuffer.allocate(1500);
+                while(server.isOpen()) {
+                    if (freeze) {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
                         }
-                    } catch (IOException e) {
+                    } else{
+                        try {
+                            packet.clear();
+                            server.receive(packet);
+                            packet.flip();
+                            for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
+                                messagesReceived.add(msg.trim());
+                            }
+                        } catch (IOException e) {
+                        }
                     }
                 }
             }
@@ -47,7 +71,15 @@ final class DummyStatsDServer {
         return new ArrayList<String>(messagesReceived);
     }
 
-    public void close() {
+    public void freeze() {
+        freeze = true;
+    }
+
+    public void unfreeze() {
+        freeze = false;
+    }
+
+    public void close() throws IOException {
         server.close();
     }
 

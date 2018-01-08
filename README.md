@@ -57,3 +57,9 @@ public class Foo {
   }
 }
 ```
+
+Unix Domain Socket support
+---------------------------
+java.io.IOException: No such file or directory
+java.io.IOException: No buffer space available
+
