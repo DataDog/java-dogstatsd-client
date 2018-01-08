@@ -40,7 +40,7 @@ public final class NonBlockingStatsDClientPerfTest {
         for(int i = 0; i < testSize; ++i) {
             executor.submit(new Runnable() {
                 public void run() {
-                    client.count("mycount", RAND.nextInt());
+                    client.count("mycount", 1);
                 }
             });
 
@@ -49,7 +49,7 @@ public final class NonBlockingStatsDClientPerfTest {
         executor.shutdown();
         executor.awaitTermination(20, TimeUnit.SECONDS);
 
-        for(int i = 0; i < 20000 && server.messagesReceived().size() < testSize; i += 50) {
+        while(server.messagesReceived().size() < testSize) {
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ex) {}
