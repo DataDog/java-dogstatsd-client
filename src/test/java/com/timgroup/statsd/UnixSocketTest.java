@@ -105,6 +105,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         server.freeze();
         while(lastException.getMessage() == null) {
             client.gauge("mycount", 20);
+            Thread.sleep(50);
         }
         assertThat(lastException.getMessage(), containsString("No buffer space available"));
 
