@@ -22,7 +22,7 @@ final class DummyStatsDServer {
                     try {
                         final DatagramPacket packet = new DatagramPacket(new byte[1500], 1500);
                         server.receive(packet);
-                        for(String msg : new String(packet.getData(), DefaultStatsDClient.MESSAGE_CHARSET).split("\n")) {
+                        for(String msg : new String(packet.getData(), Protocol.MESSAGE_CHARSET).split("\n")) {
                             messagesReceived.add(msg.trim());
                         }
                     } catch (IOException e) {

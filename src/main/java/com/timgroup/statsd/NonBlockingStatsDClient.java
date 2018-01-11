@@ -1,14 +1,9 @@
 package com.timgroup.statsd;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 
@@ -53,7 +48,8 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * instantiation, and may throw an exception if that a connection cannot
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are consumed, guaranteeing
-     * that failures in metrics will not affect normal code execution.
+     * that failures in metrics will not affect normal code execution. <p>The client will use the
+     * UDP protcol to communicate with the StatsD instance.</p>
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -76,7 +72,8 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * instantiation, and may throw an exception if that a connection cannot
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are consumed, guaranteeing
-     * that failures in metrics will not affect normal code execution.
+     * that failures in metrics will not affect normal code execution. <p>The client will use the
+     * UDP protcol to communicate with the StatsD instance.</p>
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -101,7 +98,8 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * instantiation, and may throw an exception if that a connection cannot
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are consumed, guaranteeing
-     * that failures in metrics will not affect normal code execution.
+     * that failures in metrics will not affect normal code execution. <p>The client will use the
+     * UDP protcol to communicate with the StatsD instance.</p>
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -126,7 +124,8 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * instantiation, and may throw an exception if that a connection cannot
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are consumed, guaranteeing
-     * that failures in metrics will not affect normal code execution.
+     * that failures in metrics will not affect normal code execution. <p>The client will use the
+     * UDP protcol to communicate with the StatsD instance.</p>
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -154,7 +153,8 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are passed to the specified
      * handler and then consumed, guaranteeing that failures in metrics will
-     * not affect normal code execution.
+     * not affect normal code execution. <p>The client will use the UDP protcol to communicate
+     * with the StatsD instance.</p>
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -183,7 +183,8 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are passed to the specified
      * handler and then consumed, guaranteeing that failures in metrics will
-     * not affect normal code execution.
+     * not affect normal code execution. <p>The client will use the UDP protcol to communicate
+     * with the StatsD instance.</p>
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -214,7 +215,9 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * be established. Once a client has been instantiated in this way, all
      * exceptions thrown during subsequent usage are passed to the specified
      * handler and then consumed, guaranteeing that failures in metrics will
-     * not affect normal code execution.
+     * not affect normal code execution. <p>The client will use the UDP protcol to communicate
+     * with the StatsD instance.</p>
+     *
      *
      * @param prefix
      *     the prefix to apply to keys sent via this client
@@ -229,12 +232,42 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                                   final Callable<InetSocketAddress> addressLookup) throws StatsDClientException {
+    public NonBlockingStatsDClient(String prefix, int queueSize, String[] constantTags,
+        StatsDClientErrorHandler errorHandler, Callable<InetSocketAddress> addressLookup) throws
+        StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, createStatsDProtocol(addressLookup,
+            errorHandler
+        ));
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance using the specified protocol.
+     * All messages send via this client will have their keys prefixed with the specified string.
+     * Once a client has been instantiated in this way, all exceptions thrown during subsequent
+     * usage are passed to the specified handler and then consumed, guaranteeing that failures in
+     * metrics will not affect normal code execution. <p>Prefer using the {@link
+     * StatsDClientBuilder} over this constructor.</p>
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param protocol
+     *     the underlying protocol to use for communication.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
+        final StatsDClientErrorHandler errorHandler, Protocol protocol)
+        throws StatsDClientException {
         super(prefix, constantTags, errorHandler);
 
-        queue = new LinkedBlockingQueue<String>(queueSize);
-        executor.submit(new QueueConsumer(addressLookup));
+        queue = new LinkedBlockingQueue<>(queueSize);
+        executor.submit(new QueueConsumer(protocol));
     }
 
     @Override
@@ -243,10 +276,11 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
     }
 
     private class QueueConsumer implements Runnable {
-        private final Sender sender;
 
-        QueueConsumer(final Callable<InetSocketAddress> addressLookup) {
-            sender = new Sender(addressLookup);
+        private final Protocol protocol;
+
+        QueueConsumer(final Protocol protocol) {
+            this.protocol = protocol;
         }
 
         @Override
@@ -257,9 +291,9 @@ public final class NonBlockingStatsDClient extends BackgroundStatsDClient {
                 try {
                     final String message = queue.poll(1, TimeUnit.SECONDS);
                     if (null != message) {
-                        sender.addToBuffer(message);
+                        protocol.send(message);
                         if (null == queue.peek()) {
-                            sender.blockingSend();
+                            protocol.flush();
                         }
                     }
                 } catch (final Exception e) {

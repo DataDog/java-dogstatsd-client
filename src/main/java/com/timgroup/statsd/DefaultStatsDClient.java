@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -15,10 +12,16 @@ import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Base class for any StatsDClient. This class is responsible of formatting the different API
+ * call into a StatsD string, which is then passed to the {@link #send(String)} message for
+ * subclasses to handle the IO Operation.
+ *
+ * @author Tom Denley
+ * @author Pascal Gélinas
+ */
 public abstract class DefaultStatsDClient implements StatsDClient {
 
-    public static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
-    protected static final int PACKET_SIZE_BYTES = 1400;
     protected static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
         @Override
         public void handle(final Exception e) { /* No-op */ }
@@ -54,7 +57,6 @@ public abstract class DefaultStatsDClient implements StatsDClient {
     private final String prefix;
     private final String constantTagsRendered;
 
-    protected final DatagramChannel clientChannel;
     protected final StatsDClientErrorHandler handler;
 
     public DefaultStatsDClient(
@@ -83,16 +85,26 @@ public abstract class DefaultStatsDClient implements StatsDClient {
         } else {
             constantTagsRendered = null;
         }
-
-        try {
-            clientChannel = DatagramChannel.open();
-        } catch (final Exception e) {
-            throw new StatsDClientException("Failed to start StatsD client", e);
-        }
     }
 
     /**
-     * Send the formatted StatD metric string on the {@link #clientChannel}. This can be done in a
+     * Helper method for default UDP protocol and backward-compatibility.
+     */
+    protected static UdpProtocol createStatsDProtocol(Callable<InetSocketAddress> addressLookup,
+        StatsDClientErrorHandler errorHandler) throws StatsDClientException {
+        try {
+            return new UdpProtocol(addressLookup, errorHandler);
+        } catch (IOException e) {
+            throw new StatsDClientException("Unable to create Udp Protocol", e);
+        }
+    }
+
+    protected static UdpProtocol createStatsDProtocol(String hostname, int port) {
+        return createStatsDProtocol(staticStatsDAddressResolution(hostname, port), null);
+    }
+
+    /**
+     * Send the formatted StatsD metric string to the server. This can be done in a
      * background thread, the caller thread or any other threading model the implementation
      * chooses.
      *
@@ -135,7 +147,7 @@ public abstract class DefaultStatsDClient implements StatsDClient {
     private void appendSampleRate(double sampleRate, StringBuilder sb) {
         sb.append("|@");
         // Use of a formatter here so that the sample rate stays the same as when using String
-      // .format
+        // .format
         // FIXME couldn't the NUMBER_FORMATTERS be used instead?
         new Formatter(sb).format("%f", sampleRate);
     }
@@ -732,77 +744,6 @@ public abstract class DefaultStatsDClient implements StatsDClient {
 
     private boolean isInvalidSample(double sampleRate) {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
-    }
-
-    @Override
-    public void stop() {
-        if (clientChannel != null) {
-            try {
-                clientChannel.close();
-            } catch (final IOException e) {
-                handler.handle(e);
-            }
-        }
-    }
-
-    /**
-     * Helper class that is responsible for the IO Operation on the {@link #clientChannel}.
-     */
-    protected class Sender {
-
-        private final ByteBuffer sendBuffer = ByteBuffer.allocate(PACKET_SIZE_BYTES);
-        private final Callable<InetSocketAddress> addressLookup;
-
-        protected Sender(Callable<InetSocketAddress> addressLookup) {
-            this.addressLookup = addressLookup;
-        }
-
-        /**
-         * Add the specified StatsD-formatted String to the IO Buffer, if there are still available
-         * space. If the message cannot fit in the buffer, the buffer is sent to the server via
-         * {@link #blockingSend()} and then the message gets added to the buffer.
-         *
-         * @param message The StatsD-formatted String.
-         * @throws Exception if the addressLookup fails during the send.
-         */
-        protected void addToBuffer(String message) throws Exception {
-            final byte[] data = message.getBytes(MESSAGE_CHARSET);
-            if (sendBuffer.remaining() < (data.length + 1)) {
-                blockingSend();
-            }
-            if (sendBuffer.position() > 0) {
-                sendBuffer.put((byte) '\n');
-            }
-            sendBuffer.put(data);
-        }
-
-        /**
-         * Send the IO Buffer to the server and ready the buffer to receive more data.
-         *
-         * @throws Exception if the addressLookup fails.
-         */
-        protected void blockingSend() throws Exception {
-            final InetSocketAddress address = addressLookup.call();
-            final int sizeOfBuffer = sendBuffer.position();
-            sendBuffer.flip();
-
-            final int sentBytes = clientChannel.send(sendBuffer, address);
-            sendBuffer.limit(sendBuffer.capacity());
-            sendBuffer.rewind();
-
-            if (sizeOfBuffer != sentBytes) {
-                handler.handle(
-                    new IOException(
-                        String.format(
-                            "Could not send entirely stat %s to host %s:%d. Only sent %d bytes "
-                                + "out of %d bytes",
-                            sendBuffer.toString(),
-                            address.getHostName(),
-                            address.getPort(),
-                            sentBytes,
-                            sizeOfBuffer)));
-            }
-        }
     }
 
     /**

@@ -7,6 +7,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * An abstract class for implementation of StatsDClient which use a background IO Thread.
+ *
+ * @author Pascal Gélinas
  */
 public abstract class BackgroundStatsDClient extends DefaultStatsDClient {
 
@@ -41,8 +43,6 @@ public abstract class BackgroundStatsDClient extends DefaultStatsDClient {
             executor.awaitTermination(30, TimeUnit.SECONDS);
         } catch (final Exception e) {
             handler.handle(e);
-        } finally {
-            super.stop();
         }
     }
 }
