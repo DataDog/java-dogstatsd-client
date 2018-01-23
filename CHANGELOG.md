@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.5 (In progress)
+
+* Added support for new beta feature, global distributions
+
 ## 2.4 / 2017.12.12
 
 Note: Starting from this version the client requires Java7+
