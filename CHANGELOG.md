@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 2.5 (In progress)
+## 2.5 / 2018.01.23 
 
 * Added support for new beta feature, global distributions
 
