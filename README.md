@@ -1,5 +1,6 @@
-java-dogstatsd-client
-==================
+# Java DogStatsD Client
+
+[![Build Status](https://travis-ci.org/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.org/DataDog/java-dogstatsd-client)
 
 A statsd client library implemented in Java.  Allows for Java applications to easily communicate with statsd.
 
@@ -7,8 +8,8 @@ This version was originally forked from [java-dogstatsd-client](https://github.c
 
 See [CHANGELOG.md](CHANGELOG.md) for changes.
 
-Downloads
----------
+## Downloads
+
 The client jar is distributed via maven central, and can be downloaded [here](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.datadoghq%20a%3Ajava-dogstatsd-client).
 
 ```xml
@@ -19,8 +20,8 @@ The client jar is distributed via maven central, and can be downloaded [here](ht
 </dependency>
 ```
 
-Usage
------
+## Usage
+
 ```java
 import com.timgroup.statsd.ServiceCheck;
 import com.timgroup.statsd.StatsDClient;
