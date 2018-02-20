@@ -1,22 +1,60 @@
 package com.timgroup.statsd;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.After;
-import org.junit.Test;
-
-import java.net.SocketException;
-import java.util.Locale;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 
+import java.net.SocketException;
+import java.util.Arrays;
+import java.util.Locale;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
+
+@RunWith(Parameterized.class)
 public class NonBlockingStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
-    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
+
     private static DummyStatsDServer server;
+    public static final String LOCALHOST = "localhost";
+    public static final String PREFIX = "my.prefix";
+
+    private final static StatsDClientBuilder builder;
+    private final static StatsDClient nonBlockingClient;
+    private final static StatsDClient blockingClient;
+    private final static StatsDClient concurrentClient;
+
+    static {
+        builder = new StatsDClientBuilder().prefix(PREFIX)
+            .hostname(LOCALHOST)
+            .port(STATSD_SERVER_PORT)
+            .udpProtocol();
+        blockingClient = builder.buildBlocking();
+        nonBlockingClient = builder.buildNonBlocking();
+        concurrentClient = builder.buildConcurrent(10);
+        empty_prefix_client = builder.prefix("").buildBlocking();
+        null_prefix_client = builder.prefix(null).buildBlocking();
+        constant_tags_client = builder.prefix(PREFIX).constantTags("instance:foo", "app:bar")
+            .buildBlocking();
+    }
+
+    private static StatsDClient empty_prefix_client;
+    private static StatsDClient null_prefix_client;
+    private static StatsDClient constant_tags_client;
+
+    @Parameters(name="{0}")
+    public static Iterable<? extends StatsDClient> createClient() {
+        return Arrays.asList(nonBlockingClient, blockingClient, concurrentClient);
+    }
+
+    @Parameter
+    public StatsDClient client;
 
     @BeforeClass
     public static void start() throws SocketException {
@@ -25,7 +63,9 @@ public class NonBlockingStatsDClientTest {
 
     @AfterClass
     public static void stop() throws Exception {
-        client.stop();
+        nonBlockingClient.stop();
+        blockingClient.stop();
+        concurrentClient.stop();
         server.close();
     }
 
@@ -408,57 +448,6 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mytime:123|ms|@1.000000|#baz,foo:bar"));
     }
 
-
-    @Test(timeout=5000L) public void
-    sends_gauge_mixed_tags() throws Exception {
-
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        empty_prefix_client.gauge("value", 423, "baz");
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#app:bar,instance:foo,baz"));
-    }
-
-    @Test(timeout=5000L) public void
-    sends_gauge_mixed_tags_with_sample_rate() throws Exception {
-
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        empty_prefix_client.gauge("value", 423,1, "baz");
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz"));
-    }
-
-    @Test(timeout=5000L) public void
-    sends_gauge_constant_tags_only() throws Exception {
-
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        empty_prefix_client.gauge("value", 423);
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#app:bar,instance:foo"));
-    }
-
-    @Test(timeout=5000L) public void
-    sends_gauge_empty_prefix() throws Exception {
-
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
-        empty_prefix_client.gauge("top.level.value", 423);
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
-    }
-
-    @Test(timeout=5000L) public void
-    sends_gauge_null_prefix() throws Exception {
-
-        final NonBlockingStatsDClient null_prefix_client = new NonBlockingStatsDClient(null, "localhost", STATSD_SERVER_PORT);
-        null_prefix_client.gauge("top.level.value", 423);
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
-    }
-
     @Test(timeout=5000L) public void
     sends_event() throws Exception {
 
@@ -524,25 +513,6 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout=5000L) public void
-    sends_event_empty_prefix() throws Exception {
-
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
-        final Event event = Event.builder()
-                .withTitle("title1")
-                .withText("text1")
-                .withDate(1234567000)
-                .withHostname("host1")
-                .withPriority(Event.Priority.LOW)
-                .withAggregationKey("key1")
-                .withAlertType(Event.AlertType.ERROR)
-                .build();
-        empty_prefix_client.recordEvent(event, "foo:bar", "baz");
-        server.waitForMessage();
-
-        assertThat(server.messagesReceived(), contains("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
-    }
-
-    @Test(timeout=5000L) public void
     sends_service_check() throws Exception {
         final String inputMessage = "\u266c \u2020\u00f8U \n\u2020\u00f8U \u00a5\u00bau|m: T0\u00b5 \u266a"; // "♬ †øU \n†øU ¥ºu|m: T0µ ♪"
         final String outputMessage = "\u266c \u2020\u00f8U \\n\u2020\u00f8U \u00a5\u00bau|m\\: T0\u00b5 \u266a"; // note the escaped colon
@@ -592,5 +562,74 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myset:myuserid|s|#baz,foo:bar"));
 
+    }
+
+    // Non-parameterized test to check specific features of DefaultStatsDClient.
+    @Test(timeout = 5000L)
+    public void
+    sends_gauge_mixed_tags() throws Exception {
+        constant_tags_client.gauge("value", 423, "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(),
+            contains("my.prefix.value:423|g|#app:bar,instance:foo,baz"));
+    }
+
+    @Test(timeout = 5000L)
+    public void
+    sends_gauge_mixed_tags_with_sample_rate() throws Exception {
+        constant_tags_client.gauge("value", 423, 1, "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(),
+            contains("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz"));
+    }
+
+    @Test(timeout = 5000L)
+    public void
+    sends_gauge_constant_tags_only() throws Exception {
+        constant_tags_client.gauge("value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(),
+            contains("my.prefix.value:423|g|#app:bar,instance:foo"));
+    }
+
+    @Test(timeout = 5000L)
+    public void
+    sends_gauge_empty_prefix() throws Exception {
+        empty_prefix_client.gauge("top.level.value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
+    }
+
+    @Test(timeout = 5000L)
+    public void
+    sends_gauge_null_prefix() throws Exception {
+        null_prefix_client.gauge("top.level.value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
+    }
+
+    @Test(timeout = 5000L)
+    public void
+    sends_event_empty_prefix() throws Exception {
+
+        final Event event = Event.builder()
+            .withTitle("title1")
+            .withText("text1")
+            .withDate(1234567000)
+            .withHostname("host1")
+            .withPriority(Event.Priority.LOW)
+            .withAggregationKey("key1")
+            .withAlertType(Event.AlertType.ERROR)
+            .build();
+        empty_prefix_client.recordEvent(event, "foo:bar", "baz");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(),
+            contains("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
     }
 }
