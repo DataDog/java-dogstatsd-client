@@ -19,7 +19,7 @@ public final class NonBlockingStatsDClientPerfTest {
     private static final int STATSD_SERVER_PORT = 17255;
     private static final Random RAND = new Random();
     private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
-    private final ExecutorService executor = Executors.newFixedThreadPool(20);
+    private final ExecutorService executor = Executors.newFixedThreadPool(10);
     private static DummyStatsDServer server;
 
     @BeforeClass
