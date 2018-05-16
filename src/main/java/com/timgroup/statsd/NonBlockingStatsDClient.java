@@ -22,6 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixDatagramChannel;
+import jnr.unixsocket.UnixSocketOptions;
 
 
 /**
@@ -318,6 +319,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
             final SocketAddress address = addressLookup.call();
             if (address instanceof UnixSocketAddress) {
                 clientChannel = UnixDatagramChannel.open();
+                clientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, Integer.valueOf(100));
             } else{
                 clientChannel = DatagramChannel.open();
             }

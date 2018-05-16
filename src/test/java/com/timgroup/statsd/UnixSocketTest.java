@@ -32,7 +32,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         socketFile.deleteOnExit();
 
         server = new DummyStatsDServer(socketFile.toString());
-        client = new NonBlockingStatsDClient("my.prefix", socketFile.toString(), 0, null, this);
+        client = new NonBlockingStatsDClient("my.prefix", socketFile.toString(), 0, 1, null, this);
     }
 
     @After
@@ -103,9 +103,9 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         server.freeze();
         while(lastException.getMessage() == null) {
             client.gauge("mycount", 20);
-            Thread.sleep(1);  // We need to fill the buffer, setting a shorter sleep
+            Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
         }
-        assertThat(lastException.getMessage(), containsString("No buffer space available"));
+        assertThat(lastException.getMessage(), containsString("Resource temporarily unavailable"));
 
         // Make sure we recover after we resume listening
         server.clear();
