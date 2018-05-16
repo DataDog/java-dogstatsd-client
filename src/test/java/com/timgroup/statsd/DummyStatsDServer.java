@@ -40,7 +40,7 @@ final class DummyStatsDServer {
                             Thread.sleep(10);
                         } catch (InterruptedException e) {
                         }
-                    } else{
+                    } else {
                         try {
                             packet.clear();
                             server.receive(packet);

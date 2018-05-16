@@ -17,8 +17,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
     private static File tmpFolder;
     private static NonBlockingStatsDClient client;
     private static DummyStatsDServer server;
-    private Exception lastException = new Exception();
     private static File socketFile;
+    private volatile Exception lastException = new Exception();
 
     public void handle(Exception exception) {
         lastException = exception;
@@ -63,9 +63,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
         // Close the server, client should throw an IOException
         server.close();
-        client.gauge("mycount", 20);
         while(lastException.getMessage() == null) {
-            // Wait until we flush and get the exception
+            client.gauge("mycount", 20);
             Thread.sleep(10);
         }
         assertThat(lastException.getMessage(), containsString("Connection refused"));
@@ -73,9 +72,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         // Delete the socket file, client should throw an IOException
         lastException = new Exception();
         socketFile.delete();
-        client.gauge("mycount", 20);
         while(lastException.getMessage() == null) {
-            // Wait until we flush and get the exception
+            client.gauge("mycount", 20);
             Thread.sleep(10);
         }
         assertThat(lastException.getMessage(), containsString("No such file or directory"));
@@ -105,11 +103,12 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         server.freeze();
         while(lastException.getMessage() == null) {
             client.gauge("mycount", 20);
-            Thread.sleep(50);
+            Thread.sleep(1);  // We need to fill the buffer, setting a shorter sleep
         }
         assertThat(lastException.getMessage(), containsString("No buffer space available"));
 
         // Make sure we recover after we resume listening
+        server.clear();
         server.unfreeze();
         while (!server.messagesReceived().contains("my.prefix.mycount:30|g")) {
             server.clear();
