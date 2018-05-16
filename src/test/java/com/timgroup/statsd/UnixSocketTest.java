@@ -1,7 +1,9 @@
 package com.timgroup.statsd;
 
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import java.io.IOException;
 import java.io.File;
@@ -22,6 +24,11 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
     public void handle(Exception exception) {
         lastException = exception;
+    }
+
+    @BeforeClass
+    public static void linuxOnly() throws IOException {
+        Assume.assumeThat(System.getProperty("os.name"), containsString("Linux"));
     }
 
     @Before
