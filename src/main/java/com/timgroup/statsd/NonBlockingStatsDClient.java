@@ -319,6 +319,8 @@ public final class NonBlockingStatsDClient implements StatsDClient {
             final SocketAddress address = addressLookup.call();
             if (address instanceof UnixSocketAddress) {
                 clientChannel = UnixDatagramChannel.open();
+                // Set send timeout to 100ms, to handle the case where the transmission buffer is full
+                // If no timeout is set, the send becomes blocking
                 clientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, Integer.valueOf(100));
             } else{
                 clientChannel = DatagramChannel.open();
