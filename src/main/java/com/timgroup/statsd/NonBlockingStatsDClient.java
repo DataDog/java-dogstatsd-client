@@ -86,6 +86,23 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         }
     };
 
+    private static final ThreadLocal<NumberFormat> SAMPLE_RATE_FORMATTERS = new ThreadLocal<NumberFormat>() {
+        @Override
+        protected NumberFormat initialValue() {
+            final NumberFormat numberFormatter = NumberFormat.getInstance(Locale.US);
+            numberFormatter.setGroupingUsed(false);
+            numberFormatter.setMinimumFractionDigits(6);
+
+            if (numberFormatter instanceof DecimalFormat) {
+                final DecimalFormat decimalFormat = (DecimalFormat) numberFormatter;
+                final DecimalFormatSymbols symbols = decimalFormat.getDecimalFormatSymbols();
+                symbols.setNaN("NaN");
+                decimalFormat.setDecimalFormatSymbols(symbols);
+            }
+            return numberFormatter;
+        }
+    };
+
     private final String prefix;
     private final DatagramChannel clientChannel;
     private final StatsDClientErrorHandler handler;
@@ -290,7 +307,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    final Callable<InetSocketAddress> addressLookup) throws StatsDClientException {
         if((prefix != null) && (!prefix.isEmpty())) {
-            this.prefix = String.format("%s.", prefix);
+            this.prefix = new StringBuilder(prefix).append(".").toString();
         } else {
             this.prefix = "";
         }
@@ -399,7 +416,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final long delta, final String... tags) {
-        send(String.format("%s%s:%d|c%s", prefix, aspect, delta, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(delta).append("|c").append(tagString(tags)).toString());
     }
     
     /**
@@ -410,7 +427,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-    	send(String.format("%s%s:%d|c|@%f%s", prefix, aspect, delta, sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(delta).append("|c|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -427,7 +444,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final double delta, final String... tags) {
-        send(String.format("%s%s:%s|c%s", prefix, aspect, NUMBER_FORMATTERS.get().format(delta), tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(delta)).append("|c").append(tagString(tags)).toString());
     }
 
     /**
@@ -438,7 +455,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         if(isInvalidSample(sampleRate)) {
             return;
         }
-        send(String.format("%s%s:%s|c|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(delta), sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(delta)).append("|c|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -535,7 +552,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordGaugeValue(final String aspect, final double value, final String... tags) {
         /* Intentionally using %s rather than %f here to avoid
          * padding with extra 0s to represent precision */
-        send(String.format("%s%s:%s|g%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|g").append(tagString(tags)).toString());
     }
     
     /**
@@ -546,7 +563,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%s|g|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|g|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -580,7 +597,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordGaugeValue(final String aspect, final long value, final String... tags) {
-        send(String.format("%s%s:%d|g%s", prefix, aspect, value, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|g").append(tagString(tags)).toString());
     }
     
     /**
@@ -591,7 +608,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|g|@%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|g|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -624,7 +641,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordExecutionTime(final String aspect, final long timeInMs, final String... tags) {
-        send(String.format("%s%s:%d|ms%s", prefix, aspect, timeInMs, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(timeInMs).append("|ms").append(tagString(tags)).toString());
     }
     
     /**
@@ -635,7 +652,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|ms|@%f%s", prefix, aspect, timeInMs, sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(timeInMs).append("|ms|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -670,7 +687,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordHistogramValue(final String aspect, final double value, final String... tags) {
         /* Intentionally using %s rather than %f here to avoid
          * padding with extra 0s to represent precision */
-        send(String.format("%s%s:%s|h%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|h").append(tagString(tags)).toString());
     }
     
     /**
@@ -683,7 +700,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	}
     	  /* Intentionally using %s rather than %f here to avoid
     	   * padding with extra 0s to represent precision */
-    	send(String.format("%s%s:%s|h|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|h|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -716,7 +733,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordHistogramValue(final String aspect, final long value, final String... tags) {
-        send(String.format("%s%s:%d|h%s", prefix, aspect, value, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|h").append(tagString(tags)).toString());
     }
     
     /**
@@ -727,7 +744,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|h|@%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|h|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -764,7 +781,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordDistributionValue(final String aspect, final double value, final String... tags) {
         /* Intentionally using %s rather than %f here to avoid
          * padding with extra 0s to represent precision */
-        send(String.format("%s%s:%s|d%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|d").append(tagString(tags)).toString());
     }
     
     /**
@@ -777,7 +794,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	}
     	  /* Intentionally using %s rather than %f here to avoid
     	   * padding with extra 0s to represent precision */
-    	send(String.format("%s%s:%s|d|@%f%s", prefix, aspect, NUMBER_FORMATTERS.get().format(value), sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|d|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -811,7 +828,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordDistributionValue(final String aspect, final long value, final String... tags) {
-        send(String.format("%s%s:%d|d%s", prefix, aspect, value, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|d").append(tagString(tags)).toString());
     }
     
     /**
@@ -822,7 +839,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     	if(isInvalidSample(sampleRate)) {
     		return;
     	}
-        send(String.format("%s%s:%d|d|@%f%s", prefix, aspect, value, sampleRate, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|d|@").append(SAMPLE_RATE_FORMATTERS.get().format(sampleRate)).append(tagString(tags)).toString());
     }
 
     /**
@@ -890,8 +907,8 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordEvent(final Event event, final String... tags) {
         final String title = escapeEventString(prefix + event.getTitle());
         final String text = escapeEventString(event.getText());
-        send(String.format("_e{%d,%d}:%s|%s%s%s",
-                title.length(), text.length(), title, text, eventMap(event), tagString(tags)));
+        send(new StringBuilder("_e{").append(title.length()).append(",").append(text.length()).append("}:").append(title)
+                .append("|").append(text).append(eventMap(event)).append(tagString(tags)).toString());
     }
 
     private String escapeEventString(final String title) {
@@ -916,16 +933,16 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     private String toStatsDString(final ServiceCheck sc) {
         // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
         final StringBuilder sb = new StringBuilder();
-        sb.append(String.format("_sc|%s|%d", sc.getName(), sc.getStatus()));
+        sb.append("_sc|").append(sc.getName()).append("|").append(sc.getStatus());
         if (sc.getTimestamp() > 0) {
-            sb.append(String.format("|d:%d", sc.getTimestamp()));
+            sb.append("|d:").append(sc.getTimestamp());
         }
         if (sc.getHostname() != null) {
-            sb.append(String.format("|h:%s", sc.getHostname()));
+            sb.append("|h:").append(sc.getHostname());
         }
         sb.append(tagString(sc.getTags()));
         if (sc.getMessage() != null) {
-            sb.append(String.format("|m:%s", sc.getEscapedMessage()));
+            sb.append("|m:").append(sc.getEscapedMessage());
         }
         return sb.toString();
     }
@@ -962,7 +979,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     public void recordSetValue(final String aspect, final String value, final String... tags) {
         // documentation is light, but looking at dogstatsd source, we can send string values
         // here instead of numbers
-        send(String.format("%s%s:%s|s%s", prefix, aspect, value, tagString(tags)));
+        send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|s").append(tagString(tags)).toString());
     }
 
     private void send(final String message) {
