@@ -60,3 +60,17 @@ public class Foo {
   }
 }
 ```
+
+Unix Domain Socket support
+---------------------------
+
+As an alternative to UDP, Agent6 can receive metrics via a UNIX Socket (on Linux only). This library supports
+transmission via this protocol. To use it, simply pass the socket path as a hostname, and 0 as port.
+
+By default, all exceptions are ignored, mimicking UDP behaviour. When using Unix Sockets, transmission errors will
+trigger exceptions you can choose to handle by passing a `StatsDClientErrorHandler`:
+
+- Connection error because of an invalid/missing socket will trigger a `java.io.IOException: No such file or directory`
+- If dogstatsd's reception buffer were to fill up, the send will timeout after 100ms and throw either a
+`java.io.IOException: No buffer space available` or a `java.io.IOException: Resource temporarily unavailable`
+

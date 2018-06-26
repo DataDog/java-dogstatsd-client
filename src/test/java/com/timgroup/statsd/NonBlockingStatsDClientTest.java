@@ -5,6 +5,7 @@ import org.junit.BeforeClass;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.SocketException;
 import java.util.Locale;
 
@@ -19,7 +20,7 @@ public class NonBlockingStatsDClientTest {
     private static DummyStatsDServer server;
 
     @BeforeClass
-    public static void start() throws SocketException {
+    public static void start() throws IOException {
         server = new DummyStatsDServer(STATSD_SERVER_PORT);
     }
 

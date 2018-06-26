@@ -1,6 +1,7 @@
 package com.timgroup.statsd;
 
 
+import java.io.IOException;
 import java.net.SocketException;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -18,11 +19,11 @@ public final class NonBlockingStatsDClientPerfTest {
     private static final int STATSD_SERVER_PORT = 17255;
     private static final Random RAND = new Random();
     private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
-    private final ExecutorService executor = Executors.newFixedThreadPool(20);
+    private final ExecutorService executor = Executors.newFixedThreadPool(10);
     private static DummyStatsDServer server;
 
     @BeforeClass
-    public static void start() throws SocketException {
+    public static void start() throws IOException {
         server = new DummyStatsDServer(STATSD_SERVER_PORT);
     }
 
@@ -39,7 +40,7 @@ public final class NonBlockingStatsDClientPerfTest {
         for(int i = 0; i < testSize; ++i) {
             executor.submit(new Runnable() {
                 public void run() {
-                    client.count("mycount", RAND.nextInt());
+                    client.count("mycount", 1);
                 }
             });
 
@@ -48,7 +49,7 @@ public final class NonBlockingStatsDClientPerfTest {
         executor.shutdown();
         executor.awaitTermination(20, TimeUnit.SECONDS);
 
-        for(int i = 0; i < 20000 && server.messagesReceived().size() < testSize; i += 50) {
+        while(server.messagesReceived().size() < testSize) {
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ex) {}

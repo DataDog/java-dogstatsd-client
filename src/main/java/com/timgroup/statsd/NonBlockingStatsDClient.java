@@ -2,6 +2,7 @@ package com.timgroup.statsd;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.SocketAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -19,7 +20,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
+import jnr.unixsocket.UnixSocketAddress;
+import jnr.unixsocket.UnixDatagramChannel;
+import jnr.unixsocket.UnixSocketOptions;
 
 
 /**
@@ -305,7 +308,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                                   final Callable<InetSocketAddress> addressLookup) throws StatsDClientException {
+                                   final Callable<SocketAddress> addressLookup) throws StatsDClientException {
         if((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = new StringBuilder(prefix).append(".").toString();
         } else {
@@ -330,7 +333,15 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         }
 
         try {
-            clientChannel = DatagramChannel.open();
+            final SocketAddress address = addressLookup.call();
+            if (address instanceof UnixSocketAddress) {
+                clientChannel = UnixDatagramChannel.open();
+                // Set send timeout to 100ms, to handle the case where the transmission buffer is full
+                // If no timeout is set, the send becomes blocking
+                clientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, Integer.valueOf(100));
+            } else{
+                clientChannel = DatagramChannel.open();
+            }
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
@@ -995,10 +1006,11 @@ public final class NonBlockingStatsDClient implements StatsDClient {
 
     private class QueueConsumer implements Runnable {
         private final ByteBuffer sendBuffer = ByteBuffer.allocate(PACKET_SIZE_BYTES);
+        private final Callable<SocketAddress> addressLookup;
 
-        private final Callable<InetSocketAddress> addressLookup;
 
-        QueueConsumer(final Callable<InetSocketAddress> addressLookup) {
+
+        QueueConsumer(final Callable<SocketAddress> addressLookup) {
             this.addressLookup = addressLookup;
         }
 
@@ -1007,7 +1019,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
                 try {
                     final String message = queue.poll(1, TimeUnit.SECONDS);
                     if(null != message) {
-                        final InetSocketAddress address = addressLookup.call();
+                        final SocketAddress address = addressLookup.call();
                         final byte[] data = message.getBytes(MESSAGE_CHARSET);
                         if(sendBuffer.remaining() < (data.length + 1)) {
                             blockingSend(address);
@@ -1026,7 +1038,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
             }
         }
 
-        private void blockingSend(final InetSocketAddress address) throws IOException {
+        private void blockingSend(final SocketAddress address) throws IOException {
             final int sizeOfBuffer = sendBuffer.position();
             sendBuffer.flip();
 
@@ -1038,10 +1050,9 @@ public final class NonBlockingStatsDClient implements StatsDClient {
                 handler.handle(
                         new IOException(
                             String.format(
-                                "Could not send entirely stat %s to host %s:%d. Only sent %d bytes out of %d bytes",
+                                "Could not send entirely stat %s to %s. Only sent %d bytes out of %d bytes",
                                 sendBuffer.toString(),
-                                address.getHostName(),
-                                address.getPort(),
+                                address.toString(),
                                 sentBytes,
                                 sizeOfBuffer)));
             }
@@ -1055,10 +1066,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
      * @param port     the port of the targeted StatsD server
      * @return a function to perform the lookup
      */
-    public static Callable<InetSocketAddress> volatileAddressResolution(final String hostname, final int port) {
-        return new Callable<InetSocketAddress>() {
-            @Override public InetSocketAddress call() throws UnknownHostException {
-                return new InetSocketAddress(InetAddress.getByName(hostname), port);
+    public static Callable<SocketAddress> volatileAddressResolution(final String hostname, final int port) {
+        return new Callable<SocketAddress>() {
+            @Override public SocketAddress call() throws UnknownHostException {
+                if (port == 0) { // Hostname is a file path to the socket
+                    return new UnixSocketAddress(hostname);
+                } else {
+                    return new InetSocketAddress(InetAddress.getByName(hostname), port);
+                }
             }
         };
     }
@@ -1071,16 +1086,16 @@ public final class NonBlockingStatsDClient implements StatsDClient {
    * @return a function that cached the result of the lookup
    * @throws Exception if the lookup fails, i.e. {@link UnknownHostException}
    */
-    public static Callable<InetSocketAddress> staticAddressResolution(final String hostname, final int port) throws Exception {
-        final InetSocketAddress address = volatileAddressResolution(hostname, port).call();
-        return new Callable<InetSocketAddress>() {
-            @Override public InetSocketAddress call() {
+    public static Callable<SocketAddress> staticAddressResolution(final String hostname, final int port) throws Exception {
+        final SocketAddress address = volatileAddressResolution(hostname, port).call();
+        return new Callable<SocketAddress>() {
+            @Override public SocketAddress call() {
                 return address;
             }
         };
     }
 
-    private static Callable<InetSocketAddress> staticStatsDAddressResolution(final String hostname, final int port) throws StatsDClientException {
+    private static Callable<SocketAddress> staticStatsDAddressResolution(final String hostname, final int port) throws StatsDClientException {
         try {
             return staticAddressResolution(hostname, port);
         } catch (final Exception e) {
