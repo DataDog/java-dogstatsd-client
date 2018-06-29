@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.6 / 2018.06.29
+
+* [FEATURE] Add support for submitting data through Unix Domain Sockets. See [#42][]. 
+* [IMPROVEMENT] Replace string `format` with `StringBuilder`for performance gains. Thanks [@cithal][] See [#49][].
+
 ## 2.5 / 2018.01.23 
 
 * Added support for new beta feature, global distributions
@@ -43,4 +48,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#33]: https://github.com/DataDog/java-dogstatsd-client/issues/33
 [#34]: https://github.com/DataDog/java-dogstatsd-client/issues/34
 [#37]: https://github.com/DataDog/java-dogstatsd-client/issues/37
+[#42]: https://github.com/DataDog/java-dogstatsd-client/issues/42
+[#49]: https://github.com/DataDog/java-dogstatsd-client/issues/49
+[@cithal]: https://github.com/cithal
 [@PatrickAuld]: https://github.com/PatrickAuld
