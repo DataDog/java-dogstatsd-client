@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.6.1 / 2018.07.06
+
+* [BUGFIX] Fix older Java compatability issues due to building with newer versions of Java.
+* [DEV] Enforce Java 7/8 when testing/building. See [#53][].
+
 ## 2.6 / 2018.06.29
 
 * [FEATURE] Add support for submitting data through Unix Domain Sockets. See [#42][]. 
@@ -50,5 +55,6 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#37]: https://github.com/DataDog/java-dogstatsd-client/issues/37
 [#42]: https://github.com/DataDog/java-dogstatsd-client/issues/42
 [#49]: https://github.com/DataDog/java-dogstatsd-client/issues/49
+[#53]: https://github.com/DataDog/java-dogstatsd-client/issues/53
 [@cithal]: https://github.com/cithal
 [@PatrickAuld]: https://github.com/PatrickAuld
