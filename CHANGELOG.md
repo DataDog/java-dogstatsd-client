@@ -2,7 +2,7 @@
 
 ## 2.6.1 / 2018.07.06
 
-* [BUGFIX] Fix older Java compatability issues due to building with newer versions of Java.
+* [BUGFIX] Fix older Java compatability issues due to building with newer versions of Java that affected v2.6 of this library.
 * [DEV] Enforce Java 7/8 when testing/building. See [#53][].
 
 ## 2.6 / 2018.06.29
