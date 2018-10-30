@@ -6,8 +6,11 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.SocketException;
+import java.net.SocketAddress;
+import java.nio.channels.DatagramChannel;
 import java.util.Locale;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -593,5 +596,61 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myset:myuserid|s|#baz,foo:bar"));
 
+    }
+
+    @Test(timeout = 5000L) public void
+    shutdown_test() throws Exception {
+        final int port = 17256;
+        final DummyStatsDServer server = new DummyStatsDServer(port);
+        final AtomicBoolean slow = new AtomicBoolean(true);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
+            @Override
+            protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
+                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel) {
+                return new SlowStatsDSender(addressLookup, new SlowBlockingQueue(slow), handler, clientChannel, slow);
+            }
+        };
+        try {
+            for (int i = 0; i < 1000; i++) {
+                client.count("mycounter", 5);
+            }
+            client.stop();
+            assertEquals(1000, server.messagesReceived().size());
+        } finally {
+            client.stop();
+            server.close();
+        }
+    }
+
+
+    private static class SlowStatsDSender extends StatsDSender {
+        private final AtomicBoolean slow;
+
+        SlowStatsDSender(Callable<SocketAddress> addressLookup, BlockingQueue queue, StatsDClientErrorHandler handler, DatagramChannel clientChannel, AtomicBoolean slow) {
+            super(addressLookup, queue, handler, clientChannel);
+            this.slow = slow;
+        }
+
+        @Override
+        void shutdown() {
+            super.shutdown();
+            slow.set(false);
+        }
+    }
+
+    private static class SlowBlockingQueue extends LinkedBlockingQueue<String> {
+        private final AtomicBoolean slow;
+
+        private SlowBlockingQueue(AtomicBoolean slow) {
+            this.slow = slow;
+        }
+
+        @Override
+        public String poll(long timeout, TimeUnit unit) throws InterruptedException {
+            if (slow.get()) {
+                Thread.sleep(300);
+            }
+            return super.poll(timeout, unit);
+        }
     }
 }
