@@ -52,10 +52,6 @@ public class Foo {
           .build();
     statsd.serviceCheck(sc); /* Datadog extension: send service check status */
 
-    /* Compatibility note: Unlike upstream statsd, DataDog expects execution times to be a
-     * floating-point value in seconds, not a millisecond value. This library
-     * does the conversion from ms to fractional seconds.
-     */
     statsd.recordExecutionTime("bag", 25, "cluster:foo"); /* DataDog extension: cluster tag */
   }
 }
