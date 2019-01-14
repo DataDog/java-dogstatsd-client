@@ -1019,8 +1019,14 @@ public final class NonBlockingStatsDClient implements StatsDClient {
                 try {
                     final String message = queue.poll(1, TimeUnit.SECONDS);
                     if(null != message) {
-                        final SocketAddress address = addressLookup.call();
                         final byte[] data = message.getBytes(MESSAGE_CHARSET);
+
+                        if (sendBuffer.capacity() < data.length) {
+                            throw new UnsendableMessageException(message);
+                        }
+
+                        final SocketAddress address = addressLookup.call();
+
                         if(sendBuffer.remaining() < (data.length + 1)) {
                             blockingSend(address);
                         }

@@ -6,12 +6,13 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.SocketException;
+import java.util.List;
 import java.util.Locale;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class NonBlockingStatsDClientTest {
 
@@ -593,5 +594,39 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myset:myuserid|s|#baz,foo:bar"));
 
+    }
+
+    @Test(timeout=5000L) public void
+    sends_too_large_message() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+
+        try (final NonBlockingStatsDClient testClient = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT,  null, errorHandler)) {
+
+            final byte[] messageBytes = new byte[1600];
+            final ServiceCheck tooLongServiceCheck = ServiceCheck.builder()
+                    .withName("toolong")
+                    .withMessage(new String(messageBytes))
+                    .withStatus(ServiceCheck.Status.OK)
+                    .build();
+            testClient.serviceCheck(tooLongServiceCheck);
+
+            final ServiceCheck withinLimitServiceCheck = ServiceCheck.builder()
+                    .withName("fine")
+                    .withStatus(ServiceCheck.Status.OK)
+                    .build();
+            testClient.serviceCheck(withinLimitServiceCheck);
+
+            server.waitForMessage();
+
+            final List<Exception> exceptions = errorHandler.getExceptions();
+            assertEquals(1, exceptions.size());
+            final Exception exception = exceptions.get(0);
+            assertEquals(UnsendableMessageException.class, exception.getClass());
+            assertTrue(((UnsendableMessageException)exception).getUnsendableMessage().startsWith("_sc|toolong|"));
+
+            final List<String> messages = server.messagesReceived();
+            assertEquals(1, messages.size());
+            assertEquals("_sc|fine|0", messages.get(0));
+        }
     }
 }
