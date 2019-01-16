@@ -6,7 +6,6 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.SocketException;
 import java.util.Locale;
 
 import static org.hamcrest.MatcherAssert.assertThat;
