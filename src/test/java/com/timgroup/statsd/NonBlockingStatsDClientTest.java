@@ -25,8 +25,12 @@ public class NonBlockingStatsDClientTest {
 
     @AfterClass
     public static void stop() throws Exception {
-        client.stop();
-        server.close();
+        try {
+            client.stop();
+            server.close();
+        } catch (java.io.IOException e) {
+            return;
+        }
     }
 
     @After
