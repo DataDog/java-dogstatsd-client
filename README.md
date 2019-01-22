@@ -16,7 +16,7 @@ The client jar is distributed via maven central, and can be downloaded [here](ht
 <dependency>
     <groupId>com.datadoghq</groupId>
     <artifactId>java-dogstatsd-client</artifactId>
-    <version>2.6.1</version>
+    <version>2.7</version>
 </dependency>
 ```
 
@@ -73,4 +73,3 @@ trigger exceptions you can choose to handle by passing a `StatsDClientErrorHandl
 - Connection error because of an invalid/missing socket will trigger a `java.io.IOException: No such file or directory`
 - If dogstatsd's reception buffer were to fill up, the send will timeout after 100ms and throw either a
 `java.io.IOException: No buffer space available` or a `java.io.IOException: Resource temporarily unavailable`
-
