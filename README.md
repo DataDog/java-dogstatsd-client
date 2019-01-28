@@ -10,7 +10,7 @@ See [CHANGELOG.md](CHANGELOG.md) for changes.
 
 ## Downloads
 
-The client jar is distributed via maven central, and can be downloaded [here](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.datadoghq%20a%3Ajava-dogstatsd-client).
+The client is distributed via maven central, and can be downloaded [here](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.datadoghq%20a%3Ajava-dogstatsd-client).
 
 ```xml
 <dependency>
