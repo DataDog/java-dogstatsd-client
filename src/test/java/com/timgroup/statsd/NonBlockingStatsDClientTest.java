@@ -1,16 +1,19 @@
 package com.timgroup.statsd;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.After;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 import java.util.Locale;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -38,8 +41,8 @@ public class NonBlockingStatsDClientTest {
         server.clear();
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_value_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_value_to_statsd() throws Exception {
 
 
         client.count("mycount", 24);
@@ -48,17 +51,17 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_value_with_sample_rate_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_value_with_sample_rate_to_statsd() throws Exception {
 
-    	client.count("mycount", 24, 1);
+        client.count("mycount", 24, 1);
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|@1.000000"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_value_to_statsd_with_null_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_value_to_statsd_with_null_tags() throws Exception {
 
 
         client.count("mycount", 24, (java.lang.String[]) null);
@@ -67,8 +70,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_value_to_statsd_with_empty_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_value_to_statsd_with_empty_tags() throws Exception {
 
 
         client.count("mycount", 24);
@@ -77,8 +80,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_value_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_value_to_statsd_with_tags() throws Exception {
 
 
         client.count("mycount", 24, "foo:bar", "baz");
@@ -87,8 +90,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:24|c|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_value_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_value_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.count("mycount", 24, 1, "foo:bar", "baz");
@@ -98,8 +101,8 @@ public class NonBlockingStatsDClientTest {
     }
 
 
-    @Test(timeout=5000L) public void
-    sends_counter_increment_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_increment_to_statsd() throws Exception {
 
 
         client.incrementCounter("myinc");
@@ -108,8 +111,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_increment_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_increment_to_statsd_with_tags() throws Exception {
 
 
         client.incrementCounter("myinc", "foo:bar", "baz");
@@ -118,8 +121,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_increment_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_increment_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.incrementCounter("myinc", 1, "foo:bar", "baz");
@@ -128,8 +131,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_decrement_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_decrement_to_statsd() throws Exception {
 
 
         client.decrementCounter("mydec");
@@ -138,8 +141,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_decrement_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_decrement_to_statsd_with_tags() throws Exception {
 
 
         client.decrementCounter("mydec", "foo:bar", "baz");
@@ -148,8 +151,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_counter_decrement_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_counter_decrement_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.decrementCounter("mydec", 1, "foo:bar", "baz");
@@ -158,8 +161,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_to_statsd() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 423);
@@ -168,8 +171,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_with_sample_rate_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_with_sample_rate_to_statsd() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 423, 1);
@@ -178,8 +181,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|@1.000000"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_large_double_gauge_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_large_double_gauge_to_statsd() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 123456789012345.67890);
@@ -188,8 +191,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:123456789012345.67|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_exact_double_gauge_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_exact_double_gauge_to_statsd() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 123.45678901234567890);
@@ -198,8 +201,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:123.456789|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_gauge_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_gauge_to_statsd() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 0.423);
@@ -208,8 +211,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:0.423|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_to_statsd_with_tags() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 423, "foo:bar", "baz");
@@ -218,8 +221,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 423, 1, "foo:bar", "baz");
@@ -228,8 +231,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:423|g|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_gauge_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_gauge_to_statsd_with_tags() throws Exception {
 
 
         client.recordGaugeValue("mygauge", 0.423, "foo:bar", "baz");
@@ -238,8 +241,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:0.423|g|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_histogram_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_histogram_to_statsd() throws Exception {
 
         client.recordHistogramValue("myhistogram", 423);
         server.waitForMessage();
@@ -247,8 +250,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:423|h"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_histogram_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_histogram_to_statsd() throws Exception {
 
 
         client.recordHistogramValue("myhistogram", 0.423);
@@ -257,8 +260,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_histogram_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_histogram_to_statsd_with_tags() throws Exception {
 
 
         client.recordHistogramValue("myhistogram", 423, "foo:bar", "baz");
@@ -267,8 +270,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:423|h|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.recordHistogramValue("myhistogram", 423, 1, "foo:bar", "baz");
@@ -277,8 +280,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:423|h|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_histogram_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_histogram_to_statsd_with_tags() throws Exception {
 
 
         client.recordHistogramValue("myhistogram", 0.423, "foo:bar", "baz");
@@ -287,8 +290,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.recordHistogramValue("myhistogram", 0.423, 1, "foo:bar", "baz");
@@ -297,8 +300,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_distribtuion_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_distribtuion_to_statsd() throws Exception {
 
         client.recordDistributionValue("mydistribution", 423);
         server.waitForMessage();
@@ -306,8 +309,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_distribution_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_distribution_to_statsd() throws Exception {
 
 
         client.recordDistributionValue("mydistribution", 0.423);
@@ -316,8 +319,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_distribution_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_distribution_to_statsd_with_tags() throws Exception {
 
 
         client.recordDistributionValue("mydistribution", 423, "foo:bar", "baz");
@@ -326,8 +329,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.recordDistributionValue("mydistribution", 423, 1, "foo:bar", "baz");
@@ -336,8 +339,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:423|d|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_distribution_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_distribution_to_statsd_with_tags() throws Exception {
 
 
         client.recordDistributionValue("mydistribution", 0.423, "foo:bar", "baz");
@@ -346,8 +349,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_double_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_double_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.recordDistributionValue("mydistribution", 0.423, 1, "foo:bar", "baz");
@@ -356,8 +359,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_timer_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_timer_to_statsd() throws Exception {
 
 
         client.recordExecutionTime("mytime", 123);
@@ -368,9 +371,11 @@ public class NonBlockingStatsDClientTest {
 
     /**
      * A regression test for <a href="https://github.com/indeedeng/java-dogstatsd-client/issues/3">this i18n number formatting bug</a>
+     *
      * @throws Exception
      */
-    @Test public void
+    @Test
+    public void
     sends_timer_to_statsd_from_locale_with_unamerican_number_formatting() throws Exception {
 
         Locale originalDefaultLocale = Locale.getDefault();
@@ -392,8 +397,8 @@ public class NonBlockingStatsDClientTest {
     }
 
 
-    @Test(timeout=5000L) public void
-    sends_timer_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_timer_to_statsd_with_tags() throws Exception {
 
 
         client.recordExecutionTime("mytime", 123, "foo:bar", "baz");
@@ -402,8 +407,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mytime:123|ms|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_timer_with_sample_rate_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_timer_with_sample_rate_to_statsd_with_tags() throws Exception {
 
 
         client.recordExecutionTime("mytime", 123, 1, "foo:bar", "baz");
@@ -413,8 +418,8 @@ public class NonBlockingStatsDClientTest {
     }
 
 
-    @Test(timeout=5000L) public void
-    sends_gauge_mixed_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_mixed_tags() throws Exception {
 
         final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423, "baz");
@@ -423,18 +428,18 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#app:bar,instance:foo,baz"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_mixed_tags_with_sample_rate() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_mixed_tags_with_sample_rate() throws Exception {
 
         final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        empty_prefix_client.gauge("value", 423,1, "baz");
+        empty_prefix_client.gauge("value", 423, 1, "baz");
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_constant_tags_only() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_constant_tags_only() throws Exception {
 
         final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
         empty_prefix_client.gauge("value", 423);
@@ -443,8 +448,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#app:bar,instance:foo"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_empty_prefix() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_empty_prefix() throws Exception {
 
         final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
         empty_prefix_client.gauge("top.level.value", 423);
@@ -453,8 +458,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_gauge_null_prefix() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_gauge_null_prefix() throws Exception {
 
         final NonBlockingStatsDClient null_prefix_client = new NonBlockingStatsDClient(null, "localhost", STATSD_SERVER_PORT);
         null_prefix_client.gauge("top.level.value", 423);
@@ -463,8 +468,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_event() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_event() throws Exception {
 
         final Event event = Event.builder()
                 .withTitle("title1")
@@ -481,8 +486,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_partial_event() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_partial_event() throws Exception {
 
         final Event event = Event.builder()
                 .withTitle("title1")
@@ -495,8 +500,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("_e{16,5}:my.prefix.title1|text1|d:1234567"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_event_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_event_with_tags() throws Exception {
 
         final Event event = Event.builder()
                 .withTitle("title1")
@@ -513,8 +518,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("_e{16,5}:my.prefix.title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_partial_event_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_partial_event_with_tags() throws Exception {
 
         final Event event = Event.builder()
                 .withTitle("title1")
@@ -527,8 +532,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("_e{16,5}:my.prefix.title1|text1|d:1234567|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_event_empty_prefix() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_event_empty_prefix() throws Exception {
 
         final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
         final Event event = Event.builder()
@@ -546,8 +551,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_service_check() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_service_check() throws Exception {
         final String inputMessage = "\u266c \u2020\u00f8U \n\u2020\u00f8U \u00a5\u00bau|m: T0\u00b5 \u266a"; // "♬ †øU \n†øU ¥ºu|m: T0µ ♪"
         final String outputMessage = "\u266c \u2020\u00f8U \\n\u2020\u00f8U \u00a5\u00bau|m\\: T0\u00b5 \u266a"; // note the escaped colon
         final String[] tags = {"key1:val1", "key2:val2"};
@@ -569,8 +574,8 @@ public class NonBlockingStatsDClientTest {
                 outputMessage)));
     }
 
-    @Test(timeout=5000L) public void
-    sends_nan_gauge_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_nan_gauge_to_statsd() throws Exception {
         client.recordGaugeValue("mygauge", Double.NaN);
 
         server.waitForMessage();
@@ -578,8 +583,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:NaN|g"));
     }
 
-    @Test(timeout=5000L) public void
-    sends_set_to_statsd() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_set_to_statsd() throws Exception {
         client.recordSetValue("myset", "myuserid");
 
         server.waitForMessage();
@@ -588,8 +593,8 @@ public class NonBlockingStatsDClientTest {
 
     }
 
-    @Test(timeout=5000L) public void
-    sends_set_to_statsd_with_tags() throws Exception {
+    @Test(timeout = 5000L)
+    public void sends_set_to_statsd_with_tags() throws Exception {
         client.recordSetValue("myset", "myuserid", "foo:bar", "baz");
 
         server.waitForMessage();
@@ -598,24 +603,23 @@ public class NonBlockingStatsDClientTest {
 
     }
 
-    @Test(timeout = 5000L) public void
-    shutdown_test() throws Exception {
+    @Test(timeout = 5000L) 
+    public void shutdown_test() throws Exception {
         final int port = 17256;
         final DummyStatsDServer server = new DummyStatsDServer(port);
-        final AtomicBoolean slow = new AtomicBoolean(true);
+        final CountDownLatch lock = new CountDownLatch(1);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
             @Override
             protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
                                                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel) {
-                return new SlowStatsDSender(addressLookup, new SlowBlockingQueue(slow), handler, clientChannel, slow);
+                return new SlowStatsDSender(addressLookup, new SlowBlockingQueue(lock), handler, clientChannel, lock);
             }
         };
         try {
-            for (int i = 0; i < 1000; i++) {
-                client.count("mycounter", 5);
-            }
+            client.count("mycounter", 5);
+            assertEquals(0, server.messagesReceived().size());
             client.stop();
-            assertEquals(1000, server.messagesReceived().size());
+            assertEquals(1, server.messagesReceived().size());
         } finally {
             client.stop();
             server.close();
@@ -624,32 +628,41 @@ public class NonBlockingStatsDClientTest {
 
 
     private static class SlowStatsDSender extends StatsDSender {
-        private final AtomicBoolean slow;
+        private final CountDownLatch lock;
 
-        SlowStatsDSender(Callable<SocketAddress> addressLookup, BlockingQueue queue, StatsDClientErrorHandler handler, DatagramChannel clientChannel, AtomicBoolean slow) {
+        SlowStatsDSender(Callable<SocketAddress> addressLookup, BlockingQueue queue,
+                         StatsDClientErrorHandler handler, DatagramChannel clientChannel,
+                         CountDownLatch lock) {
             super(addressLookup, queue, handler, clientChannel);
-            this.slow = slow;
+            this.lock = lock;
         }
 
         @Override
         void shutdown() {
             super.shutdown();
-            slow.set(false);
+            lock.countDown();
         }
     }
 
     private static class SlowBlockingQueue extends LinkedBlockingQueue<String> {
-        private final AtomicBoolean slow;
+        private final CountDownLatch countDownLatch;
+        private boolean lock = false;
 
-        private SlowBlockingQueue(AtomicBoolean slow) {
-            this.slow = slow;
+
+        private SlowBlockingQueue(CountDownLatch countDownLatch) {
+            this.countDownLatch = countDownLatch;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return !lock && super.isEmpty();
         }
 
         @Override
         public String poll(long timeout, TimeUnit unit) throws InterruptedException {
-            if (slow.get()) {
-                Thread.sleep(300);
-            }
+            lock = true;
+            countDownLatch.await(1, TimeUnit.MINUTES);
+            lock = false;
             return super.poll(timeout, unit);
         }
     }
