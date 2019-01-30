@@ -1,16 +1,21 @@
 # CHANGELOG
 
+## 2.7.1 / 2019.01.22
+
+* [FEATURE] Ability to configure unix buffer timeout and size. See [#64][]
+* [FIX] Catch any Socket IO Exception on test cleanup. See [#67][]
+
 ## 2.6.1 / 2018.07.06
 
-* [BUGFIX] Fix older Java compatability issues due to building with newer versions of Java.
+* [BUGFIX] Fix older Java compatability issues due to building with newer versions of Java that affected v2.6 of this library.
 * [DEV] Enforce Java 7/8 when testing/building. See [#53][].
 
 ## 2.6 / 2018.06.29
 
-* [FEATURE] Add support for submitting data through Unix Domain Sockets. See [#42][]. 
+* [FEATURE] Add support for submitting data through Unix Domain Sockets. See [#42][].
 * [IMPROVEMENT] Replace string `format` with `StringBuilder`for performance gains. Thanks [@cithal][] See [#49][].
 
-## 2.5 / 2018.01.23 
+## 2.5 / 2018.01.23
 
 * Added support for new beta feature, global distributions
 

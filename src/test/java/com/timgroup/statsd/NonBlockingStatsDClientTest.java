@@ -32,8 +32,12 @@ public class NonBlockingStatsDClientTest {
 
     @AfterClass
     public static void stop() throws Exception {
-        client.stop();
-        server.close();
+        try {
+            client.stop();
+            server.close();
+        } catch (java.io.IOException e) {
+            return;
+        }
     }
 
     @After
@@ -603,7 +607,7 @@ public class NonBlockingStatsDClientTest {
 
     }
 
-    @Test(timeout = 5000L) 
+    @Test(timeout = 5000L)
     public void shutdown_test() throws Exception {
         final int port = 17256;
         final DummyStatsDServer server = new DummyStatsDServer(port);
