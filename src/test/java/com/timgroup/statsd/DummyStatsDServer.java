@@ -80,7 +80,11 @@ final class DummyStatsDServer {
     }
 
     public void close() throws IOException {
-        server.close();
+        try {
+            server.close();
+        } catch (Exception e) {
+            //ignore
+        }
     }
 
     public void clear() {

@@ -1,28 +1,25 @@
 package com.timgroup.statsd;
 
+import jnr.unixsocket.UnixDatagramChannel;
+import jnr.unixsocket.UnixSocketAddress;
+import jnr.unixsocket.UnixSocketOptions;
+
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.SocketAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
-import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.Locale;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import jnr.unixsocket.UnixSocketAddress;
-import jnr.unixsocket.UnixDatagramChannel;
-import jnr.unixsocket.UnixSocketOptions;
 
 
 /**
@@ -53,8 +50,13 @@ import jnr.unixsocket.UnixSocketOptions;
  * @author Tom Denley
  *
  */
-public final class NonBlockingStatsDClient implements StatsDClient {
+public class NonBlockingStatsDClient implements StatsDClient {
 
+    /**
+     * 1400 chosen as default here so that the number of bytes in a message plus the number of bytes required
+     * for additional udp headers should be under the 1500 Maximum Transmission Unit for ethernet.
+     * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
+     */
     private static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
     private static final int SOCKET_TIMEOUT_MS = 100;
     private static final int SOCKET_BUFFER_BYTES = -1;
@@ -123,7 +125,7 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         }
     });
 
-    private final BlockingQueue<String> queue;
+    private final StatsDSender statsDSender;
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
@@ -515,8 +517,13 @@ public final class NonBlockingStatsDClient implements StatsDClient {
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
-        queue = new LinkedBlockingQueue<String>(queueSize);
-        executor.submit(new QueueConsumer(maxPacketSizeBytes, addressLookup));
+        statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+        executor.submit(statsDSender);
+    }
+
+    protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
+                                        final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+        return new StatsDSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
     }
 
     /**
@@ -526,8 +533,19 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void stop() {
         try {
+            statsDSender.shutdown();
             executor.shutdown();
-            executor.awaitTermination(30, TimeUnit.SECONDS);
+            try {
+                executor.awaitTermination(30, TimeUnit.SECONDS);
+                if (!executor.isTerminated()) {
+                    executor.shutdownNow();
+                }
+            } catch (Exception e) {
+                handler.handle(e);
+                if (!executor.isTerminated()) {
+                    executor.shutdownNow();
+                }
+            }
         }
         catch (final Exception e) {
             handler.handle(e);
@@ -1164,68 +1182,11 @@ public final class NonBlockingStatsDClient implements StatsDClient {
     }
 
     private void send(final String message) {
-        queue.offer(message);
+        statsDSender.send(message);
     }
     
     private boolean isInvalidSample(double sampleRate) {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
-    }
-
-    public static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
-
-
-    private class QueueConsumer implements Runnable {
-        private final ByteBuffer sendBuffer;
-        private final Callable<SocketAddress> addressLookup;
-
-        QueueConsumer(final int maxPacketSizeBytes, final Callable<SocketAddress> addressLookup) {
-            sendBuffer = ByteBuffer.allocate(maxPacketSizeBytes);
-            this.addressLookup = addressLookup;
-        }
-
-        @Override public void run() {
-            while(!executor.isShutdown()) {
-                try {
-                    final String message = queue.poll(1, TimeUnit.SECONDS);
-                    if(null != message) {
-                        final SocketAddress address = addressLookup.call();
-                        final byte[] data = message.getBytes(MESSAGE_CHARSET);
-                        if(sendBuffer.remaining() < (data.length + 1)) {
-                            blockingSend(address);
-                        }
-                        if(sendBuffer.position() > 0) {
-                            sendBuffer.put( (byte) '\n');
-                        }
-                        sendBuffer.put(data);
-                        if(null == queue.peek()) {
-                            blockingSend(address);
-                        }
-                    }
-                } catch (final Exception e) {
-                    handler.handle(e);
-                }
-            }
-        }
-
-        private void blockingSend(final SocketAddress address) throws IOException {
-            final int sizeOfBuffer = sendBuffer.position();
-            sendBuffer.flip();
-
-            final int sentBytes = clientChannel.send(sendBuffer, address);
-            sendBuffer.limit(sendBuffer.capacity());
-            sendBuffer.rewind();
-
-            if (sizeOfBuffer != sentBytes) {
-                handler.handle(
-                        new IOException(
-                            String.format(
-                                "Could not send entirely stat %s to %s. Only sent %d bytes out of %d bytes",
-                                sendBuffer.toString(),
-                                address.toString(),
-                                sentBytes,
-                                sizeOfBuffer)));
-            }
-        }
     }
 
     /**
