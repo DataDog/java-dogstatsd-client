@@ -623,6 +623,7 @@ public class NonBlockingStatsDClientTest {
             client.count("mycounter", 5);
             assertEquals(0, server.messagesReceived().size());
             client.stop();
+            server.waitForMessage();
             assertEquals(1, server.messagesReceived().size());
         } finally {
             client.stop();
