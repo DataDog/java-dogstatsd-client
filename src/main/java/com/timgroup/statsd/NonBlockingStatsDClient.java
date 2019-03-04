@@ -52,6 +52,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class NonBlockingStatsDClient implements StatsDClient {
 
+    /**
+     * 1400 chosen as default here so that the number of bytes in a message plus the number of bytes required
+     * for additional udp headers should be under the 1500 Maximum Transmission Unit for ethernet.
+     * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
+     */
+    private static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
     private static final int SOCKET_TIMEOUT_MS = 100;
     private static final int SOCKET_BUFFER_BYTES = -1;
 
@@ -212,6 +218,33 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     the port of the targeted StatsD server
      * @param constantTags
      *     tags to be added to all content sent
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final String[] constantTags, final int maxPacketSizeBytes) throws StatsDClientException {
+        this(prefix, hostname, port, Integer.MAX_VALUE, constantTags, null, maxPacketSizeBytes);
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are consumed, guaranteeing
+     * that failures in metrics will not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server
+     * @param port
+     *     the port of the targeted StatsD server
+     * @param constantTags
+     *     tags to be added to all content sent
      * @param queueSize
      *     the maximum amount of unprocessed messages in the BlockingQueue.
      * @throws StatsDClientException
@@ -247,7 +280,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
                                    final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, Integer.MAX_VALUE, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES);
+        this(prefix, Integer.MAX_VALUE, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES);
     }
 
     /**
@@ -278,7 +311,40 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
                                    final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES);
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES);
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server
+     * @param port
+     *     the port of the targeted StatsD server
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, final int maxPacketSizeBytes) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, maxPacketSizeBytes);
     }
 
     /**
@@ -312,7 +378,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize, int timeout, int bufferSize,
-            final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
         this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), timeout, bufferSize);
     }
 
@@ -341,8 +407,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-            final Callable<SocketAddress> addressLookup) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES);
+                                   final Callable<SocketAddress> addressLookup) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES);
     }
 
     /**
@@ -375,6 +441,41 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, DEFAULT_MAX_PACKET_SIZE_BYTES);
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param addressLookup
+     *     yields the IP address and socket of the StatsD server
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param timeout
+     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
+     * @param bufferSize
+     *     the socket buffer size in bytes. Applies to unix sockets only.
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
+                                   final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes) throws StatsDClientException {
         if((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = new StringBuilder(prefix).append(".").toString();
         } else {
@@ -416,13 +517,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
-        statsDSender = createSender(addressLookup, queueSize, handler, clientChannel);
+        statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
         executor.submit(statsDSender);
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                        final StatsDClientErrorHandler handler, final DatagramChannel clientChannel) {
-        return new StatsDSender(addressLookup, queueSize, handler, clientChannel);
+                                        final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+        return new StatsDSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
     }
 
     /**
