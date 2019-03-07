@@ -6,6 +6,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Rule;
 
+import com.timgroup.statsd.StatsDSender.Message;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
@@ -690,9 +692,9 @@ public class NonBlockingStatsDClientTest {
         }
     }
 
-    private static class SlowBlockingQueue extends LinkedBlockingQueue<String> {
+    private static class SlowBlockingQueue extends LinkedBlockingQueue<Message> {
         private final CountDownLatch countDownLatch;
-        private boolean lock = false;
+        private volatile boolean lock = false;
 
 
         private SlowBlockingQueue(CountDownLatch countDownLatch) {
@@ -705,7 +707,7 @@ public class NonBlockingStatsDClientTest {
         }
 
         @Override
-        public String poll(long timeout, TimeUnit unit) throws InterruptedException {
+        public Message poll(long timeout, TimeUnit unit) throws InterruptedException {
             lock = true;
             countDownLatch.await(1, TimeUnit.MINUTES);
             lock = false;
