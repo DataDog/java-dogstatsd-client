@@ -7,6 +7,8 @@ import org.junit.Test;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
+import com.timgroup.statsd.StatsDSender.Message;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.List;
