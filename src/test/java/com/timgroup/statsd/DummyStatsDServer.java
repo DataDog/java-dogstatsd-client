@@ -7,13 +7,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 
 final class DummyStatsDServer {
-    private final List<String> messagesReceived = new ArrayList<String>();
+    private final Queue<String> messagesReceived = new LinkedBlockingQueue<String>();
     private final DatagramChannel server;
     private volatile Boolean freeze = false;
 
