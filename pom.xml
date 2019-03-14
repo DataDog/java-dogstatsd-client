@@ -67,6 +67,12 @@
       <version>4.12</version>
     </dependency>
     <dependency>
+      <groupId>com.github.stefanbirkner</groupId>
+      <artifactId>system-rules</artifactId>
+      <scope>test</scope>
+      <version>1.18.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.jnr</groupId>
       <artifactId>jnr-unixsocket</artifactId>
       <version>0.18</version>
