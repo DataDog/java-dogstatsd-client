@@ -1278,11 +1278,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     private String[] updateTagsWithEntityID(String[] tags, String entityID) {
         // Support "dd.internal.entity_id" internal tag.
-        if (entityID == null) {
+        if(entityID == null || entityID.trim().isEmpty()) {
             // if the entityID parameter is null, default to the environment variable
             entityID = System.getenv(DD_ENTITY_ID_ENV_VAR);
         }
-        if (entityID != null) {
+        if(entityID != null && !entityID.trim().isEmpty()) {
             final String entityTag = new StringBuilder(ENTITY_ID_TAG_NAME).append(":").append(entityID).toString();
             if (tags == null) {
                 tags = new String[]{entityTag};
