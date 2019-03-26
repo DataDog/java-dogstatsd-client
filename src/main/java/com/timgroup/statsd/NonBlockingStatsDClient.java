@@ -13,6 +13,7 @@ import java.nio.channels.DatagramChannel;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -52,12 +53,17 @@ import java.util.concurrent.TimeUnit;
  */
 public class NonBlockingStatsDClient implements StatsDClient {
 
+    public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
+    public static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
+    public static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
+
     /**
      * 1400 chosen as default here so that the number of bytes in a message plus the number of bytes required
      * for additional udp headers should be under the 1500 Maximum Transmission Unit for ethernet.
      * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
      */
     private static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
+    private static final int DEFAULT_DOGSTATSD_PORT = 8125;
     private static final int SOCKET_TIMEOUT_MS = 100;
     private static final int SOCKET_BUFFER_BYTES = -1;
 
@@ -127,6 +133,29 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     private final StatsDSender statsDSender;
 
+    private final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance. It
+     * uses Environment variables ("DD_AGENT_HOST" and "DD_DOGSTATSD_PORT")
+     * in order to configure the communication with a StatsD instance.
+     * All messages send via this client will have their keys prefixed with
+     * the specified string. The new client will attempt to open a connection
+     * to the StatsD server immediately upon instantiation, and may throw an
+     * exception if that a connection cannot be established. Once a client has
+     * been instantiated in this way, all exceptions thrown during subsequent
+     * usage are consumed, guaranteeing that failures in metrics will not
+     * affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix) throws StatsDClientException {
+        this(prefix, getHostnameFromEnvVar(), getPortFromEnvVar(DEFAULT_DOGSTATSD_PORT), Integer.MAX_VALUE);
+    }
+
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
      * specified host and port. All messages send via this client will have
@@ -140,9 +169,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -163,9 +195,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param queueSize
      *     the maximum amount of unprocessed messages in the BlockingQueue.
      * @throws StatsDClientException
@@ -188,9 +223,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @throws StatsDClientException
@@ -213,9 +251,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @param maxPacketSizeBytes
@@ -240,9 +281,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @param queueSize
@@ -268,9 +312,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @param errorHandler
@@ -280,7 +327,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
                                    final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, Integer.MAX_VALUE, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES);
+        this(prefix, Integer.MAX_VALUE, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
     }
 
     /**
@@ -297,9 +344,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @param errorHandler
@@ -311,8 +361,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
                                    final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES);
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
     }
+
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
@@ -328,9 +379,51 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param entityID
+     *     the entity id value used with an internal tag for tracking client entity.
+     *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
+     *     If the environment variable is not defined, the internal tag is not added.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, String entityID) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, entityID);
+    }
+
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @param errorHandler
@@ -344,7 +437,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
                                    final String[] constantTags, final StatsDClientErrorHandler errorHandler, final int maxPacketSizeBytes) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, maxPacketSizeBytes);
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, maxPacketSizeBytes, null);
     }
 
     /**
@@ -361,9 +454,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param prefix
      *     the prefix to apply to keys sent via this client
      * @param hostname
-     *     the host name of the targeted StatsD server
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
      * @param port
-     *     the port of the targeted StatsD server
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param constantTags
      *     tags to be added to all content sent
      * @param errorHandler
@@ -408,7 +504,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    final Callable<SocketAddress> addressLookup) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES);
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
     }
 
     /**
@@ -441,7 +537,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, DEFAULT_MAX_PACKET_SIZE_BYTES);
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
     }
 
     /**
@@ -476,6 +572,45 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes, null);
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param addressLookup
+     *     yields the IP address and socket of the StatsD server
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param timeout
+     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
+     * @param bufferSize
+     *     the socket buffer size in bytes. Applies to unix sockets only.
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @param entityID
+     *     the entity id value used with an internal tag for tracking client entity.
+     *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
+     *     If the environment variable is not defined, the internal tag is not added.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
+                                   Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes, String entityID) throws StatsDClientException {
         if((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = new StringBuilder(prefix).append(".").toString();
         } else {
@@ -493,6 +628,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             constantTags = null;
         }
 
+        // Support "dd.internal.entity_id" internal tag.
+        constantTags = this.updateTagsWithEntityID(constantTags, entityID);
         if(constantTags != null) {
             constantTagsRendered = tagString(constantTags, null);
         } else {
@@ -517,6 +654,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
+
         statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
         executor.submit(statsDSender);
     }
@@ -1129,6 +1267,69 @@ public class NonBlockingStatsDClient implements StatsDClient {
         send(toStatsDString(sc));
     }
 
+    /**
+     * Updates and returns tags completed with the entityID tag if needed.
+     *
+     * @param tags the current constant tags array
+     *
+     * @param entityID the entityID string provided by argument
+     *
+     * @return array of tags
+     */
+    private String[] updateTagsWithEntityID(String[] tags, String entityID) {
+        // Support "dd.internal.entity_id" internal tag.
+        if(entityID == null || entityID.trim().isEmpty()) {
+            // if the entityID parameter is null, default to the environment variable
+            entityID = System.getenv(DD_ENTITY_ID_ENV_VAR);
+        }
+        if(entityID != null && !entityID.trim().isEmpty()) {
+            final String entityTag = new StringBuilder(ENTITY_ID_TAG_NAME).append(":").append(entityID).toString();
+            if (tags == null) {
+                tags = new String[]{entityTag};
+            } else {
+                tags = Arrays.copyOf(tags, tags.length+1);
+                tags[tags.length] = entityTag;
+            }
+        }
+        return tags;
+    }
+
+    /**
+     * Retrieves host name from the environment variable "DD_AGENT_HOST"
+     *
+     * @return host name from the environment variable "DD_AGENT_HOST"
+     *
+     * @throws StatsDClientException if the environment variable is not set
+     */
+    private static String getHostnameFromEnvVar() {
+        final String hostname = System.getenv(DD_AGENT_HOST_ENV_VAR);
+        if (hostname == null) {
+            throw new StatsDClientException("Failed to retrieve agent hostname from environment variable", null);
+        }
+        return hostname;
+    }
+
+    /**
+     * Retrieves dogstatsd port from the environment variable "DD_DOGSTATSD_PORT"
+     *
+     * @return dogstatsd port from the environment variable "DD_DOGSTATSD_PORT"
+     *
+     * @throws StatsDClientException if the environment variable is an integer
+     */
+    private static int getPortFromEnvVar(final int defaultPort) {
+        final String statsDPortString = System.getenv(DD_DOGSTATSD_PORT_ENV_VAR);
+        if (statsDPortString == null) {
+            return defaultPort;
+        } else {
+            try {
+                final int statsDPort = Integer.parseInt(statsDPortString);
+                return statsDPort;
+            } catch (final NumberFormatException e) {
+                throw new StatsDClientException("Failed to parse "+DD_DOGSTATSD_PORT_ENV_VAR+"environment variable value", e);
+            }
+        }
+    }
+
     private String toStatsDString(final ServiceCheck sc) {
         // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
         final StringBuilder sb = new StringBuilder();
@@ -1192,8 +1393,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Create dynamic lookup for the given host name and port.
      *
-     * @param hostname the host name of the targeted StatsD server
-     * @param port     the port of the targeted StatsD server
+     * @param hostname
+     *     the host name of the targeted StatsD server. If the environment variable
+     *     "DD_AGENT_HOST" is set, this parameter is overwritten by the environment
+     *     variable value.
+     * @param port
+     *     the port of the targeted StatsD server. If the environment variable
+     *     "DD_DOGSTATSD_PORT" is set, this parameter is overwritten by the environment
+     *     variable value.
      * @return a function to perform the lookup
      */
     public static Callable<SocketAddress> volatileAddressResolution(final String hostname, final int port) {
@@ -1225,8 +1432,15 @@ public class NonBlockingStatsDClient implements StatsDClient {
         };
     }
 
-    private static Callable<SocketAddress> staticStatsDAddressResolution(final String hostname, final int port) throws StatsDClientException {
+    private static Callable<SocketAddress> staticStatsDAddressResolution(String hostname, int port) throws StatsDClientException {
         try {
+            if (hostname == null) {
+                hostname = getHostnameFromEnvVar();
+                if (port == 0) {
+                    port = getPortFromEnvVar(DEFAULT_DOGSTATSD_PORT);
+                }
+            }
+
             return staticAddressResolution(hostname, port);
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to lookup StatsD host", e);
