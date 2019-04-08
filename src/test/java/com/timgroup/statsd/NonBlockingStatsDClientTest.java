@@ -4,6 +4,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Rule;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -20,12 +21,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
+
 
 public class NonBlockingStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
     private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
     private static DummyStatsDServer server;
+
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @BeforeClass
     public static void start() throws IOException {
@@ -455,6 +461,41 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void sends_gauge_entityID_from_env() throws Exception {
+        final String entity_value =  "foo-entity";
+        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE);
+        client.gauge("value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity"));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_gauge_entityID_from_args() throws Exception {
+        final String entity_value =  "foo-entity";
+        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, null, null, entity_value+"-arg");
+        client.gauge("value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg"));
+    }
+
+
+    @Test(timeout = 5000L)
+    public void init_client_from_env_vars() throws Exception {
+        final String entity_value =  "foo-entity";
+        environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, "17254");
+        environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix");
+        client.gauge("value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g"));
+    }
+
+    @Test(timeout = 5000L)
     public void sends_gauge_empty_prefix() throws Exception {
 
         final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
@@ -651,7 +692,7 @@ public class NonBlockingStatsDClientTest {
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
             @Override
             protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel) {
+                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
                 return new SlowStatsDSender(addressLookup, new SlowBlockingQueue(lock), handler, clientChannel, lock);
             }
         };
@@ -674,7 +715,7 @@ public class NonBlockingStatsDClientTest {
         SlowStatsDSender(Callable<SocketAddress> addressLookup, BlockingQueue queue,
                          StatsDClientErrorHandler handler, DatagramChannel clientChannel,
                          CountDownLatch lock) {
-            super(addressLookup, queue, handler, clientChannel);
+            super(addressLookup, queue, handler, clientChannel, 1400);
             this.lock = lock;
         }
 

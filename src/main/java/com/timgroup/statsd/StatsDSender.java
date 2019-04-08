@@ -12,10 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 public class StatsDSender implements Runnable {
     private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
-    private static final int PACKET_SIZE_BYTES = 1400;
 
-
-    private final ByteBuffer sendBuffer = ByteBuffer.allocate(PACKET_SIZE_BYTES);
+    private final ByteBuffer sendBuffer;
     private final Callable<SocketAddress> addressLookup;
     private final BlockingQueue<String> queue;
     private final StatsDClientErrorHandler handler;
@@ -25,12 +23,13 @@ public class StatsDSender implements Runnable {
 
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel) {
-        this(addressLookup,  new LinkedBlockingQueue<String>(queueSize), handler, clientChannel);
+                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+        this(addressLookup,  new LinkedBlockingQueue<String>(queueSize), handler, clientChannel, maxPacketSizeBytes);
     }
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final BlockingQueue<String> queue,
-                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel) {
+                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+        sendBuffer = ByteBuffer.allocate(maxPacketSizeBytes);
         this.addressLookup = addressLookup;
         this.queue = queue;
         this.handler = handler;
