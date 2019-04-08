@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class StatsDSender implements Runnable {
     private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
+    private static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
 
     private final ByteBuffer sendBuffer;
     private final Callable<SocketAddress> addressLookup;
@@ -56,7 +57,7 @@ public class StatsDSender implements Runnable {
                 if (null != message) {
                     final byte[] data = message.getBytes(MESSAGE_CHARSET);
                     if (sendBuffer.capacity() < data.length) {
-                        throw new UnsendableMessageException(message);
+                        throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
                     }
                     final SocketAddress address = addressLookup.call();
                     if (sendBuffer.remaining() < (data.length + 1)) {

@@ -675,8 +675,8 @@ public class NonBlockingStatsDClientTest {
             final List<Exception> exceptions = errorHandler.getExceptions();
             assertEquals(1, exceptions.size());
             final Exception exception = exceptions.get(0);
-            assertEquals(UnsendableMessageException.class, exception.getClass());
-            assertTrue(((UnsendableMessageException)exception).getUnsendableMessage().startsWith("_sc|toolong|"));
+            assertEquals(InvalidMessageException.class, exception.getClass());
+            assertTrue(((InvalidMessageException)exception).getInvalidMessage().startsWith("_sc|toolong|"));
 
             final List<String> messages = server.messagesReceived();
             assertEquals(1, messages.size());
