@@ -1,6 +1,6 @@
 # Java DogStatsD Client
 
-[![Build Status](https://travis-ci.org/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.org/DataDog/java-dogstatsd-client)
+[![Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.org/DataDog/java-dogstatsd-client)
 
 A statsd client library implemented in Java.  Allows for Java applications to easily communicate with statsd.
 
