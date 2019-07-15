@@ -755,7 +755,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void count(final String aspect, final long delta, final String... tags) {
         send(new StringBuilder(prefix).append(aspect).append(":").append(delta).append("|c").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -809,7 +809,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void incrementCounter(final String aspect, final String... tags) {
         count(aspect, 1, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -825,7 +825,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void increment(final String aspect, final String... tags) {
         incrementCounter(aspect, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -848,7 +848,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void decrementCounter(final String aspect, final String... tags) {
         count(aspect, -1, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -864,7 +864,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void decrement(final String aspect, final String... tags) {
         decrementCounter(aspect, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -891,7 +891,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
          * padding with extra 0s to represent precision */
         send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|g").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -910,7 +910,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void gauge(final String aspect, final double value, final String... tags) {
         recordGaugeValue(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -936,7 +936,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordGaugeValue(final String aspect, final long value, final String... tags) {
         send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|g").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -955,7 +955,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void gauge(final String aspect, final long value, final String... tags) {
         recordGaugeValue(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -980,7 +980,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordExecutionTime(final String aspect, final long timeInMs, final String... tags) {
         send(new StringBuilder(prefix).append(aspect).append(":").append(timeInMs).append("|ms").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -999,7 +999,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void time(final String aspect, final long value, final String... tags) {
         recordExecutionTime(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1026,7 +1026,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
          * padding with extra 0s to represent precision */
         send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|h").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1047,7 +1047,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void histogram(final String aspect, final double value, final String... tags) {
         recordHistogramValue(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1072,7 +1072,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordHistogramValue(final String aspect, final long value, final String... tags) {
         send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|h").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1091,7 +1091,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void histogram(final String aspect, final long value, final String... tags) {
         recordHistogramValue(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1104,7 +1104,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Records a value for the specified named distribution.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     * 
+     *
      * <p>This is a beta feature and must be enabled specifically for your organization.</p>
      *
      * @param aspect
@@ -1120,7 +1120,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
          * padding with extra 0s to represent precision */
         send(new StringBuilder(prefix).append(aspect).append(":").append(NUMBER_FORMATTERS.get().format(value)).append("|d").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1141,7 +1141,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void distribution(final String aspect, final double value, final String... tags) {
         recordDistributionValue(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1153,7 +1153,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Records a value for the specified named distribution.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     * 
+     *
      * <p>This is a beta feature and must be enabled specifically for your organization.</p>
      *
      * @param aspect
@@ -1167,7 +1167,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordDistributionValue(final String aspect, final long value, final String... tags) {
         send(new StringBuilder(prefix).append(aspect).append(":").append(value).append("|d").append(tagString(tags)).toString());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1186,7 +1186,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void distribution(final String aspect, final long value, final String... tags) {
         recordDistributionValue(aspect, value, tags);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1288,7 +1288,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 tags = new String[]{entityTag};
             } else {
                 tags = Arrays.copyOf(tags, tags.length+1);
-                tags[tags.length] = entityTag;
+                // Now that tags is one element longer, tags.length has changed...
+                tags[tags.length - 1] = entityTag;
             }
         }
         return tags;
@@ -1385,7 +1386,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private void send(final String message) {
         statsDSender.send(message);
     }
-    
+
     private boolean isInvalidSample(double sampleRate) {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
