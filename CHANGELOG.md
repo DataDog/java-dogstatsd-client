@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.8.1 / 2019.10.4
+* [FIX] Fix entity id with constant tags
+
 ## 2.8.0 / 2019.06.18
 * [FEATURE] Support environment variables for client configuration
 * [FIX] Handle messages over max packet size limit
