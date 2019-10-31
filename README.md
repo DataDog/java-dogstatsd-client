@@ -2,15 +2,15 @@
 
 [![Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.com/DataDog/java-dogstatsd-client)
 
-A statsd client library implemented in Java.  Allows for Java applications to easily communicate with statsd.
+A statsd client library implemented in Java. Allows for Java applications to easily communicate with statsd.
 
 This version was originally forked from [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) and [java-statsd-client](https://github.com/youdevise/java-statsd-client) but it is now the canonical home for the java-dogstatsd-client.  Collaborating with the former upstream projects we have now combined efforts to provide a single release.
 
 See [CHANGELOG.md](CHANGELOG.md) for changes.
 
-## Downloads
+## Installation
 
-The client jar is distributed via maven central, and can be downloaded [here](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.datadoghq%20a%3Ajava-dogstatsd-client).
+The client jar is distributed via Maven central, and can be downloaded [from Maven](http://search.maven.org/#search%7Cga%7C1%7Cg%3Acom.datadoghq%20a%3Ajava-dogstatsd-client).
 
 ```xml
 <dependency>
@@ -20,45 +20,7 @@ The client jar is distributed via maven central, and can be downloaded [here](ht
 </dependency>
 ```
 
-## Usage
-
-```java
-import com.timgroup.statsd.ServiceCheck;
-import com.timgroup.statsd.StatsDClient;
-import com.timgroup.statsd.NonBlockingStatsDClient;
-
-public class Foo {
-
-  private static final StatsDClient statsd = new NonBlockingStatsDClient(
-    "my.prefix",                          /* prefix to any stats; may be null or empty string */
-    "statsd-host",                        /* common case: localhost */
-    8125,                                 /* port */
-    new String[] {"tag:value"}            /* Datadog extension: Constant tags, always applied */
-  );
-
-  public static final void main(String[] args) {
-    statsd.incrementCounter("foo");
-    statsd.recordGaugeValue("bar", 100);
-    statsd.recordGaugeValue("baz", 0.01); /* DataDog extension: support for floating-point gauges */
-    statsd.recordHistogramValue("qux", 15);     /* DataDog extension: histograms */
-    statsd.recordHistogramValue("qux", 15.5);   /* ...also floating-point */
-    statsd.recordDistributionValue("qux", 15);     /* DataDog extension: global distributions */
-    statsd.recordDistributionValue("qux", 15.5);   /* ...also floating-point */
-
-    ServiceCheck sc = ServiceCheck
-          .builder()
-          .withName("my.check.name")
-          .withStatus(ServiceCheck.Status.OK)
-          .build();
-    statsd.serviceCheck(sc); /* Datadog extension: send service check status */
-
-    statsd.recordExecutionTime("bag", 25, "cluster:foo"); /* DataDog extension: cluster tag */
-  }
-}
-```
-
-Unix Domain Socket support
----------------------------
+### Unix Domain Socket support
 
 As an alternative to UDP, Agent6 can receive metrics via a UNIX Socket (on Linux only). This library supports
 transmission via this protocol. To use it, simply pass the socket path as a hostname, and 0 as port.
@@ -69,3 +31,44 @@ trigger exceptions you can choose to handle by passing a `StatsDClientErrorHandl
 - Connection error because of an invalid/missing socket will trigger a `java.io.IOException: No such file or directory`
 - If dogstatsd's reception buffer were to fill up, the send will timeout after 100ms and throw either a
 `java.io.IOException: No buffer space available` or a `java.io.IOException: Resource temporarily unavailable`
+
+## Configuration
+
+Once your DogStatsD client is installed, instantiate it in your code:
+
+```java
+import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.StatsDClient;
+
+public class DogStatsdClient {
+
+    public static void main(String[] args) throws Exception {
+
+        StatsDClient Statsd = new NonBlockingStatsDClient("statsd", "localhost", 8125);
+
+    }
+}
+```
+
+## Usage
+
+For usage of DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=java).
+
+### Metrics
+
+After the client is created, you can start sending custom metrics to Datadog. See the dedicated [Metric Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java) to see how to submit all supported metric types to Datadog with working code examples:
+
+* [Submit a COUNT metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#count).
+* [Submit a GAUGE metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#gauge).
+* [Submit a HISTOGRAM metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#histogram)
+* [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#distribution)
+
+Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#metric-submission-options) or [Tagging your metrics with your custom Tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#metric-tagging).
+
+### Events
+
+After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=java) to see how to submit an event to Datadog Event Stream.
+
+### Service Checks
+
+After the client is created, you can start sending Service Checks to Datadog. See the dedicated [Service Check Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/service_checks/dogstatsd_service_checks_submission/?tab=java) to see how to submit a Service Check to Datadog.
