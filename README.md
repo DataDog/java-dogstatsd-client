@@ -50,6 +50,8 @@ public class DogStatsdClient {
 }
 ```
 
+See the full list of available [DogStatsD Client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=java#client-instantiation-parameters).
+
 ## Usage
 
 For usage of DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=java).
