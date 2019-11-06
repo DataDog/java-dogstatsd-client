@@ -22,11 +22,9 @@ The client jar is distributed via Maven central, and can be downloaded [from Mav
 
 ### Unix Domain Socket support
 
-As an alternative to UDP, Agent6 can receive metrics via a UNIX Socket (on Linux only). This library supports
-transmission via this protocol. To use it, simply pass the socket path as a hostname, and 0 as port.
+As an alternative to UDP, Agent6 can receive metrics via a UNIX Socket (on Linux only). This library supports transmission via this protocol. To use it, simply pass the socket path as a hostname, and 0 as port.
 
-By default, all exceptions are ignored, mimicking UDP behaviour. When using Unix Sockets, transmission errors will
-trigger exceptions you can choose to handle by passing a `StatsDClientErrorHandler`:
+By default, all exceptions are ignored, mimicking UDP behaviour. When using Unix Sockets, transmission errors trigger exceptions you can choose to handle by passing a `StatsDClientErrorHandler`:
 
 - Connection error because of an invalid/missing socket will trigger a `java.io.IOException: No such file or directory`
 - If dogstatsd's reception buffer were to fill up, the send will timeout after 100ms and throw either a
@@ -54,7 +52,7 @@ See the full list of available [DogStatsD Client instantiation parameters](https
 
 ## Usage
 
-For usage of DogStatsD metrics, events, and Service Checks the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=java).
+In order to use DogStatsD metrics, events, and Service Checks the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=java).
 
 ### Metrics
 
@@ -65,11 +63,11 @@ After the client is created, you can start sending custom metrics to Datadog. Se
 * [Submit a HISTOGRAM metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#histogram)
 * [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#distribution)
 
-Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#metric-submission-options) or [Tagging your metrics with your custom Tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#metric-tagging).
+Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=java#metric-tagging).
 
 ### Events
 
-After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=java) to see how to submit an event to Datadog Event Stream.
+After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=java) to see how to submit an event to your Datadog Event Stream.
 
 ### Service Checks
 
