@@ -472,6 +472,18 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void sends_gauge_entityID_from_env_and_constant_tags() throws Exception {
+        final String entity_value =  "foo-entity";
+        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        final String constantTags = "arbitraryTag:arbitraryValue";
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, constantTags);
+        client.gauge("value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags));
+    }
+
+    @Test(timeout = 5000L)
     public void sends_gauge_entityID_from_args() throws Exception {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
