@@ -105,7 +105,7 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>[1.7.0-0,1.9.0-0)</version>
+                  <version>[1.7.0-0,1.9.0-0),[9.0,11.0)</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
