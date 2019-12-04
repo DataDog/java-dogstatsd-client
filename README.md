@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.com/DataDog/java-dogstatsd-client)
 
-A statsd client library implemented in Java. Allows for Java applications to easily communicate with statsd.
+A StatsD client library implemented in Java. Allows for Java applications to easily communicate with statsd.
 
-This version was originally forked from [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) and [java-statsd-client](https://github.com/youdevise/java-statsd-client) but it is now the canonical home for the java-dogstatsd-client.  Collaborating with the former upstream projects we have now combined efforts to provide a single release.
+This version was originally forked from [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) and [java-statsd-client](https://github.com/youdevise/java-statsd-client) but it is now the canonical home for the `java-dogstatsd-client`. Collaborating with the former upstream projects we have now combined efforts to provide a single release.
 
 See [CHANGELOG.md](CHANGELOG.md) for changes.
 
@@ -22,13 +22,12 @@ The client jar is distributed via Maven central, and can be downloaded [from Mav
 
 ### Unix Domain Socket support
 
-As an alternative to UDP, Agent6 can receive metrics via a UNIX Socket (on Linux only). This library supports transmission via this protocol. To use it, simply pass the socket path as a hostname, and 0 as port.
+As an alternative to UDP, Agent v6 can receive metrics via a UNIX Socket (on Linux only). This library supports transmission via this protocol. To use it, pass the socket path as a hostname, and `0` as port.
 
 By default, all exceptions are ignored, mimicking UDP behaviour. When using Unix Sockets, transmission errors trigger exceptions you can choose to handle by passing a `StatsDClientErrorHandler`:
 
-- Connection error because of an invalid/missing socket will trigger a `java.io.IOException: No such file or directory`
-- If dogstatsd's reception buffer were to fill up, the send will timeout after 100ms and throw either a
-`java.io.IOException: No buffer space available` or a `java.io.IOException: Resource temporarily unavailable`
+- Connection error because of an invalid/missing socket triggers a `java.io.IOException: No such file or directory`.
+- If DogStatsD's reception buffer were to fill up and the non blocking client is used, the send times out after 100ms and throw either a `java.io.IOException: No buffer space available` or a `java.io.IOException: Resource temporarily unavailable`.
 
 ## Configuration
 
