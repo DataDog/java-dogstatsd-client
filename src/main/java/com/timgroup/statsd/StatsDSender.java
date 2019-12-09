@@ -24,7 +24,7 @@ public class StatsDSender implements Runnable {
 
     private final int qCapacity;
     private final Queue<String> queue;
-    private final AtomicInteger qSize;
+    private final AtomicInteger qSize;  // qSize will not reflect actual size, but a close estimate.
 
     private volatile boolean shutdown;
 
@@ -48,6 +48,7 @@ public class StatsDSender implements Runnable {
                 return true;
             }
         }
+
         return false;
     }
 
