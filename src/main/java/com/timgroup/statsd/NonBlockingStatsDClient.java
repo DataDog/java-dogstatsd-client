@@ -202,7 +202,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     this parameter is equal to '0', the environment variable
      *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -290,7 +290,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param constantTags
      *     tags to be added to all content sent
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -355,7 +355,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param errorHandler
      *     handler to use when an exception occurs during usage, may be null to indicate noop
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -390,7 +390,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param errorHandler
      *     handler to use when an exception occurs during usage, may be null to indicate noop
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param entityID
      *     the entity id value used with an internal tag for tracking client entity.
      *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
@@ -429,7 +429,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param errorHandler
      *     handler to use when an exception occurs during usage, may be null to indicate noop
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param maxPacketSizeBytes
      *     the maximum number of bytes for a message that can be sent
      * @throws StatsDClientException
@@ -465,7 +465,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param errorHandler
      *     handler to use when an exception occurs during usage, may be null to indicate noop
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
      *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
      * @param bufferSize
@@ -498,7 +498,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param addressLookup
      *     yields the IP address and socket of the StatsD server
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -527,7 +527,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param addressLookup
      *     yields the IP address and socket of the StatsD server
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
      *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
      * @param bufferSize
@@ -560,7 +560,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param addressLookup
      *     yields the IP address and socket of the StatsD server
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
      *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
      * @param bufferSize
@@ -595,7 +595,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param addressLookup
      *     yields the IP address and socket of the StatsD server
      * @param queueSize
-     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
      *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
      * @param bufferSize
