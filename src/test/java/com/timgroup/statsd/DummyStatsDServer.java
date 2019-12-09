@@ -3,6 +3,7 @@ package com.timgroup.statsd;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ final class DummyStatsDServer {
             @Override
             public void run() {
                 final ByteBuffer packet = ByteBuffer.allocate(1500);
+
                 while(server.isOpen()) {
                     if (freeze) {
                         try {
@@ -42,7 +44,8 @@ final class DummyStatsDServer {
                         }
                     } else {
                         try {
-                            packet.clear();
+                            ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
+                                                       // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
                             server.receive(packet);
                             packet.flip();
                             for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
