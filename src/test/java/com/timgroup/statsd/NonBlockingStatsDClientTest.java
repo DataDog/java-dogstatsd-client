@@ -11,10 +11,8 @@ import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -699,13 +697,14 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void shutdown_test() throws Exception {
         final int port = 17256;
+        final int qSize = 256;
         final DummyStatsDServer server = new DummyStatsDServer(port);
         final CountDownLatch lock = new CountDownLatch(1);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
             @Override
             protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
                                                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
-                return new SlowStatsDSender(addressLookup, new SlowBlockingQueue(lock), handler, clientChannel, lock);
+                return new SlowStatsDSender(addressLookup, qSize, handler, clientChannel, lock);
             }
         };
         try {
@@ -724,10 +723,10 @@ public class NonBlockingStatsDClientTest {
     private static class SlowStatsDSender extends StatsDSender {
         private final CountDownLatch lock;
 
-        SlowStatsDSender(Callable<SocketAddress> addressLookup, BlockingQueue queue,
+        SlowStatsDSender(Callable<SocketAddress> addressLookup, int queueSize,
                          StatsDClientErrorHandler handler, DatagramChannel clientChannel,
                          CountDownLatch lock) {
-            super(addressLookup, queue, handler, clientChannel, 1400);
+            super(addressLookup, queueSize, handler, clientChannel, 1400);
             this.lock = lock;
         }
 
@@ -735,29 +734,6 @@ public class NonBlockingStatsDClientTest {
         void shutdown() {
             super.shutdown();
             lock.countDown();
-        }
-    }
-
-    private static class SlowBlockingQueue extends LinkedBlockingQueue<String> {
-        private final CountDownLatch countDownLatch;
-        private boolean lock = false;
-
-
-        private SlowBlockingQueue(CountDownLatch countDownLatch) {
-            this.countDownLatch = countDownLatch;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return !lock && super.isEmpty();
-        }
-
-        @Override
-        public String poll(long timeout, TimeUnit unit) throws InterruptedException {
-            lock = true;
-            countDownLatch.await(1, TimeUnit.MINUTES);
-            lock = false;
-            return super.poll(timeout, unit);
         }
     }
 }
