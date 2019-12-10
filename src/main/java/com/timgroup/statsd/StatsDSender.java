@@ -66,6 +66,7 @@ public class StatsDSender implements Runnable {
                     return;
                 }
                 final String message = queue.poll();
+                qSize.decrementAndGet();
                 if (message != null) {
                     final byte[] data = message.getBytes(MESSAGE_CHARSET);
                     if (sendBuffer.capacity() < data.length) {
