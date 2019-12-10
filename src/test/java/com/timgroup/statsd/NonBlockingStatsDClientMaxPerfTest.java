@@ -19,7 +19,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientMaxPerfTest");
     private static final int STATSD_SERVER_PORT = 17255;
-    private static final int BLAST_DURATION_SECS = 60;  // Duration in secs
+    private static final int BLAST_DURATION_SECS = 30;  // Duration in secs
     private static final int Q_SIZE = 2048;  // Duration in secs
     private static final Random RAND = new Random();
     private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient(
@@ -38,7 +38,6 @@ public final class NonBlockingStatsDClientMaxPerfTest {
     public static void stop() throws Exception {
         client.stop();
         server.close();
-        running.set(false);
     }
 
     @Test
@@ -54,10 +53,12 @@ public final class NonBlockingStatsDClientMaxPerfTest {
             });
         }
 
-        Thread.sleep(BLAST_DURATION_SECS);
+        Thread.sleep(TimeUnit.SECONDS.toMillis(BLAST_DURATION_SECS));
+        running.set(false);
 
         executor.shutdown();
-        executor.awaitTermination(10, TimeUnit.SECONDS);
+        executor.awaitTermination(1, TimeUnit.SECONDS);
+
 
         assertNotEquals(0, server.messagesReceived().size());
         log.info("Messages at server: " + server.messagesReceived().size());
