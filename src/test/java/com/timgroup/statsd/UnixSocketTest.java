@@ -39,7 +39,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         socketFile.deleteOnExit();
 
         server = new DummyStatsDServer(socketFile.toString());
-        client = new NonBlockingStatsDClient("my.prefix", socketFile.toString(), 0, 1,  100, 1024 * 1024, null, this);
+       // client = new NonBlockingStatsDClient("my.prefix", socketFile.toString(), 0, 1,  100, 1024 * 1024, null, this);
     }
 
     @After

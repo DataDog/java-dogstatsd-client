@@ -131,7 +131,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     });
 
-    private final StatsDSender statsDSender;
+    private final IStatsDSender statsDSender;
 
     private final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
 
@@ -153,7 +153,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix) throws StatsDClientException {
-        this(prefix, getHostnameFromEnvVar(), getPortFromEnvVar(DEFAULT_DOGSTATSD_PORT), Integer.MAX_VALUE);
+        this(prefix, getHostnameFromEnvVar(), getPortFromEnvVar(DEFAULT_DOGSTATSD_PORT), Integer.MAX_VALUE, false);
     }
 
     /**
@@ -179,7 +179,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port) throws StatsDClientException {
-        this(prefix, hostname, port, Integer.MAX_VALUE);
+        this(prefix, hostname, port, Integer.MAX_VALUE, false);
     }
 
     /**
@@ -206,8 +206,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize) throws StatsDClientException {
-        this(prefix, hostname, port, queueSize, null, null);
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize, boolean useOldSender) throws StatsDClientException {
+        this(prefix, hostname, port, queueSize, useOldSender, null, null);
     }
 
     /**
@@ -235,7 +235,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final String... constantTags) throws StatsDClientException {
-        this(prefix, hostname, port, Integer.MAX_VALUE, constantTags, null);
+        this(prefix, hostname, port, Integer.MAX_VALUE, constantTags, null, false);
     }
 
     /**
@@ -264,8 +264,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final String[] constantTags, final int maxPacketSizeBytes) throws StatsDClientException {
-        this(prefix, hostname, port, Integer.MAX_VALUE, constantTags, null, maxPacketSizeBytes);
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final String[] constantTags, final int maxPacketSizeBytes, boolean useOldSender) throws StatsDClientException {
+        this(prefix, hostname, port, Integer.MAX_VALUE, constantTags, null, maxPacketSizeBytes, useOldSender);
     }
 
     /**
@@ -294,8 +294,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize, final String... constantTags) throws StatsDClientException {
-        this(prefix, hostname, port, queueSize, constantTags, null);
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize, boolean useOldSender, final String... constantTags) throws StatsDClientException {
+        this(prefix, hostname, port, queueSize, constantTags, null, useOldSender);
     }
 
     /**
@@ -326,8 +326,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
-                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, Integer.MAX_VALUE, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, boolean useOldSender) throws StatsDClientException {
+        this(prefix, Integer.MAX_VALUE, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null, useOldSender);
     }
 
     /**
@@ -360,8 +360,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
-                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler,boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null,useOldSender);
     }
 
 
@@ -399,8 +399,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
-                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, String entityID) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, entityID);
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, String entityID, boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, entityID, useOldSender);
     }
 
 
@@ -436,8 +436,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
-                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, final int maxPacketSizeBytes) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, maxPacketSizeBytes, null);
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, final int maxPacketSizeBytes, boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, maxPacketSizeBytes, null,useOldSender);
     }
 
     /**
@@ -474,8 +474,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize, int timeout, int bufferSize,
-                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), timeout, bufferSize);
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler, boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, staticStatsDAddressResolution(hostname, port), timeout, bufferSize, useOldSender);
     }
 
     /**
@@ -503,8 +503,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                                   final Callable<SocketAddress> addressLookup) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
+                                   final Callable<SocketAddress> addressLookup, boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, SOCKET_TIMEOUT_MS, SOCKET_BUFFER_BYTES, DEFAULT_MAX_PACKET_SIZE_BYTES, null, useOldSender);
     }
 
     /**
@@ -536,8 +536,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                                   final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, DEFAULT_MAX_PACKET_SIZE_BYTES, null);
+                                   final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, DEFAULT_MAX_PACKET_SIZE_BYTES, null, useOldSender);
     }
 
     /**
@@ -571,8 +571,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                                   final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes, null);
+                                   final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes, boolean useOldSender) throws StatsDClientException {
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes, null,useOldSender);
     }
 
     /**
@@ -610,7 +610,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                                   Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes, String entityID) throws StatsDClientException {
+                                   Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes, String entityID, boolean useOldSender) throws StatsDClientException {
         if((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = new StringBuilder(prefix).append(".").toString();
         } else {
@@ -655,8 +655,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
 
-        statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+        if (useOldSender) {
+            statsDSender = createOldSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+        } else {
+            statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+        }
         executor.submit(statsDSender);
+    }
+    protected StatsDSenderOld createOldSender(final Callable<SocketAddress> addressLookup, final int queueSize,
+            final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+        return new StatsDSenderOld(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
