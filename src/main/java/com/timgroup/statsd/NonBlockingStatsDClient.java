@@ -651,16 +651,18 @@ public class NonBlockingStatsDClient implements StatsDClient {
             } else{
                 clientChannel = DatagramChannel.open();
             }
+
+            statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
 
-        statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
         executor.submit(statsDSender);
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                        final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+                                        final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) throws Exception {
         return new StatsDSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
     }
 
