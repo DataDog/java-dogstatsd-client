@@ -703,7 +703,7 @@ public class NonBlockingStatsDClientTest {
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
             @Override
             protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) throws Exception {
                 return new SlowStatsDSender(addressLookup, qSize, handler, clientChannel, lock);
             }
         };
@@ -725,7 +725,7 @@ public class NonBlockingStatsDClientTest {
 
         SlowStatsDSender(Callable<SocketAddress> addressLookup, int queueSize,
                          StatsDClientErrorHandler handler, DatagramChannel clientChannel,
-                         CountDownLatch lock) {
+                         CountDownLatch lock) throws Exception {
             super(addressLookup, queueSize, handler, clientChannel, 1400);
             this.lock = lock;
         }

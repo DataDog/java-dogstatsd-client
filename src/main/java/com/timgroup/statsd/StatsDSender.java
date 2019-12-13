@@ -15,10 +15,11 @@ import java.util.concurrent.TimeUnit;
 public class StatsDSender implements Runnable {
     private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
     private static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
-    private static final int WAIT_SLEEP_MS = 10;
+    private static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
 
     private final ByteBuffer sendBuffer;
     private final Callable<SocketAddress> addressLookup;
+    private final SocketAddress address;
     private final StatsDClientErrorHandler handler;
     private final DatagramChannel clientChannel;
 
@@ -30,13 +31,18 @@ public class StatsDSender implements Runnable {
 
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
+                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes)
+            throws Exception {
+
         this.qSize = new AtomicInteger(0);
         this.qCapacity = queueSize;
+
         this.addressLookup = addressLookup;
+        this.address = addressLookup.call();
         this.queue = new ConcurrentLinkedQueue<String>();
         this.handler = handler;
         this.clientChannel = clientChannel;
+
         sendBuffer = ByteBuffer.allocateDirect(maxPacketSizeBytes);
     }
 
@@ -55,6 +61,7 @@ public class StatsDSender implements Runnable {
     @Override
     public void run() {
         boolean empty;
+
         while (!((empty = queue.isEmpty()) && shutdown)) {
             try {
                 if (empty) {
@@ -66,13 +73,12 @@ public class StatsDSender implements Runnable {
                     return;
                 }
                 final String message = queue.poll();
-                qSize.decrementAndGet();
                 if (message != null) {
+                    qSize.decrementAndGet();
                     final byte[] data = message.getBytes(MESSAGE_CHARSET);
                     if (sendBuffer.capacity() < data.length) {
                         throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
                     }
-                    final SocketAddress address = addressLookup.call();
                     if (sendBuffer.remaining() < (data.length + 1)) {
                         blockingSend(address);
                     }
