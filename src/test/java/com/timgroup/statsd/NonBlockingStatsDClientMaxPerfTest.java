@@ -18,13 +18,14 @@ import static org.junit.Assert.assertNotEquals;
 public final class NonBlockingStatsDClientMaxPerfTest {
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientMaxPerfTest");
-    private static final int STATSD_SERVER_PORT = 17255;
+    private static final int TEST_WORKERS = 4;
+    private static final int STATSD_SERVER_PORT = 8888;
     private static final int BLAST_DURATION_SECS = 30;  // Duration in secs
-    private static final int Q_SIZE = 1024; // Integer.MAX_VALUE;  // Duration in secs
+    private static final int Q_SIZE = 128; // Integer.MAX_VALUE;  // Duration in secs
     private static final Random RAND = new Random();
     private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient(
             "my.prefix", "localhost", STATSD_SERVER_PORT, Q_SIZE);
-    private final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private final ExecutorService executor = Executors.newFixedThreadPool(TEST_WORKERS);
     private static AtomicBoolean running;
     private static DummyStatsDServer server;
 
@@ -43,7 +44,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
     @Test
     public void perf_test() throws Exception {
 
-        for(int i=0 ; i < 4 ; i++) {
+        for(int i=0 ; i < TEST_WORKERS ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
                     while (running.get()) {
@@ -58,7 +59,6 @@ public final class NonBlockingStatsDClientMaxPerfTest {
 
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.SECONDS);
-
 
         assertNotEquals(0, server.messagesReceived().size());
         log.info("Messages at server: " + server.messagesReceived().size());
