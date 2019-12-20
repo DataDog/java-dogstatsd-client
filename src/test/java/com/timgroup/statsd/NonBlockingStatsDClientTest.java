@@ -8,9 +8,11 @@ import org.junit.Rule;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -701,32 +703,56 @@ public class NonBlockingStatsDClientTest {
         final DummyStatsDServer server = new DummyStatsDServer(port);
         final CountDownLatch lock = new CountDownLatch(1);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
+
             @Override
-            protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) throws Exception {
-                return new SlowStatsDSender(addressLookup, qSize, handler, clientChannel, lock);
+            protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
+                    final int maxPacketSizeBytes, final int bufferPoolSize) throws Exception {
+                return new SlowStatsDProcessor(qSize, handler, maxPacketSizeBytes, bufferPoolSize, lock);
+            }
+
+            @Override
+            protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
+                    final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
+
+                return new SlowStatsDSender(addressLookup, clientChannel, handler, pool, buffers, 1, lock);
             }
         };
         try {
             client.count("mycounter", 5);
             assertEquals(0, server.messagesReceived().size());
-            client.stop();
             server.waitForMessage();
             assertEquals(1, server.messagesReceived().size());
         } finally {
             client.stop();
             server.close();
+            assertEquals(0, lock.getCount());
         }
     }
 
+    private static class SlowStatsDProcessor extends StatsDProcessor {
+        private final CountDownLatch lock;
+
+        SlowStatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
+                final int maxPacketSizeBytes, final int poolSize, CountDownLatch lock)
+                throws Exception {
+            super(queueSize, handler, maxPacketSizeBytes, poolSize);
+            this.lock = lock;
+        }
+
+        @Override
+        void shutdown() {
+            super.shutdown();
+            lock.countDown();
+        }
+    }
 
     private static class SlowStatsDSender extends StatsDSender {
         private final CountDownLatch lock;
 
-        SlowStatsDSender(Callable<SocketAddress> addressLookup, int queueSize,
-                         StatsDClientErrorHandler handler, DatagramChannel clientChannel,
-                         CountDownLatch lock) throws Exception {
-            super(addressLookup, queueSize, handler, clientChannel, 1400);
+        SlowStatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
+                final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
+                final int workers, CountDownLatch lock) throws Exception {
+            super(addressLookup, clientChannel, handler, pool, buffers, workers);
             this.lock = lock;
         }
 
