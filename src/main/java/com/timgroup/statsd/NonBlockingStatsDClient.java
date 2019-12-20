@@ -9,12 +9,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,6 +65,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
      */
     private static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
+    private static final int DEFAULT_POOL_SIZE = 256;
     private static final int DEFAULT_DOGSTATSD_PORT = 8125;
     private static final int SOCKET_TIMEOUT_MS = 100;
     private static final int SOCKET_BUFFER_BYTES = -1;
@@ -121,7 +124,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final StatsDClientErrorHandler handler;
     private final String constantTagsRendered;
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+    private final ExecutorService executor = Executors.newFixedThreadPool(2, new ThreadFactory() {
         final ThreadFactory delegate = Executors.defaultThreadFactory();
         @Override public Thread newThread(final Runnable r) {
             final Thread result = delegate.newThread(r);
@@ -131,6 +134,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     });
 
+    private final StatsDProcessor statsDProcessor;
     private final StatsDSender statsDSender;
 
     private final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
@@ -652,18 +656,26 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 clientChannel = DatagramChannel.open();
             }
 
-            statsDSender = createSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, DEFAULT_POOL_SIZE);
+            statsDSender = createSender(addressLookup, handler, clientChannel,
+                    statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue());
 
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
 
+        executor.submit(statsDProcessor);
         executor.submit(statsDSender);
     }
 
-    protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                        final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) throws Exception {
-        return new StatsDSender(addressLookup, queueSize, handler, clientChannel, maxPacketSizeBytes);
+    protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
+            final int maxPacketSizeBytes, final int bufferPoolSize) throws Exception {
+        return new StatsDProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize);
+    }
+
+    protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
+            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
+        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers);
     }
 
     /**
@@ -673,6 +685,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void stop() {
         try {
+            statsDProcessor.shutdown();
             statsDSender.shutdown();
             executor.shutdown();
             try {
@@ -1386,7 +1399,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     private void send(final String message) {
-        statsDSender.send(message);
+        statsDProcessor.send(message);
     }
 
     private boolean isInvalidSample(double sampleRate) {

@@ -7,116 +7,104 @@ import java.nio.channels.DatagramChannel;
 import java.nio.charset.Charset;
 import java.util.concurrent.Callable;
 
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 
 public class StatsDSender implements Runnable {
-    private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
-    private static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
-    private static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
-
-    private final ByteBuffer sendBuffer;
     private final Callable<SocketAddress> addressLookup;
     private final SocketAddress address;
-    private final StatsDClientErrorHandler handler;
     private final DatagramChannel clientChannel;
+    private final StatsDClientErrorHandler handler;
 
-    private final int qCapacity;
-    private final Queue<String> queue;
-    private final AtomicInteger qSize;  // qSize will not reflect actual size, but a close estimate.
+    private final BufferPool pool;
+    private final BlockingQueue<ByteBuffer> buffers;
+    private static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
 
+    private final ExecutorService executor;
+    private static final int DEFAULT_WORKERS = 1;
+    private final int workers;
+
+    private final CountDownLatch endSignal;
     private volatile boolean shutdown;
 
 
-    StatsDSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                 final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes)
-            throws Exception {
+    StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
+                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
+                 final int workers) throws Exception {
 
-        this.qSize = new AtomicInteger(0);
-        this.qCapacity = queueSize;
+        this.pool = pool;
+        this.buffers = buffers;
+        this.handler = handler;
+        this.workers = workers;
 
         this.addressLookup = addressLookup;
         this.address = addressLookup.call();
-        this.queue = new ConcurrentLinkedQueue<String>();
-        this.handler = handler;
         this.clientChannel = clientChannel;
 
-        sendBuffer = ByteBuffer.allocateDirect(maxPacketSizeBytes);
+        this.executor = Executors.newFixedThreadPool(workers);
+        this.endSignal = new CountDownLatch(workers);
     }
 
-    boolean send(final String message) {
-        if (!shutdown) {
-            if (qSize.get() < qCapacity) {
-                queue.offer(message);
-                qSize.incrementAndGet();
-                return true;
-            }
-        }
-
-        return false;
+    StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
+                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
+        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS);
     }
 
     @Override
     public void run() {
-        boolean empty;
 
-        while (!((empty = queue.isEmpty()) && shutdown)) {
-            try {
-                if (empty) {
-                    Thread.sleep(WAIT_SLEEP_MS);
-                    continue;
-                }
+        for (int i=0 ; i<workers ; i++) {
+            executor.submit(new Runnable() {
+                public void run() {
+                    while (!(buffers.isEmpty() && shutdown)) {
+                        try {
+                            // it will block here
+                            ByteBuffer buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                            if (buffer == null) {
+                                continue;
+                            }
 
-                if (Thread.interrupted()) {
-                    return;
+                            final int sizeOfBuffer = buffer.position();
+
+                            buffer.flip();
+                            final int sentBytes = clientChannel.send(buffer, address);
+
+                            buffer.clear();
+                            if (sizeOfBuffer != sentBytes) {
+                                throw new IOException(
+                                        String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
+                                            buffer.toString(),
+                                            address.toString(),
+                                            sentBytes,
+                                            sizeOfBuffer));
+                            }
+
+                            // return buffer to pool
+                            pool.put(buffer);
+                        } catch (final InterruptedException e) {
+                            if (shutdown) {
+                                endSignal.countDown();
+                                return;
+                            }
+                        } catch (final Exception e) {
+                            handler.handle(e);
+                        }
+                    }
+                    endSignal.countDown();
                 }
-                final String message = queue.poll();
-                if (message != null) {
-                    qSize.decrementAndGet();
-                    final byte[] data = message.getBytes(MESSAGE_CHARSET);
-                    if (sendBuffer.capacity() < data.length) {
-                        throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
-                    }
-                    if (sendBuffer.remaining() < (data.length + 1)) {
-                        blockingSend(address);
-                    }
-                    if (sendBuffer.position() > 0) {
-                        sendBuffer.put((byte) '\n');
-                    }
-                    sendBuffer.put(data);
-                    if (null == queue.peek()) {
-                        blockingSend(address);
-                    }
-                }
-            } catch (final InterruptedException e) {
-                if (shutdown) {
-                    return;
-                }
-            } catch (final Exception e) {
-                handler.handle(e);
-            }
+            });
         }
-    }
 
-    private void blockingSend(final SocketAddress address) throws IOException {
-        final int sizeOfBuffer = sendBuffer.position();
-        sendBuffer.flip();
-
-        final int sentBytes = clientChannel.send(sendBuffer, address);
-        sendBuffer.limit(sendBuffer.capacity());
-        sendBuffer.rewind();
-
-        if (sizeOfBuffer != sentBytes) {
-            handler.handle(
-                    new IOException(
-                            String.format(
-                                    "Could not send entirely stat %s to %s. Only sent %d bytes out of %d bytes",
-                                    sendBuffer.toString(),
-                                    address.toString(),
-                                    sentBytes,
-                                    sizeOfBuffer)));
+        try {
+            endSignal.await();
+        } catch (final InterruptedException e) {
+            // TODO
         }
     }
 

@@ -18,8 +18,8 @@ import static org.junit.Assert.assertNotEquals;
 public final class NonBlockingStatsDClientMaxPerfTest {
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientMaxPerfTest");
-    private static final int TEST_WORKERS = 8;
-    private static final int STATSD_SERVER_PORT = 17255;
+    private static final int TEST_WORKERS = 4;
+    private static final int STATSD_SERVER_PORT = 8888;
     private static final int BLAST_DURATION_SECS = 30;  // Duration in secs
     private static final int Q_SIZE = 1024; // Integer.MAX_VALUE;  // Duration in secs
     private static final Random RAND = new Random();
@@ -31,14 +31,14 @@ public final class NonBlockingStatsDClientMaxPerfTest {
 
     @BeforeClass
     public static void start() throws IOException {
-        server = new DummyStatsDServer(STATSD_SERVER_PORT);
+        // server = new DummyStatsDServer(STATSD_SERVER_PORT);
         running = new AtomicBoolean(true);
     }
 
     @AfterClass
     public static void stop() throws Exception {
         client.stop();
-        server.close();
+        // server.close();
     }
 
     @Test
@@ -60,7 +60,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.SECONDS);
 
-        assertNotEquals(0, server.messagesReceived().size());
-        log.info("Messages at server: " + server.messagesReceived().size());
+        // assertNotEquals(0, server.messagesReceived().size());
+        // log.info("Messages at server: " + server.messagesReceived().size());
     }
 }
