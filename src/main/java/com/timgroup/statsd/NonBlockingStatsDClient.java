@@ -65,7 +65,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
      */
     private static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
-    private static final int DEFAULT_POOL_SIZE = 256;
+    private static final int DEFAULT_POOL_SIZE = 512;
     private static final int DEFAULT_DOGSTATSD_PORT = 8125;
     private static final int SOCKET_TIMEOUT_MS = 100;
     private static final int SOCKET_BUFFER_BYTES = -1;

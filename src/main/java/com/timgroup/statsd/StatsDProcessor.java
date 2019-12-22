@@ -23,7 +23,7 @@ public class StatsDProcessor implements Runnable {
     private final BufferPool bufferPool;
 
     private final int qCapacity;
-    private final Queue<String> queue;
+    private final Queue<String> messages;
     private final AtomicInteger qSize;  // qSize will not reflect actual size, but a close estimate.
     private final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
 
@@ -39,7 +39,7 @@ public class StatsDProcessor implements Runnable {
         this.qSize = new AtomicInteger(0);
         this.qCapacity = queueSize;
 
-        this.queue = new ConcurrentLinkedQueue<String>();
+        this.messages = new ConcurrentLinkedQueue<String>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
 
         this.handler = handler;
@@ -48,7 +48,7 @@ public class StatsDProcessor implements Runnable {
     boolean send(final String message) {
         if (!shutdown) {
             if (qSize.get() < qCapacity) {
-                queue.offer(message);
+                messages.offer(message);
                 qSize.incrementAndGet();
                 return true;
             }
@@ -68,9 +68,16 @@ public class StatsDProcessor implements Runnable {
     @Override
     public void run() {
         boolean empty;
-        ByteBuffer sendBuffer = bufferPool.borrow();
+        ByteBuffer sendBuffer;
 
-        while (!((empty = queue.isEmpty()) && shutdown)) {
+        try {
+            sendBuffer = bufferPool.borrow();
+        } catch(final InterruptedException e) {
+            // TODO
+            return;
+        }
+
+        while (!((empty = messages.isEmpty()) && shutdown)) {
 
             try {
                 if (empty) {
@@ -81,7 +88,7 @@ public class StatsDProcessor implements Runnable {
                 if (Thread.interrupted()) {
                     return;
                 }
-                final String message = queue.poll();
+                final String message = messages.poll();
                 if (message != null) {
                     qSize.decrementAndGet();
                     final byte[] data = message.getBytes(MESSAGE_CHARSET);
@@ -89,15 +96,15 @@ public class StatsDProcessor implements Runnable {
                         throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
                     }
                     if (sendBuffer.remaining() < (data.length + 1)) {
-                        outboundQueue.offer(sendBuffer);
+                        outboundQueue.put(sendBuffer);
                         sendBuffer = bufferPool.borrow();
                     }
                     if (sendBuffer.position() > 0) {
                         sendBuffer.put((byte) '\n');
                     }
                     sendBuffer.put(data);
-                    if (null == queue.peek()) {
-                        outboundQueue.offer(sendBuffer);
+                    if (null == messages.peek()) {
+                        outboundQueue.put(sendBuffer);
                         sendBuffer = bufferPool.borrow();
                     }
                 }
