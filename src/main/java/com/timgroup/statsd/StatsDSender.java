@@ -62,10 +62,11 @@ public class StatsDSender implements Runnable {
         for (int i=0 ; i<workers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
+                    ByteBuffer buffer = null;
+
                     while (!(buffers.isEmpty() && shutdown)) {
                         try {
-                            // it will block here
-                            ByteBuffer buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                            buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                             if (buffer == null) {
                                 continue;
                             }
@@ -86,8 +87,12 @@ public class StatsDSender implements Runnable {
                             }
 
                             // return buffer to pool
-                            pool.put(buffer);
+                            if (buffer != null) {
+                                pool.put(buffer);
+                            }
+
                         } catch (final InterruptedException e) {
+                            // TODO: Improve buffer handling on InterruptedException
                             if (shutdown) {
                                 endSignal.countDown();
                                 return;
@@ -101,10 +106,12 @@ public class StatsDSender implements Runnable {
             });
         }
 
-        try {
-            endSignal.await();
-        } catch (final InterruptedException e) {
-            // TODO
+        boolean done = false;
+        while(!done) {
+            try {
+                endSignal.await();
+                done = true;
+            } catch (final InterruptedException e) { }
         }
     }
 
