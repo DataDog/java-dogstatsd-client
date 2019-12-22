@@ -21,7 +21,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
     private static final int TEST_WORKERS = 8;
     private static final int STATSD_SERVER_PORT = 17255;
     private static final int BLAST_DURATION_SECS = 30;  // Duration in secs
-    private static final int Q_SIZE = 16384; // Integer.MAX_VALUE;  // Duration in secs
+    private static final int Q_SIZE = 1024; // Integer.MAX_VALUE;  // Duration in secs
     private static final Random RAND = new Random();
     private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient(
             "my.prefix", "localhost", STATSD_SERVER_PORT, Q_SIZE);
