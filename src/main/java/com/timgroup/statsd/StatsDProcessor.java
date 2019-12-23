@@ -73,7 +73,7 @@ public class StatsDProcessor implements Runnable {
         try {
             sendBuffer = bufferPool.borrow();
         } catch(final InterruptedException e) {
-            // TODO
+            handler.handle(e);
             return;
         }
 
