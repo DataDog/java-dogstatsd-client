@@ -66,6 +66,11 @@ public class StatsDSender implements Runnable {
 
                     while (!(buffers.isEmpty() && shutdown)) {
                         try {
+
+                            if (buffer != null) {
+                                pool.put(buffer);
+                            }
+
                             buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                             if (buffer == null) {
                                 continue;
@@ -86,13 +91,7 @@ public class StatsDSender implements Runnable {
                                             sizeOfBuffer));
                             }
 
-                            // return buffer to pool
-                            if (buffer != null) {
-                                pool.put(buffer);
-                            }
-
                         } catch (final InterruptedException e) {
-                            // TODO: Improve buffer handling on InterruptedException
                             if (shutdown) {
                                 endSignal.countDown();
                                 return;
