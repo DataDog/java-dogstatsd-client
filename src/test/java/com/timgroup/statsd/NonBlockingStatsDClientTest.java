@@ -705,8 +705,12 @@ public class NonBlockingStatsDClientTest {
 
             @Override
             protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-                    final int maxPacketSizeBytes, final int bufferPoolSize) throws Exception {
-                return new SlowStatsDProcessor(qSize, handler, maxPacketSizeBytes, bufferPoolSize, lock);
+                    final int maxPacketSizeBytes, final int bufferPoolSize, boolean blocking) throws Exception {
+                if (blocking) {
+                    return new SlowStatsDBlockingProcessor(qSize, handler, maxPacketSizeBytes, bufferPoolSize, lock);
+                } else {
+                    return new SlowStatsDNonBlockingProcessor(qSize, handler, maxPacketSizeBytes, bufferPoolSize, lock);
+                }
             }
 
             @Override
@@ -729,10 +733,27 @@ public class NonBlockingStatsDClientTest {
         }
     }
 
-    private static class SlowStatsDProcessor extends StatsDProcessor {
+    private static class SlowStatsDNonBlockingProcessor extends StatsDNonBlockingProcessor {
         private final CountDownLatch lock;
 
-        SlowStatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
+        SlowStatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
+                final int maxPacketSizeBytes, final int poolSize, CountDownLatch lock)
+                throws Exception {
+            super(queueSize, handler, maxPacketSizeBytes, poolSize);
+            this.lock = lock;
+        }
+
+        @Override
+        void shutdown() {
+            super.shutdown();
+            lock.countDown();
+        }
+    }
+
+    private static class SlowStatsDBlockingProcessor extends StatsDBlockingProcessor {
+        private final CountDownLatch lock;
+
+        SlowStatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
                 final int maxPacketSizeBytes, final int poolSize, CountDownLatch lock)
                 throws Exception {
             super(queueSize, handler, maxPacketSizeBytes, poolSize);
