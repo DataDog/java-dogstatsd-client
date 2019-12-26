@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.ArrayList;
 import java.util.List;
 import jnr.unixsocket.UnixDatagramChannel;
@@ -13,29 +14,24 @@ import jnr.unixsocket.UnixSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 
-class DummyStatsDServer {
-    private final List<String> messagesReceived = new ArrayList<String>();
+class DummyLowMemStatsDServer extends DummyStatsDServer {
+    private final AtomicInteger packetCount = new AtomicInteger(0);
+    private final AtomicInteger messageCount = new AtomicInteger(0);
 
-    protected final DatagramChannel server;
-    protected volatile Boolean freeze = false;
-
-    public DummyStatsDServer(int port) throws IOException {
-        server = DatagramChannel.open();
-        server.bind(new InetSocketAddress(port));
-        this.listen();
+    public DummyLowMemStatsDServer(int port) throws IOException {
+        super(port);
     }
 
-    public DummyStatsDServer(String socketPath) throws IOException {
-        server = UnixDatagramChannel.open();
-        server.bind(new UnixSocketAddress(socketPath));
-        this.listen();
+    public DummyLowMemStatsDServer(String socketPath) throws IOException {
+        super(socketPath);
     }
 
+    @Override
     protected void listen() {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                final ByteBuffer packet = ByteBuffer.allocate(1500);
+                final ByteBuffer packet = ByteBuffer.allocateDirect(1500);
 
                 while(server.isOpen()) {
                     if (freeze) {
@@ -49,8 +45,10 @@ class DummyStatsDServer {
                                                        // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
                             server.receive(packet);
                             packet.flip();
+                            packetCount.incrementAndGet();
+
                             for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
-                                messagesReceived.add(msg.trim());
+                                messageCount.incrementAndGet();
                             }
                         } catch (IOException e) {
                         }
@@ -62,37 +60,19 @@ class DummyStatsDServer {
         thread.start();
     }
 
-    public void waitForMessage() {
-        while (messagesReceived.isEmpty()) {
-            try {
-                Thread.sleep(50L);
-            } catch (InterruptedException e) {
-            }
-        }
-    }
-
-    public List<String> messagesReceived() {
-        return new ArrayList<String>(messagesReceived);
-    }
-
-    public void freeze() {
-        freeze = true;
-    }
-
-    public void unfreeze() {
-        freeze = false;
-    }
-
-    public void close() throws IOException {
-        try {
-            server.close();
-        } catch (Exception e) {
-            //ignore
-        }
-    }
-
+    @Override
     public void clear() {
-        messagesReceived.clear();
+        packetCount.set(0);
+        messageCount.set(0);
+        super.clear();
+    }
+
+    public int getPacketCount() {
+        return packetCount.get();
+    }
+
+    public int getMessageCount() {
+        return messageCount.get();
     }
 
 }
