@@ -1,50 +1,83 @@
 package com.timgroup.statsd;
 
-
 import java.io.IOException;
 import java.net.SocketException;
+
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 import java.util.logging.Logger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+
+import org.junit.After;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import static org.junit.Assert.assertNotEquals;
 
+@RunWith(Parameterized.class)
 public final class NonBlockingStatsDClientMaxPerfTest {
 
-    private static Logger log = Logger.getLogger("NonBlockingStatsDClientMaxPerfTest");
-    private static final int TEST_WORKERS = 4;
-    private static final int STATSD_SERVER_PORT = 17255;
-    private static final int BLAST_DURATION_SECS = 30;  // Duration in secs
-    private static final int Q_SIZE = 1024; // Integer.MAX_VALUE;  // Duration in secs
-    private static final Random RAND = new Random();
-    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient(
-            "my.prefix", "localhost", STATSD_SERVER_PORT, Q_SIZE);
-    private final ExecutorService executor = Executors.newFixedThreadPool(TEST_WORKERS);
-    private static AtomicBoolean running;
-    private static DummyStatsDServer server;
+    private static final int senderWorkers = 4;
+    private final int clientWorkers;
+    private final int port;
+    private final int duration;  // Duration in secs
+    private final int qSize; // Queue length (number of elements)
 
-    @BeforeClass
-    public static void start() throws IOException {
-         server = new DummyStatsDServer(STATSD_SERVER_PORT);
-        running = new AtomicBoolean(true);
+    private NonBlockingStatsDClient client;
+    private DummyStatsDServer server;
+
+    private AtomicBoolean running;
+    private final ExecutorService executor;
+
+    private static Logger log = Logger.getLogger("NonBlockingStatsDClientMaxPerfTest");
+
+    @Parameters
+    public static Collection<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+                 { 30, 17255, 256, 1 },  // 30 seconds, 17255 port, 256 qSize, 1 worker
+                 { 30, 17256, 512, 1 },  // 30 seconds, 17255 port, 512 qSize, 1 worker
+                 { 30, 17257, 1024, 1 },  // 30 seconds, 17255 port, 1024 qSize, 1 worker
+                 { 30, 17258, 2048, 1 },  // 30 seconds, 17255 port, 2048 qSize, 1 worker
+                 { 30, 17259, 4096, 1 },  // 30 seconds, 17255 port, 4096 qSize, 1 worker
+                 { 30, 17260, Integer.MAX_VALUE, 1 },  // 30 seconds, 17255 port, MAX_VALUE qSize, 1 worker
+                 { 30, 17261, 256, 2 },  // 30 seconds, 17255 port, 256 qSize, 2 workers
+                 { 30, 17262, 512, 2 },  // 30 seconds, 17255 port, 512 qSize, 2 workers
+                 { 30, 17263, 1024, 2 },  // 30 seconds, 17255 port, 1024 qSize, 2 workers
+                 { 30, 17264, 2048, 2 },  // 30 seconds, 17255 port, 2048 qSize, 2 workers
+                 { 30, 17265, 4096, 2 },  // 30 seconds, 17255 port, 4096 qSize, 2 workers
+                 { 30, 17266, Integer.MAX_VALUE, 2 }  // 30 seconds, 17255 port, MAX_VALUE qSize, 2 workers
+           });
     }
 
-    @AfterClass
-    public static void stop() throws Exception {
+    public NonBlockingStatsDClientMaxPerfTest(int duration, int port, int qSize, int workers) throws IOException {
+        this.duration = duration;
+        this.port = port;
+        this.qSize = qSize;
+        this.clientWorkers = workers;
+        this.client = new NonBlockingStatsDClient("my.prefix", "localhost", port, qSize);
+        this.server = new DummyStatsDServer(port);
+
+        this.executor = Executors.newFixedThreadPool(senderWorkers);
+        this.running = new AtomicBoolean(true);
+
+    }
+
+    @After
+    public void stop() throws Exception {
         client.stop();
         server.close();
     }
 
     @Test
-    public void perf_test() throws Exception {
+    public void perfTest() throws Exception {
 
-        for(int i=0 ; i < TEST_WORKERS ; i++) {
+        for(int i=0 ; i < this.senderWorkers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
                     while (running.get()) {
@@ -54,7 +87,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
             });
         }
 
-        Thread.sleep(TimeUnit.SECONDS.toMillis(BLAST_DURATION_SECS));
+        Thread.sleep(TimeUnit.SECONDS.toMillis(this.duration));
         running.set(false);
 
         executor.shutdown();
