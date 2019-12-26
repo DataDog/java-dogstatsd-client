@@ -615,7 +615,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    final Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes,
                                    final int senderWorkers) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes, null, senderWorkers);
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes, null, senderWorkers, false);
     }
 
     /**
@@ -652,10 +652,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes,
                                    String entityID) throws StatsDClientException {
-        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes, entityID, DEFAULT_SENDER_WORKERS);
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout,
+                bufferSize, maxPacketSizeBytes, entityID, DEFAULT_SENDER_WORKERS, false);
     }
 
     /**
@@ -696,7 +697,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes,
-                                   String entityID, final int senderWorkers) throws StatsDClientException {
+                                   String entityID, final int senderWorkers, boolean blocking) throws StatsDClientException {
         if((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = new StringBuilder(prefix).append(".").toString();
         } else {
@@ -738,7 +739,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 clientChannel = DatagramChannel.open();
             }
 
-            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, DEFAULT_POOL_SIZE);
+            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, DEFAULT_POOL_SIZE, blocking);
             statsDSender = createSender(addressLookup, handler, clientChannel,
                     statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue(), senderWorkers);
 
@@ -751,8 +752,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int bufferPoolSize) throws Exception {
-        return new StatsDProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize);
+            final int maxPacketSizeBytes, final int bufferPoolSize, boolean blocking) throws Exception {
+        if (blocking) {
+            return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize);
+        } else {
+            return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize);
+        }
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
