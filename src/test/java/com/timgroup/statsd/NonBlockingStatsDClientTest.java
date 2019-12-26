@@ -490,7 +490,6 @@ public class NonBlockingStatsDClientTest {
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, null, null, entity_value+"-arg");
         client.gauge("value", 423);
         server.waitForMessage();
-
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg"));
     }
 
@@ -712,9 +711,10 @@ public class NonBlockingStatsDClientTest {
 
             @Override
             protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
-                    final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
+                    final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
+                    final int serverWorkers) throws Exception {
 
-                return new SlowStatsDSender(addressLookup, clientChannel, handler, pool, buffers, 1, lock);
+                return new SlowStatsDSender(addressLookup, clientChannel, handler, pool, buffers, serverWorkers, lock);
             }
         };
         try {
