@@ -30,7 +30,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
     private final int qSize; // Queue length (number of elements)
 
     private NonBlockingStatsDClient client;
-    private DummyStatsDServer server;
+    private DummyLowMemStatsDServer server;
 
     private AtomicBoolean running;
     private final ExecutorService executor;
@@ -45,13 +45,13 @@ public final class NonBlockingStatsDClientMaxPerfTest {
                  { 30, 17257, 1024, 1 },  // 30 seconds, 17255 port, 1024 qSize, 1 worker
                  { 30, 17258, 2048, 1 },  // 30 seconds, 17255 port, 2048 qSize, 1 worker
                  { 30, 17259, 4096, 1 },  // 30 seconds, 17255 port, 4096 qSize, 1 worker
-                 { 30, 17260, Integer.MAX_VALUE, 1 },  // 30 seconds, 17255 port, MAX_VALUE qSize, 1 worker
+                 // { 30, 17260, Integer.MAX_VALUE, 1 },  // 30 seconds, 17255 port, MAX_VALUE qSize, 1 worker
                  { 30, 17261, 256, 2 },  // 30 seconds, 17255 port, 256 qSize, 2 workers
                  { 30, 17262, 512, 2 },  // 30 seconds, 17255 port, 512 qSize, 2 workers
                  { 30, 17263, 1024, 2 },  // 30 seconds, 17255 port, 1024 qSize, 2 workers
                  { 30, 17264, 2048, 2 },  // 30 seconds, 17255 port, 2048 qSize, 2 workers
-                 { 30, 17265, 4096, 2 },  // 30 seconds, 17255 port, 4096 qSize, 2 workers
-                 { 30, 17266, Integer.MAX_VALUE, 2 }  // 30 seconds, 17255 port, MAX_VALUE qSize, 2 workers
+                 { 30, 17265, 4096, 2 }  // 30 seconds, 17255 port, 4096 qSize, 2 workers
+                 // { 30, 17266, Integer.MAX_VALUE, 2 }  // 30 seconds, 17255 port, MAX_VALUE qSize, 2 workers
            });
     }
 
@@ -61,7 +61,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
         this.qSize = qSize;
         this.clientWorkers = workers;
         this.client = new NonBlockingStatsDClient("my.prefix", "localhost", port, qSize);
-        this.server = new DummyStatsDServer(port);
+        this.server = new DummyLowMemStatsDServer(port);
 
         this.executor = Executors.newFixedThreadPool(senderWorkers);
         this.running = new AtomicBoolean(true);
@@ -93,7 +93,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.SECONDS);
 
-        assertNotEquals(0, server.messagesReceived().size());
-        log.info("Messages at server: " + server.messagesReceived().size());
+        assertNotEquals(0, server.getMessageCount());
+        log.info("Messages at server: " + server.getMessageCount() + " packets: " + server.getPacketCount());
     }
 }
