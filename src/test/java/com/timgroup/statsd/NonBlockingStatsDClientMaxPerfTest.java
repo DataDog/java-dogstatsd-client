@@ -60,7 +60,11 @@ public final class NonBlockingStatsDClientMaxPerfTest {
         this.port = port;
         this.qSize = qSize;
         this.clientWorkers = workers;
-        this.client = new NonBlockingStatsDClient("my.prefix", "localhost", port, qSize);
+        this.client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(port)
+            .queueSize(qSize)
+            .build();
         this.server = new DummyLowMemStatsDServer(port);
 
         this.executor = Executors.newFixedThreadPool(senderWorkers);

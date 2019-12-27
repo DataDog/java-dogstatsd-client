@@ -39,8 +39,15 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         socketFile.deleteOnExit();
 
         server = new DummyStatsDServer(socketFile.toString());
-        client = new NonBlockingStatsDClient("my.prefix", socketFile.toString(), 0, 1,  100, 1024 * 1024, null, this);
-    }
+        client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname(socketFile.toString())
+            .port(0)
+            .queueSize(1)
+            .timeout(0)
+            .socketBufferSize(1024 * 1024)
+            .errorHandler(this)
+            .build();
+        }
 
     @After
     public void stop() throws Exception {
