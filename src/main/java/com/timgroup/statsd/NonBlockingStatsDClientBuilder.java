@@ -149,9 +149,7 @@ public class NonBlockingStatsDClientBuilder {
         try {
             if (hostname == null) {
                 hostname = getHostnameFromEnvVar();
-                if (port == 0) {
-                    port = getPortFromEnvVar(NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT);
-                }
+                port = getPortFromEnvVar(port);
             }
 
             return staticAddressResolution(hostname, port);

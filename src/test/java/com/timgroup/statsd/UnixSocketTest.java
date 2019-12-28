@@ -22,13 +22,20 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
     private static File socketFile;
     private volatile Exception lastException = new Exception();
 
-    public void handle(Exception exception) {
+    private static boolean linux = true;
+
+    public synchronized void handle(Exception exception) {
         lastException = exception;
     }
 
     @BeforeClass
-    public static void linuxOnly() throws IOException {
-        Assume.assumeThat(System.getProperty("os.name"), containsString("Linux"));
+    public static void supportedOnly() throws IOException {
+        boolean isLinux = System.getProperty("os.name").toLowerCase().contains("linux");
+        boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
+        if (isMac) {
+            linux = false;
+        }
+        Assume.assumeTrue(isLinux || isMac);
     }
 
     @Before
@@ -43,7 +50,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .hostname(socketFile.toString())
             .port(0)
             .queueSize(1)
-            .timeout(0)
+            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
             .socketBufferSize(1024 * 1024)
             .errorHandler(this)
             .build();
@@ -119,7 +126,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             client.gauge("mycount", 20);
             Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
         }
-        assertThat(lastException.getMessage(), containsString("Resource temporarily unavailable"));
+        String excMessage = linux ? "Resource temporarily unavailable" : "No buffer space available";
+        assertThat(lastException.getMessage(), containsString(excMessage));
 
         // Make sure we recover after we resume listening
         server.clear();
