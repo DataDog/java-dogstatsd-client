@@ -12,6 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Logger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -32,6 +33,8 @@ public class NonBlockingStatsDClientTest {
         .port(STATSD_SERVER_PORT)
         .build();
     private static DummyStatsDServer server;
+
+    private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
 
     @Rule
     public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
@@ -528,7 +531,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void init_client_from_env_vars() throws Exception {
         final String entity_value =  "foo-entity";
-        environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, "17254");
+        environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, Integer.toString(STATSD_SERVER_PORT));
         environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
             .build();
@@ -762,7 +765,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClientBuilder builder = new SlowStatsDNonBlockingStatsDClientBuilder().prefix("")
             .hostname("localhost")
-            .port(STATSD_SERVER_PORT);
+            .port(port);
         final SlowStatsDNonBlockingStatsDClient client = ((SlowStatsDNonBlockingStatsDClientBuilder)builder).build();
 
         try {
@@ -777,89 +780,29 @@ public class NonBlockingStatsDClientTest {
         }
     }
 
-    private static class SlowStatsDNonBlockingProcessor extends StatsDNonBlockingProcessor {
-        private final CountDownLatch lock;
-
-        SlowStatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-                final int maxPacketSizeBytes, final int poolSize, CountDownLatch lock)
-                throws Exception {
-            super(queueSize, handler, maxPacketSizeBytes, poolSize);
-            this.lock = lock;
-        }
-
-        @Override
-        void shutdown() {
-            super.shutdown();
-            lock.countDown();
-        }
-    }
-
-    private static class SlowStatsDBlockingProcessor extends StatsDBlockingProcessor {
-        private final CountDownLatch lock;
-
-        SlowStatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-                final int maxPacketSizeBytes, final int poolSize, CountDownLatch lock)
-                throws Exception {
-            super(queueSize, handler, maxPacketSizeBytes, poolSize);
-            this.lock = lock;
-        }
-
-        @Override
-        void shutdown() {
-            super.shutdown();
-            lock.countDown();
-        }
-    }
-
-    private static class SlowStatsDSender extends StatsDSender {
-        private final CountDownLatch lock;
-
-        SlowStatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
-                final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                final int workers, CountDownLatch lock) throws Exception {
-            super(addressLookup, clientChannel, handler, pool, buffers, workers);
-            this.lock = lock;
-        }
-
-        @Override
-        void shutdown() {
-            super.shutdown();
-            lock.countDown();
-        }
-    }
-
     private static class SlowStatsDNonBlockingStatsDClient extends NonBlockingStatsDClient {
 
-        private final CountDownLatch lock = new CountDownLatch(1);
+        private CountDownLatch lock;
 
         SlowStatsDNonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes,
-                                   String entityID, final int poolSize, final int senderWorkers, boolean blocking) throws StatsDClientException {
+                                   String entityID, final int poolSize, final int senderWorkers, boolean blocking)
+                throws StatsDClientException {
             super(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes,
                     entityID, poolSize, senderWorkers, blocking);
-        }
-
-        @Override
-        protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-                final int maxPacketSizeBytes, final int bufferPoolSize, boolean blocking) throws Exception {
-            if (blocking) {
-                return new SlowStatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize, lock);
-            } else {
-                return new SlowStatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize, lock);
-            }
-        }
-
-        @Override
-        protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
-                final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                final int serverWorkers) throws Exception {
-
-            return new SlowStatsDSender(addressLookup, clientChannel, handler, pool, buffers, serverWorkers, lock);
+            lock = new CountDownLatch(1);
         }
 
         public CountDownLatch getLock() {
             return this.lock;
         }
+
+        @Override
+        public void stop() {
+            super.stop();
+            lock.countDown();
+        }
+
     };
 
     private static class SlowStatsDNonBlockingStatsDClientBuilder extends NonBlockingStatsDClientBuilder {
@@ -868,7 +811,8 @@ public class NonBlockingStatsDClientTest {
         public SlowStatsDNonBlockingStatsDClient build() throws StatsDClientException {
             if (addressLookup != null) {
                 return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID, bufferPoolSize, senderWorkers, blocking);
+                        addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID, bufferPoolSize,
+                        senderWorkers, blocking);
             } else {
                 return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                         staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
