@@ -128,8 +128,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     });
 
-    private final StatsDProcessor statsDProcessor;
-    private final StatsDSender statsDSender;
+    protected final StatsDProcessor statsDProcessor;
+    protected final StatsDSender statsDSender;
 
     private final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
 
