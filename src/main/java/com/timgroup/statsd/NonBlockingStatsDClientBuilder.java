@@ -22,6 +22,7 @@ public class NonBlockingStatsDClientBuilder {
     public int bufferPoolSize = NonBlockingStatsDClient.DEFAULT_POOL_SIZE;
     public int socketBufferSize = NonBlockingStatsDClient.SOCKET_BUFFER_BYTES;
     public int maxPacketSizeBytes = NonBlockingStatsDClient.DEFAULT_MAX_PACKET_SIZE_BYTES;
+    public int processorWorkers = NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
     public boolean blocking;
 
@@ -60,6 +61,10 @@ public class NonBlockingStatsDClientBuilder {
         maxPacketSizeBytes = val;
         return this;
     }
+    public NonBlockingStatsDClientBuilder processorWorkers(int val) {
+        processorWorkers = val;
+        return this;
+    }
     public NonBlockingStatsDClientBuilder senderWorkers(int val) {
         senderWorkers = val;
         return this;
@@ -95,11 +100,12 @@ public class NonBlockingStatsDClientBuilder {
     public NonBlockingStatsDClient build() throws StatsDClientException {
         if (addressLookup != null) {
             return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                    addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID, bufferPoolSize, senderWorkers, blocking);
+                    addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID,
+                    bufferPoolSize, processorWorkers, senderWorkers, blocking);
         } else {
             return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                     staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
-                    entityID, bufferPoolSize, senderWorkers, blocking);
+                    entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking);
         }
     }
 
