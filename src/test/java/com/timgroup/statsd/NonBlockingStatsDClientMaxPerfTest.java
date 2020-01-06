@@ -23,8 +23,9 @@ import static org.junit.Assert.assertNotEquals;
 @RunWith(Parameterized.class)
 public final class NonBlockingStatsDClientMaxPerfTest {
 
-    private static final int senderWorkers = 4;
-    private final int clientWorkers;
+    private static final int testWorkers = 4;
+    private final int processorWorkers;
+    private final int senderWorkers;
     private final int port;
     private final int duration;  // Duration in secs
     private final int qSize; // Queue length (number of elements)
@@ -40,30 +41,46 @@ public final class NonBlockingStatsDClientMaxPerfTest {
     @Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
-                 { 30, 17255, 256, 1 },  // 30 seconds, 17255 port, 256 qSize, 1 worker
-                 { 30, 17256, 512, 1 },  // 30 seconds, 17255 port, 512 qSize, 1 worker
-                 { 30, 17257, 1024, 1 },  // 30 seconds, 17255 port, 1024 qSize, 1 worker
-                 { 30, 17258, 2048, 1 },  // 30 seconds, 17255 port, 2048 qSize, 1 worker
-                 { 30, 17259, 4096, 1 },  // 30 seconds, 17255 port, 4096 qSize, 1 worker
+                 { 30, 17255, 256, 1, 1 },  // 30 seconds, 17255 port, 256 qSize, 1 worker
+                 { 30, 17255, 512, 1, 1 },  // 30 seconds, 17255 port, 512 qSize, 1 worker
+                 { 30, 17255, 1024, 1, 1 },  // 30 seconds, 17255 port, 1024 qSize, 1 worker
+                 { 30, 17255, 2048, 1, 1 },  // 30 seconds, 17255 port, 2048 qSize, 1 worker
+                 { 30, 17255, 4096, 1, 1 },  // 30 seconds, 17255 port, 4096 qSize, 1 worker
                  // { 30, 17260, Integer.MAX_VALUE, 1 },  // 30 seconds, 17255 port, MAX_VALUE qSize, 1 worker
-                 { 30, 17261, 256, 2 },  // 30 seconds, 17255 port, 256 qSize, 2 workers
-                 { 30, 17262, 512, 2 },  // 30 seconds, 17255 port, 512 qSize, 2 workers
-                 { 30, 17263, 1024, 2 },  // 30 seconds, 17255 port, 1024 qSize, 2 workers
-                 { 30, 17264, 2048, 2 },  // 30 seconds, 17255 port, 2048 qSize, 2 workers
-                 { 30, 17265, 4096, 2 }  // 30 seconds, 17255 port, 4096 qSize, 2 workers
-                 // { 30, 17266, Integer.MAX_VALUE, 2 }  // 30 seconds, 17255 port, MAX_VALUE qSize, 2 workers
+                 { 30, 17255, 256, 2, 1 },  // 30 seconds, 17255 port, 256 qSize, 2 workers
+                 { 30, 17255, 512, 2, 1 },  // 30 seconds, 17255 port, 512 qSize, 2 workers
+                 { 30, 17255, 1024, 2, 1 },  // 30 seconds, 17255 port, 1024 qSize, 2 workers
+                 { 30, 17255, 2048, 2, 1 },  // 30 seconds, 17255 port, 2048 qSize, 2 workers
+                 { 30, 17255, 4096, 2, 1 },  // 30 seconds, 17255 port, 4096 qSize, 2 workers
+                 // // { 30, 17255, Integer.MAX_VALUE, 2 }  // 30 seconds, 17255 port, MAX_VALUE qSize, 2 workers
+                 { 30, 17255, 256, 1, 2},  // 30 seconds, 17255 port, 256 qSize, 1 sender worker, 2 processor workers
+                 { 30, 17255, 512, 1, 2 },  // 30 seconds, 17255 port, 512 qSize, 1 sender worker, 2 processor workers
+                 { 30, 17255, 1024, 1, 2 },  // 30 seconds, 17255 port, 1024 qSize, 1 sender worker, 2 processor workers
+                 { 30, 17255, 2048, 1, 2 },  // 30 seconds, 17255 port, 2048 qSize, 1 sender worke, 2 processor workers
+                 { 30, 17255, 4096, 1, 2 },  // 30 seconds, 17255 port, 4096 qSize, 1 sender worke, 2 processor workers
+                 // // { 30, 17255, Integer.MAX_VALUE, 1, 2 },  // 30 seconds, 17255 port, MAX_VALUE qSize, 1 worker
+                 { 30, 17255, 256, 2, 2 },  // 30 seconds, 17255 port, 256 qSize, 2 sender workers, 2 processor workers
+                 { 30, 17255, 512, 2, 2 },  // 30 seconds, 17255 port, 512 qSize, 2 sender workers, 2 processor workers
+                 { 30, 17255, 1024, 2, 2 },  // 30 seconds, 17255 port, 1024 qSize, 2 sender workers, 2 processor workers
+                 { 30, 17255, 2048, 2, 2 },  // 30 seconds, 17255 port, 2048 qSize, 2 sender workers, 2 processor workers
+                 { 30, 17255, 4096, 2, 2 }  // 30 seconds, 17255 port, 4096 qSize, 2 sender workers, 2 processor workers
+                 // // { 30, 17255, Integer.MAX_VALUE, 2 }  // 30 seconds, 17255 port, MAX_VALUE qSize, 2 sender workers
            });
     }
 
-    public NonBlockingStatsDClientMaxPerfTest(int duration, int port, int qSize, int workers) throws IOException {
+    public NonBlockingStatsDClientMaxPerfTest(int duration, int port, int qSize,
+            int processorWorkers, int senderWorkers) throws IOException {
         this.duration = duration;
         this.port = port;
         this.qSize = qSize;
-        this.clientWorkers = workers;
+        this.processorWorkers = processorWorkers;
+        this.senderWorkers = senderWorkers;
         this.client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
             .hostname("localhost")
             .port(port)
             .queueSize(qSize)
+            .senderWorkers(senderWorkers)
+            .processorWorkers(processorWorkers)
             .build();
         this.server = new DummyLowMemStatsDServer(port);
 
@@ -81,7 +98,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
     @Test
     public void perfTest() throws Exception {
 
-        for(int i=0 ; i < this.senderWorkers ; i++) {
+        for(int i=0 ; i < this.testWorkers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
                     while (running.get()) {
