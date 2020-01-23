@@ -1,17 +1,10 @@
 package com.timgroup.statsd;
 
-import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.charset.Charset;
-import java.util.concurrent.Callable;
 
-import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatsDBlockingProcessor extends StatsDProcessor {
 
