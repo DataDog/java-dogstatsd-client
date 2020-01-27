@@ -3,7 +3,7 @@ package com.timgroup.statsd;
 import java.util.Date;
 
 /**
- * An event to send
+ * An event to send.
  * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#events">http://docs.datadoghq.com/guides/dogstatsd/#events</a>
  */
 public class Event {
@@ -25,6 +25,7 @@ public class Event {
     }
 
     /**
+     * Get number of milliseconds since epoch started.
      * @return -1 if not set
      */
     public long getMillisSinceEpoch() {
@@ -65,11 +66,16 @@ public class Event {
         ERROR, WARNING, INFO, SUCCESS
     }
 
-    @SuppressWarnings({"AccessingNonPublicFieldOfAnotherObject", "PrivateMemberAccessBetweenOuterAndInnerClass", "ParameterHidesMemberVariable"})
+    @SuppressWarnings({"AccessingNonPublicFieldOfAnotherObject",
+            "PrivateMemberAccessBetweenOuterAndInnerClass", "ParameterHidesMemberVariable"})
     public static class Builder {
         private final Event event = new Event();
+
         private Builder() {}
 
+        /**
+         * Build factory method for the event.
+         */
         public Event build() {
             if ((event.title == null) || event.title.isEmpty()) {
                 throw new IllegalStateException("event title must be set");
@@ -81,6 +87,7 @@ public class Event {
         }
 
         /**
+         * Title for the event.
          * @param title
          *     Event title ; mandatory
          */
@@ -90,6 +97,7 @@ public class Event {
         }
 
         /**
+         * Text for the event.
          * @param text
          *     Event text ; supports line breaks ; mandatory
          */
@@ -99,6 +107,7 @@ public class Event {
         }
 
         /**
+         * Date for the event.
          * @param date
          *     Assign a timestamp to the event ; Default: none (Default is the current Unix epoch timestamp when not sent)
          */
@@ -108,6 +117,7 @@ public class Event {
         }
 
         /**
+         * Date for the event.
          * @param millisSinceEpoch
          *     Assign a timestamp to the event ; Default: none (Default is the current Unix epoch timestamp when not sent)
          */
@@ -117,6 +127,7 @@ public class Event {
         }
 
         /**
+         * Source hostname for the event.
          * @param hostname
          *     Assign a hostname to the event ; Default: none
          */
@@ -126,6 +137,7 @@ public class Event {
         }
 
         /**
+         * Aggregation key for the event.
          * @param aggregationKey
          *     Assign an aggregation key to the event, to group it with some others ; Default: none
          */
@@ -135,6 +147,7 @@ public class Event {
         }
 
         /**
+         * Priority for the event.
          * @param priority
          *     Can be "normal" or "low" ; Default: "normal"
          */
@@ -145,6 +158,7 @@ public class Event {
         }
 
         /**
+         * Source Type name for the event.
          * @param sourceTypeName
          *     Assign a source type to the event ; Default: none
          */
@@ -154,6 +168,7 @@ public class Event {
         }
 
         /**
+         * Alert type for the event.
          * @param alertType
          *     Can be "error", "warning", "info" or "success" ; Default: "info"
          */

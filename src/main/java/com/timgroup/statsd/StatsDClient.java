@@ -26,6 +26,8 @@ public interface StatsDClient extends Closeable {
     void stop();
 
     /**
+     * Stop the statsd client.
+     *
      * @see #stop()
      */
     @Override
@@ -59,7 +61,7 @@ public interface StatsDClient extends Closeable {
      * @param delta
      *     the amount to adjust the counter by
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
      */
@@ -93,7 +95,7 @@ public interface StatsDClient extends Closeable {
      * @param delta
      *     the amount to adjust the counter by
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
      */
@@ -123,7 +125,7 @@ public interface StatsDClient extends Closeable {
      * @param aspect
      *     the name of the counter to increment
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
      */
@@ -163,7 +165,7 @@ public interface StatsDClient extends Closeable {
      * @param aspect
      *     the name of the counter to decrement
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
      */
@@ -203,21 +205,11 @@ public interface StatsDClient extends Closeable {
      * @param aspect
      *     the name of the gauge
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param value
      *     the new reading of the gauge
      */
     void recordGaugeValue(String aspect, double value, double sampleRate, String... tags);
-
-    /**
-     * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
-     */
-    void gauge(String aspect, double value, String... tags);
-    
-    /**
-     * Convenience method equivalent to {@link #recordGaugeValue(String, double, double, String[])}.
-     */
-    void gauge(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Records the latest fixed value for the specified named gauge.
@@ -232,7 +224,7 @@ public interface StatsDClient extends Closeable {
      *     the new reading of the gauge
      */
     void recordGaugeValue(String aspect, long value, String... tags);
-    
+
     /**
      * Records the latest fixed value for the specified named gauge.
      *
@@ -243,11 +235,21 @@ public interface StatsDClient extends Closeable {
      * @param aspect
      *     the name of the gauge
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param value
      *     the new reading of the gauge
      */
     void recordGaugeValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
+     */
+    void gauge(String aspect, double value, String... tags);
+    
+    /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, double, double, String[])}.
+     */
+    void gauge(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
@@ -338,16 +340,6 @@ public interface StatsDClient extends Closeable {
     void recordHistogramValue(String aspect, double value, double sampleRate, String... tags);
 
     /**
-     * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
-     */
-    void histogram(String aspect, double value, String... tags);
-
-    /**
-     * Convenience method equivalent to {@link #recordHistogramValue(String, double, double, String[])}.
-     */
-    void histogram(String aspect, double value, double sampleRate, String... tags);
-    
-    /**
      * Records a value for the specified named histogram.
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
@@ -362,7 +354,7 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void recordHistogramValue(String aspect, long value, String... tags);
-    
+
     /**
      * Records a value for the specified named histogram.
      *
@@ -375,11 +367,21 @@ public interface StatsDClient extends Closeable {
      * @param value
      *     the value to be incorporated in the histogram
      * @param sampleRate
-     * 		percentage of time metric to be sent
+     *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
      */
     void recordHistogramValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
+     */
+    void histogram(String aspect, double value, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordHistogramValue(String, double, double, String[])}.
+     */
+    void histogram(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}.
@@ -430,6 +432,44 @@ public interface StatsDClient extends Closeable {
     void recordDistributionValue(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long value, String... tags);
+
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, double, String[])}.
      */
     void distribution(String aspect, double value, String... tags);
@@ -439,44 +479,6 @@ public interface StatsDClient extends Closeable {
      */
     void distribution(String aspect, double value, double sampleRate, String... tags);
     
-    /**
-     * Records a value for the specified named distribution.
-     *
-     * <p>This method is a DataDog extension, and may not work with other servers.</p>
-     *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     * 
-     * @param aspect
-     *     the name of the distribution
-     * @param value
-     *     the value to be incorporated in the distribution
-     * @param tags
-     *     array of tags to be added to the data
-     */
-    void recordDistributionValue(String aspect, long value, String... tags);
-    
-    /**
-     * Records a value for the specified named distribution.
-     *
-     * <p>This method is a DataDog extension, and may not work with other servers.</p>
-     *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     * 
-     * @param aspect
-     *     the name of the distribution
-     * @param value
-     *     the value to be incorporated in the distribution
-     * @param sampleRate
-     * 		percentage of time metric to be sent
-     * @param tags
-     *     array of tags to be added to the data
-     */
-    void recordDistributionValue(String aspect, long value, double sampleRate, String... tags);
-
     /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, long, String[])}.
      */
@@ -488,7 +490,7 @@ public interface StatsDClient extends Closeable {
     void distribution(String aspect, long value, double sampleRate, String... tags);
 
     /**
-     * Records an event
+     * Records an event.
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
      *
@@ -499,7 +501,8 @@ public interface StatsDClient extends Closeable {
      * @param tags
      *     array of tags to be added to the data
      *
-     * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#events-1">http://docs.datadoghq.com/guides/dogstatsd/#events-1</a>
+     * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#events-1">
+     *     http://docs.datadoghq.com/guides/dogstatsd/#events-1</a>
      */
     void recordEvent(Event event, String... tags);
 
@@ -519,8 +522,8 @@ public interface StatsDClient extends Closeable {
     /**
      * Records a value for the specified set.
      *
-     * Sets are used to count the number of unique elements in a group. If you want to track the number of
-     * unique visitor to your site, sets are a great way to do that.
+     * <p>Sets are used to count the number of unique elements in a group. If you want to track the number of
+     * unique visitor to your site, sets are a great way to do that.</p>
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
      *

@@ -24,7 +24,7 @@
 <module name = "Checker">
     <property name="charset" value="UTF-8"/>
 
-    <property name="severity" value="warning"/>
+    <property name="severity" value="error"/>
 
     <property name="fileExtensions" value="java, properties, xml"/>
     <!-- Checks for whitespace                               -->
@@ -46,7 +46,7 @@
             <property name="allowNonPrintableEscapes" value="true"/>
         </module>
         <module name="LineLength">
-            <property name="max" value="100"/>
+            <property name="max" value="130"/>
             <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
         </module>
         <module name="AvoidStarImport"/>
@@ -57,8 +57,9 @@
             <property name="tokens" value="LITERAL_TRY, LITERAL_FINALLY, LITERAL_IF, LITERAL_ELSE, LITERAL_SWITCH"/>
         </module>
         <module name="NeedBraces"/>
-        <module name="LeftCurly">
-            <property name="maxLineLength" value="100"/>
+        <module name="LineLength">
+            <property name="severity" value="error"/>
+            <property name="max" value="130"/>
         </module>
         <module name="RightCurly"/>
         <module name="RightCurly">
@@ -103,7 +104,7 @@
              value="Type name ''{0}'' must match pattern ''{1}''."/>
         </module>
         <module name="MemberName">
-            <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9]*$"/>
+            <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9]*|[_A-Z0-9]*$"/>
             <message key="name.invalidPattern"
              value="Member name ''{0}'' must match pattern ''{1}''."/>
         </module>
@@ -149,8 +150,10 @@
             <property name="arrayInitIndent" value="4"/>
         </module>
         <module name="AbbreviationAsWordInName">
-            <property name="ignoreFinal" value="false"/>
+            <property name="ignoreFinal" value="true"/>
+            <property name="ignoreStatic" value="true"/>
             <property name="allowedAbbreviationLength" value="1"/>
+            <property name="allowedAbbreviations" value="ID,URL"/>
         </module>
         <module name="OverloadMethodsDeclarationOrder"/>
         <module name="VariableDeclarationUsageDistance"/>

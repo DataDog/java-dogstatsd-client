@@ -5,16 +5,16 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.Charset;
-import java.util.concurrent.Callable;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatsDSender implements Runnable {
     private final Callable<SocketAddress> addressLookup;
@@ -59,7 +59,7 @@ public class StatsDSender implements Runnable {
     @Override
     public void run() {
 
-        for (int i=0 ; i<workers ; i++) {
+        for (int i = 0 ; i < workers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
                     ByteBuffer buffer = null;
@@ -106,11 +106,13 @@ public class StatsDSender implements Runnable {
         }
 
         boolean done = false;
-        while(!done) {
+        while (!done) {
             try {
                 endSignal.await();
                 done = true;
-            } catch (final InterruptedException e) { }
+            } catch (final InterruptedException e) {
+                // NOTHING
+            }
         }
     }
 
