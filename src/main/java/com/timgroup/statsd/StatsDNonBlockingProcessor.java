@@ -1,40 +1,33 @@
 package com.timgroup.statsd;
 
-import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.charset.Charset;
-import java.util.concurrent.Callable;
 
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     private final Queue<String> messages;
-    private final int qCapacity;
-    private final AtomicInteger qSize;  // qSize will not reflect actual size, but a close estimate.
+    private final int qcapacity;
+    private final AtomicInteger qsize;  // qSize will not reflect actual size, but a close estimate.
 
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers)
             throws Exception {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
-        this.qSize = new AtomicInteger(0);
-        this.qCapacity = queueSize;
+        this.qsize = new AtomicInteger(0);
+        this.qcapacity = queueSize;
         this.messages = new ConcurrentLinkedQueue<String>();
     }
 
     @Override
     boolean send(final String message) {
         if (!shutdown) {
-            if (qSize.get() < qCapacity) {
+            if (qsize.get() < qcapacity) {
                 messages.offer(message);
-                qSize.incrementAndGet();
+                qsize.incrementAndGet();
                 return true;
             }
         }
@@ -45,7 +38,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     @Override
     public void run() {
 
-        for (int i=0 ; i<workers ; i++) {
+        for (int i = 0 ; i < workers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
                     boolean empty;
@@ -53,7 +46,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
                     try {
                         sendBuffer = bufferPool.borrow();
-                    } catch(final InterruptedException e) {
+                    } catch (final InterruptedException e) {
                         handler.handle(e);
                         return;
                     }
@@ -71,7 +64,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                             }
                             final String message = messages.poll();
                             if (message != null) {
-                                qSize.decrementAndGet();
+                                qsize.decrementAndGet();
                                 final byte[] data = message.getBytes(MESSAGE_CHARSET);
                                 if (sendBuffer.capacity() < data.length) {
                                     throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
@@ -91,6 +84,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                             }
                         } catch (final InterruptedException e) {
                             if (shutdown) {
+                                endSignal.countDown();
                                 return;
                             }
                         } catch (final Exception e) {
@@ -103,11 +97,13 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         }
 
         boolean done = false;
-        while(!done) {
+        while (!done) {
             try {
                 endSignal.await();
                 done = true;
-            } catch (final InterruptedException e) { }
+            } catch (final InterruptedException e) {
+                // NOTHING
+            }
         }
     }
 

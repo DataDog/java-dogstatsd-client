@@ -11,7 +11,7 @@ public interface StatsDClientErrorHandler {
     /**
      * Handle the given exception, which occurred during a StatsD client operation.
      *
-     * Should normally be implemented as a synchronized method.
+     * <p>Should normally be implemented as a synchronized method.</p>
      *
      * @param exception
      *     the {@link Exception} that occurred
