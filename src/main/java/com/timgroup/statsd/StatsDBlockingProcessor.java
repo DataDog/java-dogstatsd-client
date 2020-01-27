@@ -26,6 +26,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return true;
             }
         } catch (InterruptedException e) {
+            // NOTHING
         }
 
         return false;
@@ -34,7 +35,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     @Override
     public void run() {
 
-        for (int i=0 ; i<workers ; i++) {
+        for (int i = 0 ; i < workers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
                     boolean empty;
@@ -42,7 +43,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
                     try {
                         sendBuffer = bufferPool.borrow();
-                    } catch(final InterruptedException e) {
+                    } catch (final InterruptedException e) {
                         handler.handle(e);
                         return;
                     }
@@ -89,19 +90,13 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
         }
 
         boolean done = false;
-        while(!done) {
+        while (!done) {
             try {
                 endSignal.await();
                 done = true;
-            } catch (final InterruptedException e) { }
+            } catch (final InterruptedException e) {
+                // NOTHING
+            }
         }
-    }
-
-    boolean isShutdown() {
-        return shutdown;
-    }
-
-    void shutdown() {
-        shutdown = true;
     }
 }

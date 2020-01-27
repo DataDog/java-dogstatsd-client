@@ -1,12 +1,12 @@
 package com.timgroup.statsd;
 
+import jnr.unixsocket.UnixSocketAddress;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
-
-import jnr.unixsocket.UnixSocketAddress;
 
 public class NonBlockingStatsDClientBuilder {
 
@@ -41,62 +41,80 @@ public class NonBlockingStatsDClientBuilder {
         port = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder queueSize(int val) {
         queueSize = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder timeout(int val) {
         timeout = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder bufferPoolSize(int val) {
         bufferPoolSize = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder socketBufferSize(int val) {
         socketBufferSize = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder maxPacketSizeBytes(int val) {
         maxPacketSizeBytes = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder processorWorkers(int val) {
         processorWorkers = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder senderWorkers(int val) {
         senderWorkers = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder blocking(boolean val) {
         blocking = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder addressLookup(Callable<SocketAddress> val) {
         addressLookup = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder hostname(String val) {
         hostname = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder prefix(String val) {
         prefix = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder entityID(String val) {
         entityID = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder constantTags(String... val) {
         constantTags = val;
         return this;
     }
+
     public NonBlockingStatsDClientBuilder errorHandler(StatsDClientErrorHandler val) {
         errorHandler = val;
         return this;
     }
+
+    /**
+     * NonBlockingStatsDClient factory method.
+     */
     public NonBlockingStatsDClient build() throws StatsDClientException {
         if (addressLookup != null) {
             return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
@@ -134,15 +152,16 @@ public class NonBlockingStatsDClientBuilder {
         };
     }
 
-  /**
-   * Lookup the address for the given host name and cache the result.
-   *
-   * @param hostname the host name of the targeted StatsD server
-   * @param port     the port of the targeted StatsD server
-   * @return a function that cached the result of the lookup
-   * @throws Exception if the lookup fails, i.e. {@link UnknownHostException}
-   */
-    public static Callable<SocketAddress> staticAddressResolution(final String hostname, final int port) throws Exception {
+    /**
+     * Lookup the address for the given host name and cache the result.
+     *
+     * @param hostname the host name of the targeted StatsD server
+     * @param port     the port of the targeted StatsD server
+     * @return a function that cached the result of the lookup
+     * @throws Exception if the lookup fails, i.e. {@link UnknownHostException}
+     */
+    public static Callable<SocketAddress> staticAddressResolution(final String hostname, final int port)
+            throws Exception {
         final SocketAddress address = volatileAddressResolution(hostname, port).call();
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
@@ -151,7 +170,8 @@ public class NonBlockingStatsDClientBuilder {
         };
     }
 
-    protected static Callable<SocketAddress> staticStatsDAddressResolution(String hostname, int port) throws StatsDClientException {
+    protected static Callable<SocketAddress> staticStatsDAddressResolution(String hostname, int port)
+            throws StatsDClientException {
         try {
             if (hostname == null) {
                 hostname = getHostnameFromEnvVar();
@@ -165,7 +185,7 @@ public class NonBlockingStatsDClientBuilder {
     }
 
     /**
-     * Retrieves host name from the environment variable "DD_AGENT_HOST"
+     * Retrieves host name from the environment variable "DD_AGENT_HOST".
      *
      * @return host name from the environment variable "DD_AGENT_HOST"
      *
@@ -180,7 +200,7 @@ public class NonBlockingStatsDClientBuilder {
     }
 
     /**
-     * Retrieves dogstatsd port from the environment variable "DD_DOGSTATSD_PORT"
+     * Retrieves dogstatsd port from the environment variable "DD_DOGSTATSD_PORT".
      *
      * @return dogstatsd port from the environment variable "DD_DOGSTATSD_PORT"
      *
