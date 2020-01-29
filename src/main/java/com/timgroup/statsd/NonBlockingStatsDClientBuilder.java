@@ -114,6 +114,7 @@ public class NonBlockingStatsDClientBuilder {
 
     /**
      * NonBlockingStatsDClient factory method.
+     * @return the built NonBlockingStatsDClient.
      */
     public NonBlockingStatsDClient build() throws StatsDClientException {
         if (addressLookup != null) {

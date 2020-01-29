@@ -165,10 +165,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     the entity id value used with an internal tag for tracking client entity.
      *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
      *     If the environment variable is not defined, the internal tag is not added.
+     * @param poolSize
+     *     The size for the network buffer pool.
      * @param processorWorkers
      *     The number of processor worker threads assembling buffers for submission.
      * @param senderWorkers
      *     The number of sender worker threads submitting buffers to the socket.
+     * @param blocking
+     *     Blocking or non-blocking implementation for statsd message queue.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -1004,7 +1008,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Records a value for the specified set.
      *
-     * <p></p>Sets are used to count the number of unique elements in a group. If you want to track the number of
+     * <p>Sets are used to count the number of unique elements in a group. If you want to track the number of
      * unique visitor to your site, sets are a great way to do that.</p>
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>

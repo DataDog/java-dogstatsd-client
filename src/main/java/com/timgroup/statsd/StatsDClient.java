@@ -114,7 +114,7 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void incrementCounter(String aspect, String... tags);
-    
+
     /**
      * Increments the specified counter by one.
      *
@@ -133,11 +133,23 @@ public interface StatsDClient extends Closeable {
 
     /**
      * Convenience method equivalent to {@link #incrementCounter(String, String[])}.
+     *
+     * @param aspect
+     *     the name of the counter to increment
+     * @param tags
+     *     array of tags to be added to the data
      */
     void increment(String aspect, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #incrementCounter(String, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the counter to increment
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void increment(String aspect, double sampleRate, String...tags);
 
@@ -154,7 +166,7 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void decrementCounter(String aspect, String... tags);
-    
+
     /**
      * Decrements the specified counter by one.
      *
@@ -173,11 +185,23 @@ public interface StatsDClient extends Closeable {
 
     /**
      * Convenience method equivalent to {@link #decrementCounter(String, String[])}.
+     *
+     * @param aspect
+     *     the name of the counter to decrement
+     * @param tags
+     *     array of tags to be added to the data
      */
     void decrement(String aspect, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #decrementCounter(String, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the counter to decrement
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void decrement(String aspect, double sampleRate, String... tags);
 
@@ -192,9 +216,11 @@ public interface StatsDClient extends Closeable {
      *     the name of the gauge
      * @param value
      *     the new reading of the gauge
+     * @param tags
+     *     array of tags to be added to the data
      */
     void recordGaugeValue(String aspect, double value, String... tags);
-    
+
     /**
      * Records the latest fixed value for the specified named gauge.
      *
@@ -204,10 +230,12 @@ public interface StatsDClient extends Closeable {
      *
      * @param aspect
      *     the name of the gauge
-     * @param sampleRate
-     *     percentage of time metric to be sent
      * @param value
      *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void recordGaugeValue(String aspect, double value, double sampleRate, String... tags);
 
@@ -222,6 +250,8 @@ public interface StatsDClient extends Closeable {
      *     the name of the gauge
      * @param value
      *     the new reading of the gauge
+     * @param tags
+     *     array of tags to be added to the data
      */
     void recordGaugeValue(String aspect, long value, String... tags);
 
@@ -234,30 +264,64 @@ public interface StatsDClient extends Closeable {
      *
      * @param aspect
      *     the name of the gauge
-     * @param sampleRate
-     *     percentage of time metric to be sent
      * @param value
      *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void recordGaugeValue(String aspect, long value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param tags
+     *     array of tags to be added to the data
      */
     void gauge(String aspect, double value, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void gauge(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param tags
+     *     array of tags to be added to the data
      */
     void gauge(String aspect, long value, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void gauge(String aspect, long value, double sampleRate, String... tags);
 
@@ -276,7 +340,7 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void recordExecutionTime(String aspect, long timeInMs, String... tags);
-    
+
     /**
      * Records an execution time in milliseconds for the specified named operation.
      *
@@ -288,7 +352,7 @@ public interface StatsDClient extends Closeable {
      *     the name of the timed operation
      * @param timeInMs
      *     the time in milliseconds
-     * @param sampleRate    
+     * @param sampleRate
      *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
@@ -297,11 +361,27 @@ public interface StatsDClient extends Closeable {
 
     /**
      * Convenience method equivalent to {@link #recordExecutionTime(String, long, String[])}.
+     *
+     * @param aspect
+     *     the name of the timed operation
+     * @param value
+     *     the time in milliseconds
+     * @param tags
+     *     array of tags to be added to the data
      */
     void time(String aspect, long value, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #recordExecutionTime(String, long, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the timed operation
+     * @param value
+     *     the time in milliseconds
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void time(String aspect, long value, double sampleRate, String... tags);
 
@@ -320,7 +400,7 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void recordHistogramValue(String aspect, double value, String... tags);
-    
+
     /**
      * Records a value for the specified named histogram.
      *
@@ -332,7 +412,7 @@ public interface StatsDClient extends Closeable {
      *     the name of the histogram
      * @param value
      *     the value to be incorporated in the histogram
-     * @param sampleRate    
+     * @param sampleRate
      *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
@@ -375,21 +455,53 @@ public interface StatsDClient extends Closeable {
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param tags
+     *     array of tags to be added to the data
      */
     void histogram(String aspect, double value, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, double, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void histogram(String aspect, double value, double sampleRate, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}.
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param tags
+     *     array of tags to be added to the data
      */
     void histogram(String aspect, long value, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, long, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void histogram(String aspect, long value, double sampleRate, String... tags);
 
@@ -401,16 +513,16 @@ public interface StatsDClient extends Closeable {
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
      *
      * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     * 
+     *
      * @param aspect
-     *     the name of the distribution 
+     *     the name of the distribution
      * @param value
      *     the value to be incorporated in the distribution
      * @param tags
      *     array of tags to be added to the data
      */
     void recordDistributionValue(String aspect, double value, String... tags);
-    
+
     /**
      * Records a value for the specified named distribution.
      *
@@ -419,12 +531,12 @@ public interface StatsDClient extends Closeable {
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
      *
      * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     * 
+     *
      * @param aspect
-     *     the name of the distribution 
+     *     the name of the distribution
      * @param value
      *     the value to be incorporated in the distribution
-     * @param sampleRate    
+     * @param sampleRate
      *     percentage of time metric to be sent
      * @param tags
      *     array of tags to be added to the data
@@ -471,21 +583,53 @@ public interface StatsDClient extends Closeable {
 
     /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
      */
     void distribution(String aspect, double value, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, double, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void distribution(String aspect, double value, double sampleRate, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, long, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
      */
     void distribution(String aspect, long value, String... tags);
-    
+
     /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, long, double, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
      */
     void distribution(String aspect, long value, double sampleRate, String... tags);
 
@@ -516,6 +660,9 @@ public interface StatsDClient extends Closeable {
 
     /**
      * Convenience method equivalent to {@link #recordServiceCheckRun(ServiceCheck sc)}.
+     *
+     * @param sc
+     *     the service check object
      */
     void serviceCheck(ServiceCheck sc);
 
