@@ -24,6 +24,8 @@ public class NonBlockingStatsDClientBuilder {
     public int maxPacketSizeBytes = NonBlockingStatsDClient.DEFAULT_MAX_PACKET_SIZE_BYTES;
     public int processorWorkers = NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
+    public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
+    public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
     public boolean blocking;
 
     public Callable<SocketAddress> addressLookup;
@@ -112,6 +114,16 @@ public class NonBlockingStatsDClientBuilder {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableTelemetry(boolean val) {
+        enableTelemetry = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder telemetryFlushInterval(int val) {
+        telemetryFlushInterval = val;
+        return this;
+    }
+
     /**
      * NonBlockingStatsDClient factory method.
      * @return the built NonBlockingStatsDClient.
@@ -120,11 +132,13 @@ public class NonBlockingStatsDClientBuilder {
         if (addressLookup != null) {
             return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                     addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID,
-                    bufferPoolSize, processorWorkers, senderWorkers, blocking);
+                    bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
+                    telemetryFlushInterval);
         } else {
             return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                     staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
-                    entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking);
+                    entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
+                    telemetryFlushInterval);
         }
     }
 

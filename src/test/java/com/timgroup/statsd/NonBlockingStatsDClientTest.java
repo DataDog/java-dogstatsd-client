@@ -790,7 +790,7 @@ public class NonBlockingStatsDClientTest {
                                    boolean blocking)
                 throws StatsDClientException {
             super(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes,
-                    entityID, poolSize, processorWorkers, senderWorkers, blocking);
+                    entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0);
             lock = new CountDownLatch(1);
         }
 
