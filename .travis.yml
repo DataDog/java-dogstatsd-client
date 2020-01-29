@@ -1,9 +1,13 @@
 dist: trusty
 language: java
 jdk:
-  - openjdk7
   - oraclejdk8
   - oraclejdk9
   - oraclejdk11
 
-install: mvn install -Dgpg.skip -Dcheckstyle.skip=true
+jobs:
+  include:
+    - jdk: openjdk7
+      env: EXTRA_MVN="-Dcheckstyle.version=2.15 -Dcheckstyle.skip"
+
+install: mvn clean install -Dgpg.skip $EXTRA_MVN
