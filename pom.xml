@@ -18,6 +18,7 @@
      -->
 	<checkstyle.config.location>style.xml</checkstyle.config.location>
 	<checkstyle.consoleOutput>true</checkstyle.consoleOutput>
+    <jdk.module.illegalAccess>deny</jdk.module.illegalAccess>
   </properties>
 
   <licenses>
