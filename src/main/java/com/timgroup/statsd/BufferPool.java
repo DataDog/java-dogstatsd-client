@@ -1,6 +1,5 @@
 package com.timgroup.statsd;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import java.util.concurrent.ArrayBlockingQueue;
