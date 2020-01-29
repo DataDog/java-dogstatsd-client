@@ -137,7 +137,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
 
     @Test
     public void perfTest() throws Exception {
-
+      
         for(int i=0 ; i < this.testWorkers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
