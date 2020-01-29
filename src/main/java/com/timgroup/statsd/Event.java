@@ -75,6 +75,7 @@ public class Event {
 
         /**
          * Build factory method for the event.
+         * @return Event built following specified options.
          */
         public Event build() {
             if ((event.title == null) || event.title.isEmpty()) {
@@ -90,6 +91,7 @@ public class Event {
          * Title for the event.
          * @param title
          *     Event title ; mandatory
+         * @return Builder object being used.
          */
         public Builder withTitle(final String title) {
             event.title = title;
@@ -100,6 +102,7 @@ public class Event {
          * Text for the event.
          * @param text
          *     Event text ; supports line breaks ; mandatory
+         * @return Builder object being used.
          */
         public Builder withText(final String text) {
             event.text = text;
@@ -110,6 +113,7 @@ public class Event {
          * Date for the event.
          * @param date
          *     Assign a timestamp to the event ; Default: none (Default is the current Unix epoch timestamp when not sent)
+         * @return Builder object being used.
          */
         public Builder withDate(final Date date) {
             event.millisSinceEpoch = date.getTime();
@@ -120,6 +124,7 @@ public class Event {
          * Date for the event.
          * @param millisSinceEpoch
          *     Assign a timestamp to the event ; Default: none (Default is the current Unix epoch timestamp when not sent)
+         * @return Builder object being used.
          */
         public Builder withDate(final long millisSinceEpoch) {
             event.millisSinceEpoch = millisSinceEpoch;
@@ -130,6 +135,7 @@ public class Event {
          * Source hostname for the event.
          * @param hostname
          *     Assign a hostname to the event ; Default: none
+         * @return Builder object being used.
          */
         public Builder withHostname(final String hostname) {
             event.hostname = hostname;
@@ -140,6 +146,7 @@ public class Event {
          * Aggregation key for the event.
          * @param aggregationKey
          *     Assign an aggregation key to the event, to group it with some others ; Default: none
+         * @return Builder object being used.
          */
         public Builder withAggregationKey(final String aggregationKey) {
             event.aggregationKey = aggregationKey;
@@ -150,6 +157,7 @@ public class Event {
          * Priority for the event.
          * @param priority
          *     Can be "normal" or "low" ; Default: "normal"
+         * @return Builder object being used.
          */
         public Builder withPriority(final Priority priority) {
             //noinspection StringToUpperCaseOrToLowerCaseWithoutLocale
@@ -161,6 +169,7 @@ public class Event {
          * Source Type name for the event.
          * @param sourceTypeName
          *     Assign a source type to the event ; Default: none
+         * @return Builder object being used.
          */
         public Builder withSourceTypeName(final String sourceTypeName) {
             event.sourceTypeName = sourceTypeName;
@@ -171,6 +180,7 @@ public class Event {
          * Alert type for the event.
          * @param alertType
          *     Can be "error", "warning", "info" or "success" ; Default: "info"
+         * @return Builder object being used.
          */
         public Builder withAlertType(final AlertType alertType) {
             //noinspection StringToUpperCaseOrToLowerCaseWithoutLocale

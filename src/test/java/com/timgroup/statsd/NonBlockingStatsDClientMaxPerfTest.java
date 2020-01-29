@@ -13,6 +13,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -111,6 +113,20 @@ public final class NonBlockingStatsDClientMaxPerfTest {
         this.executor = Executors.newFixedThreadPool(senderWorkers);
         this.running = new AtomicBoolean(true);
 
+    }
+
+    /**
+     * Run with -Dtest_perf=true if you wish the performance tests defined here to run
+     */
+    @Before
+    public void shouldRun() {
+        boolean run = false;
+        try {
+            run = (System.getProperty("test_perf").compareToIgnoreCase("true") == 0);
+        } catch (Exception ex) {
+            // NADA
+        }
+        Assume.assumeTrue(run);
     }
 
     @After
