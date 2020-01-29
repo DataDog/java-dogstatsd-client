@@ -33,10 +33,12 @@ public class StatsDSender implements Runnable {
     private final CountDownLatch endSignal;
     private volatile boolean shutdown;
 
+    private final Telemetry telemetry;
+
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
                  final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                 final int workers) throws Exception {
+                 final int workers, final Telemetry telemetry) throws Exception {
 
         this.pool = pool;
         this.buffers = buffers;
@@ -49,11 +51,14 @@ public class StatsDSender implements Runnable {
 
         this.executor = Executors.newFixedThreadPool(workers);
         this.endSignal = new CountDownLatch(workers);
+
+        this.telemetry = telemetry;
     }
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
-                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
-        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS);
+                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
+                 final Telemetry telemetry) throws Exception {
+        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS, telemetry);
     }
 
     @Override
@@ -65,6 +70,7 @@ public class StatsDSender implements Runnable {
                     ByteBuffer buffer = null;
 
                     while (!(buffers.isEmpty() && shutdown)) {
+                        int sizeOfBuffer = 0;
                         try {
 
                             if (buffer != null) {
@@ -76,7 +82,7 @@ public class StatsDSender implements Runnable {
                                 continue;
                             }
 
-                            final int sizeOfBuffer = buffer.position();
+                            sizeOfBuffer = buffer.position();
 
                             buffer.flip();
                             final int sentBytes = clientChannel.send(buffer, address);
@@ -91,12 +97,17 @@ public class StatsDSender implements Runnable {
                                             sizeOfBuffer));
                             }
 
+                            telemetry.incrBytesSent(sizeOfBuffer);
+                            telemetry.incrPacketSent(1);
+
                         } catch (final InterruptedException e) {
                             if (shutdown) {
                                 endSignal.countDown();
                                 return;
                             }
                         } catch (final Exception e) {
+                            telemetry.incrBytesDropped(sizeOfBuffer);
+                            telemetry.incrPacketDropped(1);
                             handler.handle(e);
                         }
                     }
