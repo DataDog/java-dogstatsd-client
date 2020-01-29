@@ -7,7 +7,7 @@
 * [FEATURE] Support environment variables for client configuration
 * [FIX] Handle messages over max packet size limit
 * [FEATURE] Take an argument for maxPacketSizeBytes
-  
+
 ## 2.7.1 / 2019.01.22
 
 * [FEATURE] Ability to configure unix buffer timeout and size. See [#64][]
