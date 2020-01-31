@@ -6,6 +6,10 @@ default_steps: &default_steps
     - run: |
         mvn clean install -Dgpg.skip $EXTRA_MVN
 jobs:
+  openjdk7:
+    docker:
+        - image: openjdk:7-jdk
+    <<: *default_steps
   openjdk8:
     docker:
         - image: circleci/openjdk:8u242
@@ -27,6 +31,7 @@ workflows:
   version: 2
   agent-tests:
     jobs:
+      - openjdk7
       - openjdk8
       - openjdk9
       - openjdk11
