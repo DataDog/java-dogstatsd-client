@@ -3,8 +3,23 @@ version: 2.1
 default_steps: &default_steps
   steps:
     - checkout
+
+    # Download and cache dependencies
+    - restore_cache:
+        keys:
+          - v1-dependencies-{{ checksum "pom.xml" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+    - run: mvn dependency:go-offline
+
+    - save_cache:
+        paths:
+          - ~/.m2
+        key: v1-dependencies-{{ checksum "pom.xml" }}
     - run: |
-        mvn clean install -Dgpg.skip $EXTRA_MVN
+        mvn clean install -Dgpg.skip
+
 jobs:
   openjdk7:
     docker:
