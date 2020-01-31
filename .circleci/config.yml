@@ -37,10 +37,6 @@ jobs:
     docker:
         - image: circleci/openjdk:11.0.2
     <<: *default_steps
-  openjdk13:
-    docker:
-        - image: circleci/openjdk:13.0.2-buster
-    <<: *default_steps
 
 workflows:
   version: 2
@@ -50,4 +46,3 @@ workflows:
       - openjdk8
       - openjdk9
       - openjdk11
-      - openjdk13
