@@ -11,10 +11,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
-    private final Queue<Message> messages;
-    private final AtomicInteger qsize;  // qSize will not reflect actual size, but a close estimate.
+    private final Queue<Message>[] messages;
+    private final Queue<Integer>[] processorWorkQueue;
+    private final AtomicInteger[] qsize;  // qSize will not reflect actual size, but a close estimate.
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
+
+        private final int processorQueueId;
+
+        public ProcessingTask(int id) {
+            super();
+            this.processorQueueId = id;
+        }
 
         @Override
         public void run() {
@@ -31,7 +39,8 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             aggregator.start();
 
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
+            while (!((emptyHighPrio = highPrioMessages.isEmpty()) &&
+                        (empty = processorWorkQueue[this.processorQueueId].isEmpty()) && shutdown)) {
 
                 try {
 
@@ -48,12 +57,14 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     if (!emptyHighPrio) {
                         message = highPrioMessages.poll();
                     } else {
-                        message = messages.poll();
+
+                        final int messageQueueIdx = processorWorkQueue[this.processorQueueId].poll();
+                        message = messages[messageQueueIdx].poll();
                     }
 
                     if (message != null) {
 
-                        qsize.decrementAndGet();
+                        qsize[messageQueueIdx].decrementAndGet();
 
                         // TODO: Aggregate and fix, there's some duplicate logic
                         if (aggregator.aggregateMessage(message)) {
@@ -88,7 +99,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                             writeBuilderToSendBuffer(sendBuffer);
                         }
 
-                        if (null == messages.peek()) {
+                        if (null == processorWorkQueue[this.processorQueueId].peek()) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
                         }
@@ -112,12 +123,24 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards)
-            throws Exception {
+            final int lockShardGrain, final int aggregatorFlushInterval,
+            final int aggregatorShards) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, lockShardGrain, aggregatorFlushInterval, aggregatorShards);
         this.qsize = new AtomicInteger(0);
-        this.messages = new ConcurrentLinkedQueue<>();
+
+        this.qsize = new AtomicInteger[lockShardGrain];
+        this.messages = new ConcurrentLinkedQueue[lockShardGrain];
+        for (int i = 0 ; i < lockShardGrain ; i++) {
+            this.qsize[i] = new AtomicInteger();
+            this.messages[i] = new ConcurrentLinkedQueue<Message>();
+            this.qsize[i].set(0);
+        }
+
+        this.processorWorkQueue = new ConcurrentLinkedQueue[workers];
+        for (int i = 0 ; i < workers ; i++) {
+            this.processorWorkQueue[i] = new ConcurrentLinkedQueue<Integer>();
+        }
     }
 
     @Override
@@ -134,9 +157,16 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     @Override
     protected boolean send(final Message message) {
         if (!shutdown) {
-            if (qsize.get() < qcapacity) {
-                messages.offer(message);
-                qsize.incrementAndGet();
+            long threadId = Thread.currentThread().getId();
+            // modulo reduction alternative to: long shard = threadID % [shard]this.lockShardGrain;
+            // ref: https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+            int shard = (int)((threadId * (long)this.lockShardGrain) >> 32);
+            int processQueue = (int)((threadId * (long)this.workers) >> 32);
+
+            if (qsize[shard].get() < qcapacity) {
+                messages[shard].offer(message);
+                qsize[shard].incrementAndGet();
+                processorWorkQueue[processQueue].offer(shard);
                 return true;
             }
         }

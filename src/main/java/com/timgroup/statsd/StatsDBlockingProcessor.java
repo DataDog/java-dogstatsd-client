@@ -11,7 +11,8 @@ import java.util.concurrent.TimeUnit;
 
 public class StatsDBlockingProcessor extends StatsDProcessor {
 
-    private final BlockingQueue<Message> messages;
+    private final BlockingQueue<Message>[] messages;
+    private final BlockingQueue<Integer>[] processorWorkQueue;
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
@@ -30,7 +31,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             aggregator.start();
 
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
+            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && processorWorkQueue[this.processorQueueId].isEmpty() && shutdown)) {
 
                 try {
 
@@ -38,7 +39,8 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                     if (!emptyHighPrio) {
                         message = highPrioMessages.poll();
                     } else {
-                        message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                        final int messageQueueIdx = processorWorkQueue[this.processorQueueId].poll();
+                        message = messages[messageQueueIdx].poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                     }
 
                     if (message != null) {
@@ -98,11 +100,18 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int maxPacketSizeBytes, final int poolSize, final int workers, final int lockShardGrain,
             final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
-        this.messages = new ArrayBlockingQueue<>(queueSize);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, lockShardGrain, aggregatorFlushInterval, aggregatorShards);
+        this.messages = new ArrayBlockingQueue[lockShardGrain];
+        for (int i = 0 ; i < lockShardGrain ; i++) {
+            this.messages[i] = new ArrayBlockingQueue<Message>(queueSize);
+        }
+        this.processorWorkQueue = new ArrayBlockingQueue[workers];
+        for (int i = 0 ; i < workers ; i++) {
+            this.processorWorkQueue[i] = new ArrayBlockingQueue<Integer>(queueSize);
+        }
     }
 
     @Override
@@ -120,8 +129,15 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     @Override
     protected boolean send(final Message message) {
         try {
+            long threadId = Thread.currentThread().getId();
+            // modulo reduction alternative to: long shard = threadID % this.lockShardGrain;
+            // ref: https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+            int shard = (int)((threadId * (long)this.lockShardGrain) >> 32);
+            int processQueue = (int)((threadId * (long)this.workers) >> 32);
+
             if (!shutdown) {
-                messages.put(message);
+                messages[shard].put(message);
+                processorWorkQueue[processQueue].put(shard);
                 return true;
             }
         } catch (InterruptedException e) {

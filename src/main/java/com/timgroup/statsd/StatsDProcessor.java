@@ -36,6 +36,7 @@ public abstract class StatsDProcessor implements Runnable {
 
     protected final int workers;
     protected final int qcapacity;
+    protected final int lockShardGrain;
 
     protected StatsDAggregator aggregator;
     protected volatile Telemetry telemetry;
@@ -48,6 +49,11 @@ public abstract class StatsDProcessor implements Runnable {
         protected final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
                 .onMalformedInput(CodingErrorAction.REPLACE)
                 .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        protected final int processorQueueId;
+
+        public ProcessingTask(int id) {
+            this.processorQueueId = id;
+        }
 
         public abstract void run();
 
@@ -69,12 +75,14 @@ public abstract class StatsDProcessor implements Runnable {
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards)
+            final int lockShardGrain, final int aggregatorFlushInterval,
+            final int aggregatorShards)
             throws Exception {
 
         this.handler = handler;
         this.workers = workers;
         this.qcapacity = queueSize;
+        this.lockShardGrain = lockShardGrain;
 
         this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
             final ThreadFactory delegate = Executors.defaultThreadFactory();
