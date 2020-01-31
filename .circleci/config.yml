@@ -23,7 +23,7 @@ default_steps: &default_steps
 jobs:
   openjdk7:
     docker:
-        - image: openjdk:7-jdk
+        - image: jfullaondo/openjdk:7
     <<: *default_steps
   openjdk8:
     docker:

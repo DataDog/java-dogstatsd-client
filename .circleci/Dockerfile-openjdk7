@@ -1,0 +1,3 @@
+FROM openjdk:7-jdk
+
+RUN apt update && apt install -y maven2
