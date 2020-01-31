@@ -35,6 +35,7 @@ public abstract class StatsDProcessor implements Runnable {
     protected final CountDownLatch endSignal;
 
     protected final int workers;
+    protected final int lockShardGrain;
 
     protected volatile boolean shutdown;
 
@@ -44,6 +45,11 @@ public abstract class StatsDProcessor implements Runnable {
         protected final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
                 .onMalformedInput(CodingErrorAction.REPLACE)
                 .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        protected final int processorQueueId;
+
+        public ProcessingTask(int id) {
+            this.processorQueueId = id;
+        }
 
         public abstract void run();
 
@@ -65,11 +71,13 @@ public abstract class StatsDProcessor implements Runnable {
 
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int lockShardGrain)
             throws Exception {
 
         this.handler = handler;
         this.workers = workers;
+        this.lockShardGrain = lockShardGrain;
 
         this.executor = Executors.newFixedThreadPool(workers);
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);

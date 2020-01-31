@@ -812,10 +812,10 @@ public class NonBlockingStatsDClientTest {
         SlowStatsDNonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
                                    Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes,
                                    String entityID, final int poolSize, final int processorWorkers, final int senderWorkers,
-                                   boolean blocking)
+                                   final int lockShardGrain, boolean blocking)
                 throws StatsDClientException {
             super(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes,
-                    entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0);
+                    entityID, poolSize, processorWorkers, senderWorkers, lockShardGrain, blocking, false, 0);
             lock = new CountDownLatch(1);
         }
 
@@ -838,11 +838,11 @@ public class NonBlockingStatsDClientTest {
             if (addressLookup != null) {
                 return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                         addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID, bufferPoolSize,
-                        processorWorkers, senderWorkers, blocking);
+                        processorWorkers, senderWorkers, lockShardGrain, blocking);
             } else {
                 return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                         staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
-                        entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking);
+                        entityID, bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain, blocking);
             }
         }
     }

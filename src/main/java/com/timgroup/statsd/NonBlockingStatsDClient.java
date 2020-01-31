@@ -86,6 +86,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int DEFAULT_PROCESSOR_WORKERS = 1;
     public static final int DEFAULT_SENDER_WORKERS = 1;
     public static final int DEFAULT_DOGSTATSD_PORT = 8125;
+    public static final int DEFAULT_LOCK_SHARD_GRAIN = 4;
     public static final int SOCKET_TIMEOUT_MS = 100;
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
@@ -202,6 +203,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     The number of processor worker threads assembling buffers for submission.
      * @param senderWorkers
      *     The number of sender worker threads submitting buffers to the socket.
+     * @param lockShardGrain
+     *     The granularity for the lock sharding - sharding is based of thread id
+     *     so value should not be greater than the application thread count..
      * @param blocking
      *     Blocking or non-blocking implementation for statsd message queue.
      * @param enableTelemetry
@@ -215,8 +219,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                                    final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
                                    final int timeout, final int bufferSize, final int maxPacketSizeBytes,
                                    String entityID, final int poolSize, final int processorWorkers,
-                                   final int senderWorkers, boolean blocking, final boolean enableTelemetry,
-                                   final int telemetryFlushInterval)
+                                   final int senderWorkers, final int lockShardGrain, boolean blocking,
+                                   final boolean enableTelemetry, final int telemetryFlushInterval)
             throws StatsDClientException {
         if ((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = prefix + ".";
@@ -272,7 +276,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 transportType = "udp";
             }
 
-            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize, processorWorkers, blocking);
+            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
+                    processorWorkers, lockShardGrain, blocking);
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream("version.properties"));
@@ -299,11 +304,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, boolean blocking) throws Exception {
+            final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final int lockShardGrain,
+            boolean blocking) throws Exception {
         if (blocking) {
-            return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize, workers);
+            return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes,
+                    bufferPoolSize, workers, lockShardGrain);
         } else {
-            return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize, workers);
+            return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes,
+                    bufferPoolSize, workers, lockShardGrain);
         }
     }
 
