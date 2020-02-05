@@ -18,28 +18,30 @@ default_steps: &default_steps
           - ~/.m2
         key: v1-dependencies-{{ checksum "pom.xml" }}
     - run: |
-        mvn clean install -Dgpg.skip
+        mvn clean install -Dgpg.skip $MVN_EXTRA_OPTS
 
 jobs:
   openjdk7:
     docker:
-        - image: jfullaondo/openjdk:7
+      - image: jfullaondo/openjdk:7
+    environment:
+      MVN_EXTRA_OPTS: -Dcheckstyle.version=2.15 -Dcheckstyle.skip
     <<: *default_steps
   openjdk8:
     docker:
-        - image: circleci/openjdk:8u242
+      - image: circleci/openjdk:8u242
     <<: *default_steps
   openjdk9:
     docker:
-        - image: circleci/openjdk:9.0.4-12
+      - image: circleci/openjdk:9.0.4-12
     <<: *default_steps
   openjdk11:
     docker:
-        - image: circleci/openjdk:11.0.2
+      - image: circleci/openjdk:11.0.2
     <<: *default_steps
   openjdk13:
     docker:
-        - image: circleci/openjdk:13.0.2-buster
+      - image: circleci/openjdk:13.0.2-buster
     <<: *default_steps
 
 workflows:
