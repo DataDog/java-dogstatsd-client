@@ -1223,6 +1223,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
             res.append("|t:").append(alertType);
         }
 
+        final String sourceTypeName = event.getSourceTypeName();
+        if (sourceTypeName != null) {
+            res.append("|s:").append(sourceTypeName);
+        }
+
         return res.toString();
     }
 

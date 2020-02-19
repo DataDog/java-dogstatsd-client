@@ -17,6 +17,7 @@ public class EventTest {
                 .withPriority(Event.Priority.LOW)
                 .withAggregationKey("key1")
                 .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourceType1")
                 .build();
 
         assertEquals("title1", event.getTitle());
@@ -26,6 +27,7 @@ public class EventTest {
         assertEquals("low", event.getPriority());
         assertEquals("key1", event.getAggregationKey());
         assertEquals("error", event.getAlertType());
+        assertEquals("sourceType1", event.getSourceTypeName());
     }
 
     @Test
@@ -42,6 +44,7 @@ public class EventTest {
         assertEquals(null, event.getPriority());
         assertEquals(null, event.getAggregationKey());
         assertEquals(null, event.getAlertType());
+        assertEquals(null, event.getSourceTypeName());
     }
 
     @Test (expected = IllegalStateException.class)
@@ -52,6 +55,7 @@ public class EventTest {
                 .withPriority(Event.Priority.LOW)
                 .withAggregationKey("key1")
                 .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourceType1")
                 .build();
     }
 
@@ -63,6 +67,7 @@ public class EventTest {
                 .withPriority(Event.Priority.LOW)
                 .withAggregationKey("key1")
                 .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourceType1")
                 .build();
     }
 
