@@ -16,7 +16,7 @@ The client jar is distributed via Maven central, and can be downloaded [from Mav
 <dependency>
     <groupId>com.datadoghq</groupId>
     <artifactId>java-dogstatsd-client</artifactId>
-    <version>2.8.1</version>
+    <version>2.9.0</version>
 </dependency>
 ```
 
