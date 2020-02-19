@@ -538,11 +538,12 @@ public class NonBlockingStatsDClientTest {
                 .withPriority(Event.Priority.LOW)
                 .withAggregationKey("key1")
                 .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourcetype1")
                 .build();
         client.recordEvent(event);
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error"));
+        assertThat(server.messagesReceived(), contains("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1"));
     }
 
     @Test(timeout = 5000L)
@@ -570,11 +571,12 @@ public class NonBlockingStatsDClientTest {
                 .withPriority(Event.Priority.LOW)
                 .withAggregationKey("key1")
                 .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourcetype1")
                 .build();
         client.recordEvent(event, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("_e{16,5}:my.prefix.title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("_e{16,5}:my.prefix.title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|#baz,foo:bar"));
     }
 
     @Test(timeout = 5000L)
@@ -603,11 +605,12 @@ public class NonBlockingStatsDClientTest {
                 .withPriority(Event.Priority.LOW)
                 .withAggregationKey("key1")
                 .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourcetype1")
                 .build();
         empty_prefix_client.recordEvent(event, "foo:bar", "baz");
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), contains("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|#baz,foo:bar"));
+        assertThat(server.messagesReceived(), contains("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|#baz,foo:bar"));
     }
 
     @Test(timeout = 5000L)
