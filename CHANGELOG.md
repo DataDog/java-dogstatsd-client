@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.9.0 / Unreleased
+* [FIX] Add source type name to event payload. See [#101][]
+* [IMPROVEMENT] Bump jnr-unixsocket to 0.27. See [#102][]
+* [IMPROVEMENT] Bump maven-compiler-plugin to 3.8.1. See [#93][]
+* [DOCS] Multiple documentation updates. See [#91][]
+
 ## 2.8.1 / 2019.10.4
 * [FIX] Fix entity id with constant tags
 
@@ -7,7 +13,7 @@
 * [FEATURE] Support environment variables for client configuration
 * [FIX] Handle messages over max packet size limit
 * [FEATURE] Take an argument for maxPacketSizeBytes
-  
+
 ## 2.7.1 / 2019.01.22
 
 * [FEATURE] Ability to configure unix buffer timeout and size. See [#64][]
@@ -69,5 +75,11 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#42]: https://github.com/DataDog/java-dogstatsd-client/issues/42
 [#49]: https://github.com/DataDog/java-dogstatsd-client/issues/49
 [#53]: https://github.com/DataDog/java-dogstatsd-client/issues/53
-[@cithal]: https://github.com/cithal
+[#64]: https://github.com/DataDog/java-dogstatsd-client/issues/64
+[#67]: https://github.com/DataDog/java-dogstatsd-client/issues/67
+[#91]: https://github.com/DataDog/java-dogstatsd-client/issues/91
+[#93]: https://github.com/DataDog/java-dogstatsd-client/issues/93
+[#101]: https://github.com/DataDog/java-dogstatsd-client/issues/101
+[#102]: https://github.com/DataDog/java-dogstatsd-client/issues/102
 [@PatrickAuld]: https://github.com/PatrickAuld
+[@cithal]: https://github.com/cithal
