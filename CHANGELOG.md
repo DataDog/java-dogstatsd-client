@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 2.9.0 / Unreleased
+## 2.9.0 / 2020.02.20 
 * [FIX] Add source type name to event payload. See [#101][]
 * [IMPROVEMENT] Bump jnr-unixsocket to 0.27. See [#102][]
 * [IMPROVEMENT] Bump maven-compiler-plugin to 3.8.1. See [#93][]
