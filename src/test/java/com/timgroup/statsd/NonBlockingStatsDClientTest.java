@@ -173,10 +173,44 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydec:-1|c|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout = 5000L)
+    @Test(timeout=5000L)
+    public void sanitises_counter_name() throws Exception {
+
+        client.count("Foo:bar:baz.123", 1);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|c"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_counter_name_with_sample_rate() throws Exception {
+
+        client.count("Foo:bar:baz.123", 1, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|c|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_counter_name_with_delta() throws Exception {
+
+        client.count("Foo:bar:baz.123", -1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:-1|c"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_counter_name_with_delta_and_sample_rate() throws Exception {
+
+        client.count("Foo:bar:baz.123", -1d, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:-1|c|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
     public void sends_gauge_to_statsd() throws Exception {
-
-
         client.recordGaugeValue("mygauge", 423);
         server.waitForMessage();
 
@@ -253,7 +287,43 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mygauge:0.423|g|#baz,foo:bar"));
     }
 
-    @Test(timeout = 5000L)
+    @Test(timeout=5000L)
+    public void sanitises_gauge_name_with_double() throws Exception {
+
+        client.gauge("Foo:bar:baz.123", 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|g"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_gauge_name_with_double_and_sample_rate() throws Exception {
+
+        client.gauge("Foo:bar:baz.123", 1d, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|g|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_gauge_name_with_long() throws Exception {
+
+        client.gauge("Foo:bar:baz.123", 1L);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|g"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_gauge_name_with_long_and_sample_rate() throws Exception {
+
+        client.gauge("Foo:bar:baz.123", 1L, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|g|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
     public void sends_histogram_to_statsd() throws Exception {
 
         client.recordHistogramValue("myhistogram", 423);
@@ -312,7 +382,43 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myhistogram:0.423|h|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout = 5000L)
+    @Test(timeout=5000L)
+    public void sanitises_histogram_name_with_double() throws Exception {
+
+        client.histogram("Foo:bar:baz.123", 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|h"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_histogram_name_with_double_and_sample_rate() throws Exception {
+
+        client.histogram("Foo:bar:baz.123", 1d, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|h|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_histogram_name_with_long() throws Exception {
+
+        client.histogram("Foo:bar:baz.123", 1L);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|h"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_histogram_name_with_long_and_sample_rate() throws Exception {
+
+        client.histogram("Foo:bar:baz.123", 1L, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|h|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
     public void sends_distribtuion_to_statsd() throws Exception {
 
         client.recordDistributionValue("mydistribution", 423);
@@ -371,7 +477,43 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mydistribution:0.423|d|@1.000000|#baz,foo:bar"));
     }
 
-    @Test(timeout = 5000L)
+    @Test(timeout=5000L)
+    public void sanitises_distribution_name_with_double() throws Exception {
+
+        client.distribution("Foo:bar:baz.123", 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|d"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_distribution_name_with_double_and_sample_rate() throws Exception {
+
+        client.distribution("Foo:bar:baz.123", 1d, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|d|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_distribution_name_with_long() throws Exception {
+
+        client.distribution("Foo:bar:baz.123", 1L);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|d"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_distribution_name_with_long_and_sample_rate() throws Exception {
+
+        client.distribution("Foo:bar:baz.123", 1L, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|d|@1.000000"));
+    }
+
+    @Test(timeout=5000L)
     public void sends_timer_to_statsd() throws Exception {
 
 
@@ -429,6 +571,23 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.mytime:123|ms|@1.000000|#baz,foo:bar"));
     }
 
+    @Test(timeout=5000L)
+    public void sanitises_timer_name() throws Exception {
+
+        client.time("Foo:bar:baz.123", 1L);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|ms"));
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_timer_name_with_sample_rate() throws Exception {
+
+        client.time("Foo:bar:baz.123", 1L, 1d);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:1|ms|@1.000000"));
+    }
 
     @Test(timeout = 5000L)
     public void sends_gauge_mixed_tags() throws Exception {
@@ -663,6 +822,15 @@ public class NonBlockingStatsDClientTest {
 
         assertThat(server.messagesReceived(), contains("my.prefix.myset:myuserid|s|#baz,foo:bar"));
 
+    }
+
+    @Test(timeout=5000L)
+    public void sanitises_set_name() throws Exception {
+
+        client.recordSetValue("Foo:bar:baz.123", "foo");
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("my.prefix.Foo_bar_baz.123:foo|s"));
     }
 
     @Test(timeout=5000L)
