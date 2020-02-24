@@ -95,6 +95,7 @@ public class StatsDSender implements Runnable {
                 handler.handle(e);
             }
         }
+
         builder.setLength(0);
         builder.trimToSize();
     }
@@ -106,14 +107,12 @@ public class StatsDSender implements Runnable {
             throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
         }
 
-        charBuffer = CharBuffer.wrap(builder);
-
-        // use existing charbuffer if possible, otherwise re-wrap
-        //if (length <= charBuffer.capacity()) {
-        //    charBuffer.limit(length).position(0);
-        //} else {
-        //    charBuffer = CharBuffer.wrap(builder);
-        //}
+        // no need to re-wrap if capacity is fine; underlying charseq will work
+        if (length <= charBuffer.capacity()) {
+            charBuffer.limit(length).position(0);
+        } else {
+            charBuffer = CharBuffer.wrap(builder);
+        }
 
         if (utf8Encoder.encode(charBuffer, sendBuffer, true) == CoderResult.OVERFLOW) {
             throw new BufferOverflowException();
