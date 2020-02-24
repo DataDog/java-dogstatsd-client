@@ -68,10 +68,14 @@ public class StatsDSender implements Runnable {
                 }
                 final Message message = queue.poll(1, TimeUnit.SECONDS);
                 if (null != message) {
-                    final SocketAddress address = addressLookup.call();
                     builder.setLength(0);
                     message.writeTo(builder);
                     int lowerBoundSize = builder.length();
+                    if (lowerBoundSize > sendBuffer.capacity()) {
+                        throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
+                    }
+
+                    final SocketAddress address = addressLookup.call();
                     if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
                         blockingSend(address);
                     }
