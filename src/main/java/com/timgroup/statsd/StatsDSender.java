@@ -70,15 +70,8 @@ public class StatsDSender implements Runnable {
                 if (null != message) {
                     builder.setLength(0);
                     message.writeTo(builder);
-                    int lowerBoundSize = builder.length();
-                    if (lowerBoundSize > sendBuffer.capacity()) {
-                        throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
-                    }
-
                     final SocketAddress address = addressLookup.call();
-                    if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
-                        blockingSend(address);
-                    }
+
                     sendBuffer.mark();
                     if (sendBuffer.position() > 0) {
                         sendBuffer.put((byte) '\n');
@@ -108,12 +101,20 @@ public class StatsDSender implements Runnable {
 
     private void writeBuilderToSendBuffer() {
         int length = builder.length();
-        // use existing charbuffer if possible, otherwise re-wrap
-        if (length <= charBuffer.capacity()) {
-            charBuffer.limit(length).position(0);
-        } else {
-            charBuffer = CharBuffer.wrap(builder);
+        if (length > sendBuffer.capacity()) {
+            // this would never fit
+            throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
         }
+
+        charBuffer = CharBuffer.wrap(builder);
+
+        // use existing charbuffer if possible, otherwise re-wrap
+        //if (length <= charBuffer.capacity()) {
+        //    charBuffer.limit(length).position(0);
+        //} else {
+        //    charBuffer = CharBuffer.wrap(builder);
+        //}
+
         if (utf8Encoder.encode(charBuffer, sendBuffer, true) == CoderResult.OVERFLOW) {
             throw new BufferOverflowException();
         }
