@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import com.timgroup.statsd.StatsDSender.Message;
+import com.timgroup.statsd.Message;
 
 
 /**
@@ -1232,7 +1232,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             res.append("|s:").append(sourceTypeName);
         }
 
-        return res.toString();
+        return res;
     }
 
     /**
@@ -1398,10 +1398,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append(value);
             }
         });
-    }
-
-    private void send(final String message) {
-        statsDSender.send(message);
     }
 
     private boolean isInvalidSample(double sampleRate) {

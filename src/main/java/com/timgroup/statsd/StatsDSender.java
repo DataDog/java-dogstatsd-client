@@ -15,6 +15,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.timgroup.statsd.Message;
+
 public class StatsDSender implements Runnable {
     private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
     private static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
@@ -47,16 +49,6 @@ public class StatsDSender implements Runnable {
         this.queue = queue;
         this.handler = handler;
         this.clientChannel = clientChannel;
-    }
-
-    interface Message {
-        /**
-         * Write this message to the provided {@link StringBuilder}. Will
-         * only ever be called from the sender thread.
-         *
-         * @param builder
-         */
-        void writeTo(StringBuilder builder);
     }
 
     boolean send(final Message message) {
