@@ -12,6 +12,14 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <java.version>1.6</java.version>
+    <!-- Note: using project checkstyle with AOSP style
+    find the default google java checkstyle config here -
+	<checkstyle.config.location>google_checks.xml</checkstyle.config.location>
+     -->
+	<checkstyle.config.location>style.xml</checkstyle.config.location>
+	<checkstyle.consoleOutput>true</checkstyle.consoleOutput>
+    <jdk.module.illegalAccess>deny</jdk.module.illegalAccess>
+    <checkstyle.version>3.1.0</checkstyle.version>
   </properties>
 
   <licenses>
@@ -94,6 +102,11 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.19</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>3.0.0-M2</version>
         <executions>
@@ -105,7 +118,7 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>[1.7.0-0,1.9.0-0),[9.0.0,11.0.5]</version>
+                  <version>[1.7.0-0,1.9.0-0),[9.0.0,13.0.2]</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
@@ -186,7 +199,50 @@
           <autoReleaseAfterClose>true</autoReleaseAfterClose>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${checkstyle.version}</version>
+        <executions>
+          <execution>
+            <id>checkstyle</id>
+            <phase>verify</phase>
+            <configuration>
+              <encoding>UTF-8</encoding>
+              <consoleOutput>true</consoleOutput>
+              <failsOnError>true</failsOnError>
+              <failOnViolation>true</failOnViolation>
+              <violationSeverity>warning</violationSeverity>
+              <linkXRef>false</linkXRef>
+            </configuration>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${checkstyle.version}</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>checkstyle</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>3.0.0</version>
+      </plugin>
+    </plugins>
+  </reporting>
 </project>

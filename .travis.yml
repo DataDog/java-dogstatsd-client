@@ -1,9 +1,0 @@
-dist: trusty
-language: java
-jdk:
-  - openjdk7
-  - oraclejdk8
-  - oraclejdk9
-  - oraclejdk11
-
-install: mvn install -DskipTests -Dgpg.skip

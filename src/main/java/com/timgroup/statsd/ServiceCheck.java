@@ -2,7 +2,7 @@ package com.timgroup.statsd;
 
 /**
  * A service check model, which is used to format a service check message
- * sent to the datadog agent
+ * sent to the datadog agent.
  */
 public class ServiceCheck {
 
@@ -15,9 +15,12 @@ public class ServiceCheck {
         }
     }
 
-    private String name, hostname, message;
+    private String name;
+    private String hostname;
+    private String message;
 
-    private int checkRunId, timestamp;
+    private int checkRunId;
+    private int timestamp;
 
     private Status status;
 

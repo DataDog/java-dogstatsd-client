@@ -8,13 +8,14 @@ import org.junit.Rule;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Logger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,8 +28,13 @@ import org.junit.contrib.java.lang.system.EnvironmentVariables;
 public class NonBlockingStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
-    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT);
+    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+        .hostname("localhost")
+        .port(STATSD_SERVER_PORT)
+        .build();
     private static DummyStatsDServer server;
+
+    private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
 
     @Rule
     public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
@@ -433,7 +439,12 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_mixed_tags() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags("instance:foo", "app:bar")
+            .build();
         empty_prefix_client.gauge("value", 423, "baz");
         server.waitForMessage();
 
@@ -443,7 +454,12 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_mixed_tags_with_sample_rate() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags("instance:foo", "app:bar")
+            .build();
         empty_prefix_client.gauge("value", 423, 1, "baz");
         server.waitForMessage();
 
@@ -453,7 +469,12 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_constant_tags_only() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags("instance:foo", "app:bar")
+            .build();
         empty_prefix_client.gauge("value", 423);
         server.waitForMessage();
 
@@ -464,7 +485,11 @@ public class NonBlockingStatsDClientTest {
     public void sends_gauge_entityID_from_env() throws Exception {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .build();
         client.gauge("value", 423);
         server.waitForMessage();
 
@@ -476,7 +501,11 @@ public class NonBlockingStatsDClientTest {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final String constantTags = "arbitraryTag:arbitraryValue";
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, constantTags);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .constantTags(constantTags)
+            .build();
         client.gauge("value", 423);
         server.waitForMessage();
 
@@ -487,10 +516,14 @@ public class NonBlockingStatsDClientTest {
     public void sends_gauge_entityID_from_args() throws Exception {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, null, null, entity_value+"-arg");
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .entityID(entity_value+"-arg")
+            .build();
         client.gauge("value", 423);
         server.waitForMessage();
-
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg"));
     }
 
@@ -498,9 +531,10 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void init_client_from_env_vars() throws Exception {
         final String entity_value =  "foo-entity";
-        environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, "17254");
+        environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, Integer.toString(STATSD_SERVER_PORT));
         environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix");
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .build();
         client.gauge("value", 423);
         server.waitForMessage();
 
@@ -510,7 +544,10 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_empty_prefix() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClientBuilder().prefix("")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
         empty_prefix_client.gauge("top.level.value", 423);
         server.waitForMessage();
 
@@ -520,8 +557,23 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_null_prefix() throws Exception {
 
-        final NonBlockingStatsDClient null_prefix_client = new NonBlockingStatsDClient(null, "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient null_prefix_client = new NonBlockingStatsDClientBuilder().prefix(null)
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
         null_prefix_client.gauge("top.level.value", 423);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_gauge_no_prefix() throws Exception {
+
+        final NonBlockingStatsDClient no_prefix_client = new NonBlockingStatsDClientBuilder().hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
+        no_prefix_client.gauge("top.level.value", 423);
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("top.level.value:423|g"));
@@ -596,7 +648,11 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_event_empty_prefix() throws Exception {
 
-        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient empty_prefix_client = new NonBlockingStatsDClientBuilder().prefix("")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
+
         final Event event = Event.builder()
                 .withTitle("title1")
                 .withText("text1")
@@ -669,7 +725,12 @@ public class NonBlockingStatsDClientTest {
     public void sends_too_large_message() throws Exception {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
 
-        try (final NonBlockingStatsDClient testClient = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT,  null, errorHandler)) {
+
+        try (final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+                .hostname("localhost")
+                .port(STATSD_SERVER_PORT)
+                .errorHandler(errorHandler)
+                .build()) {
 
             final byte[] messageBytes = new byte[1600];
             final ServiceCheck tooLongServiceCheck = ServiceCheck.builder()
@@ -702,65 +763,65 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void shutdown_test() throws Exception {
         final int port = 17256;
+        final int qSize = 256;
         final DummyStatsDServer server = new DummyStatsDServer(port);
-        final CountDownLatch lock = new CountDownLatch(1);
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix.shutdownTest", "localhost", port) {
-            @Override
-            protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final int queueSize,
-                                                final StatsDClientErrorHandler handler, final DatagramChannel clientChannel, final int maxPacketSizeBytes) {
-                return new SlowStatsDSender(addressLookup, new SlowBlockingQueue(lock), handler, clientChannel, lock);
-            }
-        };
+
+        final NonBlockingStatsDClientBuilder builder = new SlowStatsDNonBlockingStatsDClientBuilder().prefix("")
+            .hostname("localhost")
+            .port(port);
+        final SlowStatsDNonBlockingStatsDClient client = ((SlowStatsDNonBlockingStatsDClientBuilder)builder).build();
+
         try {
             client.count("mycounter", 5);
             assertEquals(0, server.messagesReceived().size());
-            client.stop();
             server.waitForMessage();
             assertEquals(1, server.messagesReceived().size());
         } finally {
             client.stop();
             server.close();
+            assertEquals(0, client.getLock().getCount());
         }
     }
 
+    private static class SlowStatsDNonBlockingStatsDClient extends NonBlockingStatsDClient {
 
-    private static class SlowStatsDSender extends StatsDSender {
-        private final CountDownLatch lock;
+        private CountDownLatch lock;
 
-        SlowStatsDSender(Callable<SocketAddress> addressLookup, BlockingQueue queue,
-                         StatsDClientErrorHandler handler, DatagramChannel clientChannel,
-                         CountDownLatch lock) {
-            super(addressLookup, queue, handler, clientChannel, 1400);
-            this.lock = lock;
+        SlowStatsDNonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags, final StatsDClientErrorHandler errorHandler,
+                                   Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize, final int maxPacketSizeBytes,
+                                   String entityID, final int poolSize, final int processorWorkers, final int senderWorkers,
+                                   boolean blocking)
+                throws StatsDClientException {
+            super(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes,
+                    entityID, poolSize, processorWorkers, senderWorkers, blocking);
+            lock = new CountDownLatch(1);
+        }
+
+        public CountDownLatch getLock() {
+            return this.lock;
         }
 
         @Override
-        void shutdown() {
-            super.shutdown();
+        public void stop() {
+            super.stop();
             lock.countDown();
         }
-    }
 
-    private static class SlowBlockingQueue extends LinkedBlockingQueue<String> {
-        private final CountDownLatch countDownLatch;
-        private boolean lock = false;
+    };
 
-
-        private SlowBlockingQueue(CountDownLatch countDownLatch) {
-            this.countDownLatch = countDownLatch;
-        }
+    private static class SlowStatsDNonBlockingStatsDClientBuilder extends NonBlockingStatsDClientBuilder {
 
         @Override
-        public boolean isEmpty() {
-            return !lock && super.isEmpty();
-        }
-
-        @Override
-        public String poll(long timeout, TimeUnit unit) throws InterruptedException {
-            lock = true;
-            countDownLatch.await(1, TimeUnit.MINUTES);
-            lock = false;
-            return super.poll(timeout, unit);
+        public SlowStatsDNonBlockingStatsDClient build() throws StatsDClientException {
+            if (addressLookup != null) {
+                return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
+                        addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID, bufferPoolSize,
+                        processorWorkers, senderWorkers, blocking);
+            } else {
+                return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
+                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
+                        entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking);
+            }
         }
     }
 }
