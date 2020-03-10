@@ -2,12 +2,16 @@ package com.timgroup.statsd;
 
 import com.timgroup.statsd.Message;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -29,6 +33,8 @@ public abstract class StatsDProcessor implements Runnable {
     protected final StatsDClientErrorHandler handler;
 
     protected final BufferPool bufferPool;
+    protected final List<StringBuilder> builders; // StringBuilders for processing, 1 per worker
+    protected final List<CharBuffer> charBuffers; // CharBuffers for processing, 1 per worker
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
@@ -48,6 +54,15 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
+
+        this.builders = new ArrayList<>(workers);
+        this.charBuffers = new ArrayList<>(workers);
+        for(int i=0; i<workers ; i++) {
+            StringBuilder builder = new StringBuilder();
+            CharBuffer buffer = CharBuffer.wrap(builder);
+            builders.add(builder);
+            charBuffers.add(buffer);
+        }
     }
 
     abstract boolean send(final Message message);
@@ -63,22 +78,21 @@ public abstract class StatsDProcessor implements Runnable {
     @Override
     public abstract void run();
 
-    private CharBuffer writeBuilderToSendBuffer(StringBuilder builder, CharBuffer charBuffer, ByteBuffer sendBuffer) {
+    protected void writeBuilderToSendBuffer(int workerId, StringBuilder builder, ByteBuffer sendBuffer) {
+        CharBuffer buffer = charBuffers.get(workerId);
+
         int length = builder.length();
         // use existing charbuffer if possible, otherwise re-wrap
         if (length <= buffer.capacity()) {
-            charBuffer.limit(length).position(0);
+            buffer.limit(length).position(0);
         } else {
-            charBuffer = buffer.wrap(builder);
+            buffer = CharBuffer.wrap(builder);
+            charBuffers.set(workerId, buffer);
         }
 
-        if (utf8Encoder.encode(charBuffer, sendBuffer, true) == CoderResult.OVERFLOW) {
-            // FIXME: if we throw an exception here we won't return the charbuffer.
-            // Broken currently.
+        if (utf8Encoder.encode(buffer, sendBuffer, true) == CoderResult.OVERFLOW) {
             throw new BufferOverflowException();
         }
-
-        return charBuffer;
     }
 
     boolean isShutdown() {
