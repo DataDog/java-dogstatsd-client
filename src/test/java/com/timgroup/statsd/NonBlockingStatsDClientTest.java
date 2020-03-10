@@ -6,7 +6,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Rule;
 
-import com.timgroup.statsd.StatsDSender.Message;
+import com.timgroup.statsd.Message;
 
 import java.io.IOException;
 import java.net.SocketAddress;
