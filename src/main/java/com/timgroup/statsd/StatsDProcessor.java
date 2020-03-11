@@ -80,7 +80,7 @@ public abstract class StatsDProcessor implements Runnable {
 
         this.builders = new ArrayList<>(workers);
         this.charBuffers = new ArrayList<>(workers);
-        for(int i=0; i<workers ; i++) {
+        for (int i = 0 ; i < workers ; i++) {
             StringBuilder builder = new StringBuilder();
             CharBuffer buffer = CharBuffer.wrap(builder);
             builders.add(builder);
