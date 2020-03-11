@@ -4,10 +4,10 @@ import com.timgroup.statsd.Message;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
@@ -50,9 +50,9 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                         message.writeTo(builder);
                         int lowerBoundSize = builder.length();
 
-                        // if (sendBuffer.capacity() < data.length) {
-                        //     throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
-                        // }
+                        if (sendBuffer.capacity() < lowerBoundSize) {
+                            throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
+                        }
 
                         if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
                             outboundQueue.put(sendBuffer);
@@ -110,7 +110,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     }
 
     @Override
-    protected boolean send(final Message message){
+    protected boolean send(final Message message) {
         if (!shutdown) {
             if (qsize.get() < qcapacity) {
                 messages.offer(message);
