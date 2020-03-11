@@ -13,18 +13,12 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
     private final BlockingQueue<Message> messages;
 
-    private class ProcessingTask implements Runnable {
-        private final int id;
-
-        ProcessingTask(int id) {
-            this.id = id;
-        }
+    private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
         @Override
         public void run() {
             boolean empty;
             ByteBuffer sendBuffer;
-            StringBuilder builder = builders.get(id);
 
             try {
                 sendBuffer = bufferPool.borrow();
@@ -65,11 +59,11 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                         }
 
                         try {
-                            writeBuilderToSendBuffer(id, builder, sendBuffer);
+                            writeBuilderToSendBuffer(sendBuffer);
                         } catch (BufferOverflowException boe) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
-                            writeBuilderToSendBuffer(id, builder, sendBuffer);
+                            writeBuilderToSendBuffer(sendBuffer);
                         }
 
                         // TODO: revisit this logic
@@ -92,6 +86,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             builder.trimToSize();
             endSignal.countDown();
         }
+
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
@@ -103,7 +98,12 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     }
 
     @Override
-    boolean send(final Message message){
+    protected ProcessingTask createProcessingTask() {
+        return new ProcessingTask();
+    }
+
+    @Override
+    protected boolean send(final Message message){
         try {
             if (!shutdown) {
                 messages.put(message);
@@ -120,7 +120,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     public void run() {
 
         for (int i = 0 ; i < workers ; i++) {
-            executor.submit(new ProcessingTask(i));
+            executor.submit(createProcessingTask());
         }
 
         boolean done = false;
