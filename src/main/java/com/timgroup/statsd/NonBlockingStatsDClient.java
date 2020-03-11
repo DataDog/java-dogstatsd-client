@@ -1,5 +1,7 @@
 package com.timgroup.statsd;
 
+import com.timgroup.statsd.Message;
+
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketOptions;
@@ -21,8 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
-import com.timgroup.statsd.Message;
 
 
 /**
@@ -194,7 +194,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         // Support "dd.internal.entity_id" internal tag.
         constantTags = this.updateTagsWithEntityID(constantTags, entityID);
-        if(constantTags != null) {
+        if (constantTags != null) {
             constantTagsRendered = tagString(constantTags, null, new StringBuilder()).toString();
         } else {
             constantTagsRendered = null;
@@ -305,14 +305,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Generate a suffix conveying the given tag list to the client
      */
     static StringBuilder tagString(final String[] tags, final String tagPrefix, final StringBuilder sb) {
-        if(tagPrefix != null) {
+        if (tagPrefix != null) {
             sb.append(tagPrefix);
-            if((tags == null) || (tags.length == 0)) {
+            if ((tags == null) || (tags.length == 0)) {
                 return sb;
             }
             sb.append(',');
         } else {
-            if((tags == null) || (tags.length == 0)) {
+            if ((tags == null) || (tags.length == 0)) {
                 return sb;
             }
             sb.append("|#");
@@ -320,7 +320,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         for (int n = tags.length - 1; n >= 0; n--) {
             sb.append(tags[n]);
-            if(n > 0) {
+            if (n > 0) {
                 sb.append(',');
             }
         }
@@ -363,7 +363,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     // send double with sample rate
     private void send(String aspect, final double value, String type, double sampleRate, String[] tags) {
-        if(Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
+        if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
             statsDProcessor.send(new StatsDMessage(aspect, type, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
@@ -380,8 +380,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     // send long with sample rate
     private void send(String aspect, final long value, String type, double sampleRate, String[] tags) {
-        if(Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
-            sendMetric(new StatsDMessage(aspect, type, sampleRate, tags) {
+        if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
+            send(new StatsDMessage(aspect, type, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(value);
                 }
@@ -569,7 +569,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordGaugeValue(final String aspect, final long value, final double sampleRate, final String... tags) {
-    	send(aspect, value, "g", sampleRate, tags);
+        send(aspect, value, "g", sampleRate, tags);
     }
 
     /**
@@ -732,7 +732,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void histogram(String aspect, double value, String... tags){
+    public void histogram(String aspect, double value, String... tags) {
         recordHistogramValue(aspect, value, tags);
     }
 
@@ -740,7 +740,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void histogram(String aspect, double value, double sampleRate, String... tags){
+    public void histogram(String aspect, double value, double sampleRate, String... tags) {
         recordHistogramValue(aspect, value, sampleRate, tags);
     }
 
@@ -834,7 +834,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void distribution(String aspect, double value, String... tags){
+    public void distribution(String aspect, double value, String... tags) {
         recordDistributionValue(aspect, value, tags);
     }
 
@@ -842,7 +842,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void distribution(String aspect, double value, double sampleRate, String... tags){
+    public void distribution(String aspect, double value, double sampleRate, String... tags) {
         recordDistributionValue(aspect, value, sampleRate, tags);
     }
 
