@@ -23,9 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class StatsDProcessor implements Runnable {
     protected static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
-    private final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
-            .onMalformedInput(CodingErrorAction.REPLACE)
-            .onUnmappableCharacter(CodingErrorAction.REPLACE);
 
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
     protected static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
@@ -42,6 +39,32 @@ public abstract class StatsDProcessor implements Runnable {
     protected final int workers;
 
     protected volatile boolean shutdown;
+
+    protected abstract class ProcessingTask implements Runnable {
+        protected StringBuilder builder = new StringBuilder();
+        protected CharBuffer buffer = CharBuffer.wrap(builder);
+        protected final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
+                .onMalformedInput(CodingErrorAction.REPLACE)
+                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+
+        public abstract void run();
+
+        protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
+
+            int length = builder.length();
+            // use existing charbuffer if possible, otherwise re-wrap
+            if (length <= buffer.capacity()) {
+                buffer.limit(length).position(0);
+            } else {
+                buffer = CharBuffer.wrap(builder);
+            }
+
+            if (utf8Encoder.encode(buffer, sendBuffer, true) == CoderResult.OVERFLOW) {
+                throw new BufferOverflowException();
+            }
+        }
+    }
+
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers)
@@ -65,7 +88,9 @@ public abstract class StatsDProcessor implements Runnable {
         }
     }
 
-    abstract boolean send(final Message message);
+    protected abstract ProcessingTask createProcessingTask();
+
+    protected abstract boolean send(final Message message);
 
     public BufferPool getBufferPool() {
         return this.bufferPool;
@@ -77,23 +102,6 @@ public abstract class StatsDProcessor implements Runnable {
 
     @Override
     public abstract void run();
-
-    protected void writeBuilderToSendBuffer(int workerId, StringBuilder builder, ByteBuffer sendBuffer) {
-        CharBuffer buffer = charBuffers.get(workerId);
-
-        int length = builder.length();
-        // use existing charbuffer if possible, otherwise re-wrap
-        if (length <= buffer.capacity()) {
-            buffer.limit(length).position(0);
-        } else {
-            buffer = CharBuffer.wrap(builder);
-            charBuffers.set(workerId, buffer);
-        }
-
-        if (utf8Encoder.encode(buffer, sendBuffer, true) == CoderResult.OVERFLOW) {
-            throw new BufferOverflowException();
-        }
-    }
 
     boolean isShutdown() {
         return shutdown;
