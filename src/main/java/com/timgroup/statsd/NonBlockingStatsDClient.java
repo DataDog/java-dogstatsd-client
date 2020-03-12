@@ -82,15 +82,23 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * The NumberFormat instances are not threadsafe but are only ever called from
      * the sender thread.
      */
-    private static final NumberFormat NUMBER_FORMATTER = newFormatter();
-    private static final NumberFormat SAMPLE_RATE_FORMATTER = newFormatter();
+    private static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<NumberFormat>() {
+        @Override
+        protected NumberFormat initialValue() {
+            return newFormatter(false);
+        }
+    };
+    private static final ThreadLocal<NumberFormat> SAMPLE_RATE_FORMATTER = new ThreadLocal<NumberFormat>() {
+        @Override
+        protected NumberFormat initialValue() {
+            return newFormatter(true);
+        }
+    };
 
     static {
-        NUMBER_FORMATTER.setMaximumFractionDigits(6);
-        SAMPLE_RATE_FORMATTER.setMinimumFractionDigits(6);
     }
 
-    private static NumberFormat newFormatter() {
+    private static NumberFormat newFormatter(boolean sampler) {
         // Always create the formatter for the US locale in order to avoid this bug:
         // https://github.com/indeedeng/java-dogstatsd-client/issues/3
         NumberFormat numberFormatter = NumberFormat.getInstance(Locale.US);
@@ -103,7 +111,18 @@ public class NonBlockingStatsDClient implements StatsDClient {
             symbols.setNaN("NaN");
             decimalFormat.setDecimalFormatSymbols(symbols);
         }
+
+        if (sampler) {
+            numberFormatter.setMinimumFractionDigits(6);
+        } else {
+            numberFormatter.setMaximumFractionDigits(6);
+        }
+
         return numberFormatter;
+    }
+
+    private static String format(ThreadLocal<NumberFormat> formatter, double value) {
+        return formatter.get().format(value);
     }
 
     private final String prefix;
@@ -353,7 +372,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             writeValue(builder);
             builder.append('|').append(type);
             if (!Double.isNaN(sampleRate)) {
-                builder.append('|').append('@').append(SAMPLE_RATE_FORMATTER.format(sampleRate));
+                builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
             }
             tagString(tags, builder);
         }
@@ -367,7 +386,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             statsDProcessor.send(new StatsDMessage(aspect, type, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
-                    builder.append(NUMBER_FORMATTER.format(value));
+                    builder.append(format(NUMBER_FORMATTER, value));
                 }
             });
         }

@@ -41,7 +41,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                         return;
                     }
                     final Message message = messages.poll();
-                    // TODO: revisit this logic - cleanup, remove duplicate code.
                     if (message != null) {
 
                         qsize.decrementAndGet();
@@ -72,7 +71,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                             writeBuilderToSendBuffer(sendBuffer);
                         }
 
-                        // TODO: revisit this logic
                         if (null == messages.peek()) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
