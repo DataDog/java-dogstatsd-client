@@ -36,7 +36,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                     }
 
                     final Message message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
-                    // TODO: revisit this logic - cleanup, remove duplicate code.
                     if (message != null) {
 
                         builder.setLength(0);
@@ -66,7 +65,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                             writeBuilderToSendBuffer(sendBuffer);
                         }
 
-                        // TODO: revisit this logic
                         if (null == messages.peek()) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
