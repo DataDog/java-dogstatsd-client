@@ -26,6 +26,9 @@ public abstract class StatsDProcessor implements Runnable {
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
     protected static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
 
+    // Atomic integer containing the next thread ID to be assigned
+    private static final AtomicInteger nextId = new AtomicInteger(0);
+
     protected final StatsDClientErrorHandler handler;
 
     protected final BufferPool bufferPool;
@@ -33,6 +36,12 @@ public abstract class StatsDProcessor implements Runnable {
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
+    protected static final ThreadLocal<Integer> threadId = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return nextId.getAndIncrement();
+        }
+    };
 
     protected final int workers;
     protected final int qcapacity;
@@ -152,6 +161,11 @@ public abstract class StatsDProcessor implements Runnable {
 
     public int getQcapacity() {
         return this.qcapacity;
+    }
+
+    // Returns the current thread's unique ID, assigning it if necessary
+    public static int getThreadId() {
+        return threadId.get().intValue();
     }
 
     @Override
