@@ -120,24 +120,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         return false;
     }
 
-    @Override
-    public void run() {
-
-        for (int i = 0 ; i < workers ; i++) {
-            executor.submit(createProcessingTask());
-        }
-
-        boolean done = false;
-        while (!done) {
-            try {
-                endSignal.await();
-                done = true;
-            } catch (final InterruptedException e) {
-                // NOTHING
-            }
-        }
-    }
-
     boolean isShutdown() {
         return shutdown;
     }

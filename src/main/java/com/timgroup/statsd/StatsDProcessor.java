@@ -30,8 +30,6 @@ public abstract class StatsDProcessor implements Runnable {
     protected final StatsDClientErrorHandler handler;
 
     protected final BufferPool bufferPool;
-    protected final List<StringBuilder> builders; // StringBuilders for processing, 1 per worker
-    protected final List<CharBuffer> charBuffers; // CharBuffers for processing, 1 per worker
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
@@ -77,15 +75,6 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
-
-        this.builders = new ArrayList<>(workers);
-        this.charBuffers = new ArrayList<>(workers);
-        for (int i = 0 ; i < workers ; i++) {
-            StringBuilder builder = new StringBuilder();
-            CharBuffer buffer = CharBuffer.wrap(builder);
-            builders.add(builder);
-            charBuffers.add(buffer);
-        }
     }
 
     protected abstract ProcessingTask createProcessingTask();
@@ -101,7 +90,22 @@ public abstract class StatsDProcessor implements Runnable {
     }
 
     @Override
-    public abstract void run();
+    public void run() {
+
+        for (int i = 0 ; i < workers ; i++) {
+            executor.submit(createProcessingTask());
+        }
+
+        boolean done = false;
+        while (!done) {
+            try {
+                endSignal.await();
+                done = true;
+            } catch (final InterruptedException e) {
+                // NOTHING
+            }
+        }
+    }
 
     boolean isShutdown() {
         return shutdown;

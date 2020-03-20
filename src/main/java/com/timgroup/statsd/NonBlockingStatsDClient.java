@@ -185,6 +185,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     The number of sender worker threads submitting buffers to the socket.
      * @param blocking
      *     Blocking or non-blocking implementation for statsd message queue.
+     * @param enableTelemetry
+     *     Should telemetry be enabled for the client.
+     * @param telemetryFlushInterval
+     *     Telemetry flush interval in seconds when the feature is enabled.
      * @throws StatsDClientException
      *     if the client could not be started
      */

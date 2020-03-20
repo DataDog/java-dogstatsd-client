@@ -27,13 +27,9 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
-            while (!(messages.isEmpty() && shutdown)) {
+            while (!(shutdown && messages.isEmpty())) {
 
                 try {
-
-                    if (Thread.interrupted()) {
-                        return;
-                    }
 
                     final Message message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                     if (message != null) {
@@ -112,23 +108,5 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
         }
 
         return false;
-    }
-
-    @Override
-    public void run() {
-
-        for (int i = 0 ; i < workers ; i++) {
-            executor.submit(createProcessingTask());
-        }
-
-        boolean done = false;
-        while (!done) {
-            try {
-                endSignal.await();
-                done = true;
-            } catch (final InterruptedException e) {
-                // NOTHING
-            }
-        }
     }
 }
