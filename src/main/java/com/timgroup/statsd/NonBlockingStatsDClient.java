@@ -79,8 +79,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
     };
 
     /**
-     * The NumberFormat instances are not threadsafe but are only ever called from
-     * the sender thread.
+     * The NumberFormat instances are not threadsafe and thus defined as ThreadLocal
+     * for safety.
      */
     private static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<NumberFormat>() {
         @Override
@@ -245,7 +245,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             String telemetrytags = tagString(new String[]{CLIENT_TRANSPORT_TAG + transportType,
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
-                                                          CLIENT_TAG});
+                                                          CLIENT_TAG}, new StringBuilder()).toString();
 
             this.telemetry = new Telemetry(telemetrytags, statsDProcessor);
 
@@ -380,11 +380,23 @@ public class NonBlockingStatsDClient implements StatsDClient {
         protected abstract void writeValue(StringBuilder builder);
     }
 
+
+    private void sendMetric(final Message message) {
+        send(message);
+        this.telemetry.incrMetricsSent(1);
+    }
+
+    private void send(final Message message) {
+        if (!statsDProcessor.send(message)) {
+            this.telemetry.incrPacketDroppedQueue(1);
+        }
+    }
+
     // send double with sample rate
     private void send(String aspect, final double value, String type, double sampleRate, String[] tags) {
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            statsDProcessor.send(new StatsDMessage(aspect, type, sampleRate, tags) {
+            sendMetric(new StatsDMessage(aspect, type, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(format(NUMBER_FORMATTER, value));
                 }
@@ -400,7 +412,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     // send long with sample rate
     private void send(String aspect, final long value, String type, double sampleRate, String[] tags) {
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
-            send(new StatsDMessage(aspect, type, sampleRate, tags) {
+            sendMetric(new StatsDMessage(aspect, type, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(value);
                 }
@@ -748,22 +760,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void histogram(String aspect, double value, String... tags) {
-        recordHistogramValue(aspect, value, tags);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void histogram(String aspect, double value, double sampleRate, String... tags) {
-        recordHistogramValue(aspect, value, sampleRate, tags);
-    }
-
-    /**
      * Records a value for the specified named distribution.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
@@ -846,22 +842,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void distribution(final String aspect, final long value, final double sampleRate, final String... tags) {
-        recordDistributionValue(aspect, value, sampleRate, tags);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void distribution(String aspect, double value, String... tags) {
-        recordDistributionValue(aspect, value, tags);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void distribution(String aspect, double value, double sampleRate, String... tags) {
         recordDistributionValue(aspect, value, sampleRate, tags);
     }
 
@@ -1033,17 +1013,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append(value);
             }
         });
-    }
-
-    private void sendMetric(final StatsdMessage message) {
-        send(message);
-        this.telemetry.incrMetricsSent(1);
-    }
-
-    private void send(final StatsdMessage message) {
-        if (!statsDProcessor.send(message)) {
-            this.telemetry.incrPacketDroppedQueue(1);
-        }
     }
 
     private boolean isInvalidSample(double sampleRate) {

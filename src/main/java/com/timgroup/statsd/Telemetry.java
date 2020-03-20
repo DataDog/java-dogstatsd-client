@@ -1,5 +1,7 @@
 package com.timgroup.statsd;
 
+import com.timgroup.statsd.Message;
+
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -8,23 +10,26 @@ public class Telemetry {
 
     public static int DEFAULT_FLUSH_INTERVAL = 10000; // 10s
 
-    protected AtomicInteger metricsSent;
-    protected AtomicInteger eventsSent;
-    protected AtomicInteger serviceChecksSent;
-    protected AtomicInteger bytesSent;
-    protected AtomicInteger bytesDropped;
-    protected AtomicInteger packetsSent;
-    protected AtomicInteger packetsDropped;
-    protected AtomicInteger packetsDroppedQueue;
+    protected final AtomicInteger metricsSent = new AtomicInteger(0);
 
-    protected String metricsSentMetric;
-    protected String eventsSentMetric;
-    protected String serviceChecksSentMetric;
-    protected String bytesSentMetric;
-    protected String bytesDroppedMetric;
-    protected String packetsSentMetric;
-    protected String packetsDroppedMetric;
-    protected String packetsDroppedQueueMetric;
+    protected final AtomicInteger eventsSent = new AtomicInteger(0);
+    protected final AtomicInteger serviceChecksSent = new AtomicInteger(0);
+    protected final AtomicInteger bytesSent = new AtomicInteger(0);
+    protected final AtomicInteger bytesDropped = new AtomicInteger(0);
+    protected final AtomicInteger packetsSent = new AtomicInteger(0);
+    protected final AtomicInteger packetsDropped = new AtomicInteger(0);
+    protected final AtomicInteger packetsDroppedQueue = new AtomicInteger(0);
+
+    protected final String metricsSentMetric = "datadog.dogstatsd.client.metrics";
+    protected final String eventsSentMetric = "datadog.dogstatsd.client.events";
+    protected final String serviceChecksSentMetric = "datadog.dogstatsd.client.service_checks";
+    protected final String bytesSentMetric = "datadog.dogstatsd.client.bytes_sent";
+    protected final String bytesDroppedMetric = "datadog.dogstatsd.client.bytes_dropped";
+    protected final String packetsSentMetric = "datadog.dogstatsd.client.packets_sent";
+    protected final String packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped";
+    protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
+
+    protected String tags;
 
     public StatsDProcessor processor;
     protected Timer timer;
@@ -42,26 +47,32 @@ public class Telemetry {
         }
     }
 
+    class TelemetryMessage implements Message {
+        private final String aspect;
+        private final String type = "c";  // all counters
+        private final String tags;  // pre-baked comma separeated tags string
+        private final int value;
+
+        protected TelemetryMessage(String metric, int value, String tags) {
+            this.aspect = metric;
+            this.tags = tags;
+            this.value = value;
+        }
+
+        @Override
+        public final void writeTo(StringBuilder builder) {
+            builder.append(aspect)
+                .append(':')
+                .append(this.value)
+                .append('|')
+                .append(type)
+                .append(tags);  // already has the statsd separator baked-in
+        }
+    }
+
     Telemetry(final String tags, final StatsDProcessor processor) {
         // precompute metrics lines with tags
-        this.metricsSentMetric = "datadog.dogstatsd.client.metrics:%d|c" + tags;
-        this.eventsSentMetric = "datadog.dogstatsd.client.events:%d|c" + tags;
-        this.serviceChecksSentMetric = "datadog.dogstatsd.client.service_checks:%d|c" + tags;
-        this.bytesSentMetric = "datadog.dogstatsd.client.bytes_sent:%d|c" + tags;
-        this.bytesDroppedMetric = "datadog.dogstatsd.client.bytes_dropped:%d|c" + tags;
-        this.packetsSentMetric = "datadog.dogstatsd.client.packets_sent:%d|c" + tags;
-        this.packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped:%d|c" + tags;
-        this.packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue:%d|c" + tags;
-
-        this.metricsSent = new AtomicInteger(0);
-        this.eventsSent = new AtomicInteger(0);
-        this.serviceChecksSent = new AtomicInteger(0);
-        this.bytesSent = new AtomicInteger(0);
-        this.bytesDropped = new AtomicInteger(0);
-        this.packetsSent = new AtomicInteger(0);
-        this.packetsDropped = new AtomicInteger(0);
-        this.packetsDroppedQueue = new AtomicInteger(0);
-
+        this.tags = tags;
         this.processor = processor;
         this.timer = null;
     }
@@ -92,14 +103,14 @@ public class Telemetry {
         // be spread out among processor worker and we flush every 5s by
         // default
 
-        this.processor.send(String.format(this.metricsSentMetric, this.metricsSent.getAndSet(0)));
-        this.processor.send(String.format(this.eventsSentMetric, this.eventsSent.getAndSet(0)));
-        this.processor.send(String.format(this.serviceChecksSentMetric, this.serviceChecksSent.getAndSet(0)));
-        this.processor.send(String.format(this.bytesSentMetric, this.bytesSent.getAndSet(0)));
-        this.processor.send(String.format(this.bytesDroppedMetric, this.bytesDropped.getAndSet(0)));
-        this.processor.send(String.format(this.packetsSentMetric, this.packetsSent.getAndSet(0)));
-        this.processor.send(String.format(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0)));
-        this.processor.send(String.format(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0)));
+        processor.send(new TelemetryMessage(this.metricsSentMetric, this.metricsSent.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.eventsSentMetric, this.eventsSent.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.serviceChecksSentMetric, this.serviceChecksSent.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.bytesSentMetric, this.bytesSent.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.bytesDroppedMetric, this.bytesDropped.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.packetsSentMetric, this.packetsSent.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
     }
 
     public void incrMetricsSent(final int value) {
