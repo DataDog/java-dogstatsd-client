@@ -3,11 +3,11 @@ package com.timgroup.statsd;
 
 import java.io.IOException;
 import java.net.SocketException;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.Random;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -64,6 +64,9 @@ public final class NonBlockingStatsDClientPerfTest {
                 Thread.sleep(50);
             } catch (InterruptedException ex) {}
         }
+
+        log.info("Messages at server: " + messages);
+        log.info("Packets at server: " + server.packetsReceived());
 
         assertEquals(testSize, server.messagesReceived().size());
     }
