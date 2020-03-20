@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Properties;
 
+import com.timgroup.statsd.Message;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.equalTo;
@@ -26,23 +28,45 @@ public class TelemetryTest {
 
     // fakeProcessor store messages from the telemetry only
     public static class FakeProcessor extends StatsDProcessor {
-        public final List<String> messages = new ArrayList<String>();
+        public final List<Message> messages = new ArrayList<>();
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
             super(0, handler, 0, 1, 1);
         }
 
+
+        private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
+            @Override
+            public void run() {}
+        }
+
         @Override
-        public boolean send(final String msg) {
-            messages.add(msg.trim());
+        public boolean send(final Message msg) {
+            messages.add(msg);
             return true;
         }
 
         @Override
         public void run(){}
 
-        public List<String> getMessages() {
+        @Override
+        protected ProcessingTask createProcessingTask() {
+            return new FakeProcessingTask();
+        }
+
+        public List<Message> getMessages() {
             return messages;
+        }
+
+        protected List<String> getMessagesAsStrings() {
+            StringBuilder sb = new StringBuilder();
+            ArrayList<String> stringMessages = new ArrayList<>(messages.size());
+            for(Message m : messages) {
+                sb.setLength(0);
+                m.writeTo(sb);
+                stringMessages.add(sb.toString());
+            }
+            return stringMessages;
         }
 
         public void clear() {
@@ -173,28 +197,30 @@ public class TelemetryTest {
         assertThat(client.telemetry.packetsDropped.get(), equalTo(0));
         assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(0));
 
-        assertThat(fakeProcessor.messages,
+        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
+
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.events:2|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.service_checks:3|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.bytes_sent:4|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.bytes_dropped:5|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_sent:6|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped:7|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped_queue:8|c|#test," + telemetryTags));
     }
 
@@ -211,28 +237,30 @@ public class TelemetryTest {
         client.telemetry.flush();
         assertThat(client.telemetry.metricsSent.get(), equalTo(0));
 
-        assertThat(fakeProcessor.messages,
+        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
+
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.bytes_sent:28|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags));
 
-        assertThat(fakeProcessor.messages,
+        assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags));
     }
 
@@ -293,14 +321,16 @@ public class TelemetryTest {
 
         assertThat(client.telemetry.metricsSent.get(), equalTo(0));
 
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.bytes_sent:0|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.packets_sent:0|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags));
-        assertThat(fakeProcessor.messages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags));
+        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
+
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_sent:0|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_sent:0|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags));
     }
 
     @Test(timeout = 5000L)
