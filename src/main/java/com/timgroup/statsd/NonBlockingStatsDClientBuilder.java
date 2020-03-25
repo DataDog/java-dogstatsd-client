@@ -17,6 +17,7 @@ public class NonBlockingStatsDClientBuilder {
      */
 
     public int port = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
+    public int telemetryPort = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
     public int queueSize = NonBlockingStatsDClient.DEFAULT_QUEUE_SIZE;
     public int timeout = NonBlockingStatsDClient.SOCKET_TIMEOUT_MS;
     public int bufferPoolSize = NonBlockingStatsDClient.DEFAULT_POOL_SIZE;
@@ -29,8 +30,10 @@ public class NonBlockingStatsDClientBuilder {
     public boolean blocking;
 
     public Callable<SocketAddress> addressLookup;
+    public Callable<SocketAddress> telemetryAddressLookup;
 
     public String hostname;
+    public String telemetryHostname;
     public String prefix;
     public String entityID;
     public String[] constantTags;
@@ -41,6 +44,11 @@ public class NonBlockingStatsDClientBuilder {
 
     public NonBlockingStatsDClientBuilder port(int val) {
         port = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder telemetryPort(int val) {
+        telemetryPort = val;
         return this;
     }
 
@@ -89,8 +97,18 @@ public class NonBlockingStatsDClientBuilder {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder telemetryAddressLookup(Callable<SocketAddress> val) {
+        telemetryAddressLookup = val;
+        return this;
+    }
+
     public NonBlockingStatsDClientBuilder hostname(String val) {
         hostname = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder telemetryHostname(String val) {
+        telemetryHostname = val;
         return this;
     }
 
@@ -129,17 +147,24 @@ public class NonBlockingStatsDClientBuilder {
      * @return the built NonBlockingStatsDClient.
      */
     public NonBlockingStatsDClient build() throws StatsDClientException {
-        if (addressLookup != null) {
-            return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                    addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID,
-                    bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                    telemetryFlushInterval);
-        } else {
-            return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                    staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
-                    entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                    telemetryFlushInterval);
+        Callable<SocketAddress> lookup = addressLookup;
+        Callable<SocketAddress> telemetryLookup = null;
+
+        if (lookup == null) {
+            lookup = staticStatsDAddressResolution(hostname, port);
         }
+        if (telemetryAddressLookup == null) {
+            if (telemetryHostname == null) {
+                telemetryLookup = lookup;
+            } else {
+                telemetryLookup = staticStatsDAddressResolution(telemetryHostname, telemetryPort);
+            }
+        }
+
+        return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
+                lookup, telemetryLookup, timeout, socketBufferSize, maxPacketSizeBytes,
+                entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
+                enableTelemetry, telemetryFlushInterval);
     }
 
     /**
