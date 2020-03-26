@@ -153,12 +153,14 @@ public class NonBlockingStatsDClientBuilder {
         if (lookup == null) {
             lookup = staticStatsDAddressResolution(hostname, port);
         }
-        if (telemetryAddressLookup == null) {
+
+        if (telemetryLookup == null) {
             if (telemetryHostname == null) {
                 telemetryLookup = lookup;
             } else {
                 telemetryLookup = staticStatsDAddressResolution(telemetryHostname, telemetryPort);
             }
+            System.out.println("IN CLIENT, configured telemetry " + telemetryLookup);
         }
 
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
