@@ -160,7 +160,6 @@ public class NonBlockingStatsDClientBuilder {
             } else {
                 telemetryLookup = staticStatsDAddressResolution(telemetryHostname, telemetryPort);
             }
-            System.out.println("IN CLIENT, configured telemetry " + telemetryLookup);
         }
 
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
