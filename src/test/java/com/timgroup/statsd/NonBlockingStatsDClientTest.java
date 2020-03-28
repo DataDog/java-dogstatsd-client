@@ -5,24 +5,23 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Rule;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Logger;
-import java.util.concurrent.BlockingQueue;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 
 public class NonBlockingStatsDClientTest {
@@ -45,12 +44,11 @@ public class NonBlockingStatsDClientTest {
     }
 
     @AfterClass
-    public static void stop() throws Exception {
+    public static void stop() {
         try {
             client.stop();
             server.close();
-        } catch (java.io.IOException e) {
-            return;
+        } catch (java.io.IOException ignored) {
         }
     }
 
@@ -129,7 +127,7 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c"));
     }
 
-    @Test(timeout = 5000L)
+    @Test//(timeout = 5000L)
     public void sends_counter_increment_to_statsd_with_tags() throws Exception {
 
 
@@ -539,6 +537,30 @@ public class NonBlockingStatsDClientTest {
         server.waitForMessage();
 
         assertThat(server.messagesReceived(), contains("my.prefix.value:423|g"));
+    }
+
+    @Test(timeout = 5000L)
+    public void checkEnvVars() {
+        final Random r = new Random();
+        for (final NonBlockingStatsDClient.Literal literal : NonBlockingStatsDClient.Literal.values()) {
+            final String envVarName = literal.envName();
+            final String randomString = envVarName + "_val_" +r.nextDouble();
+            environmentVariables.set(envVarName, randomString);
+            final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+                    .prefix("checkEnvVars")
+                    .hostname("localhost")
+                    .port(STATSD_SERVER_PORT)
+                    .build();
+            server.clear();
+            client.gauge("value", 42);
+            server.waitForMessage();
+            assertThat(server.messagesReceived(), contains("checkEnvVars.value:42|g|#" +
+                    literal.tag() + ":" + randomString));
+            server.clear();
+
+            environmentVariables.clear(envVarName);
+            log.info("passed for '" + literal + "'; env cleaned.");
+        }
     }
 
     @Test(timeout = 5000L)
