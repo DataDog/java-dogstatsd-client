@@ -11,7 +11,8 @@ import java.nio.channels.DatagramChannel;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
@@ -53,9 +54,29 @@ import java.util.concurrent.TimeUnit;
  */
 public class NonBlockingStatsDClient implements StatsDClient {
 
-    public static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
-    public static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
-    public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
+    static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
+    static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
+    static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
+    private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
+
+    enum Literal {
+        service,
+        env,
+        version,
+        tags;
+        private static final String PREFIX = "dd";
+        String envName() {
+            return (PREFIX + "_" + toString()).toUpperCase();
+        }
+
+        String envVal() {
+            return System.getenv(envName());
+        }
+
+        String tag() {
+            return PREFIX + "." + toString();
+        }
+    }
 
     public static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
     public static final int DEFAULT_QUEUE_SIZE = 4096;
@@ -140,8 +161,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected final StatsDSender statsDSender;
     protected final Telemetry telemetry;
 
-    private final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
-
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
      * specified host and port. All messages send via this client will have
@@ -202,17 +221,27 @@ public class NonBlockingStatsDClient implements StatsDClient {
             handler = errorHandler;
         }
 
-        /* Empty list should be null for faster comparison */
-        if ((constantTags != null) && (constantTags.length == 0)) {
-            constantTags = null;
-        }
-
-        // Support "dd.internal.entity_id" internal tag.
-        constantTags = this.updateTagsWithEntityID(constantTags, entityID);
-        if (constantTags != null) {
-            constantTagsRendered = tagString(constantTags, null);
-        } else {
-            constantTagsRendered = null;
+        {
+            List<String> costantPreTags = new ArrayList<>();
+            if (constantTags != null) {
+                for (final String constantTag : constantTags) {
+                    costantPreTags.add(constantTag);
+                }
+            }
+            // Support "dd.internal.entity_id" internal tag.
+            updateTagsWithEntityID(costantPreTags, entityID);
+            for (final Literal literal : Literal.values()) {
+                final String envVal = literal.envVal();
+                if (envVal != null && !envVal.trim().isEmpty()) {
+                    costantPreTags.add(literal.tag() + ":" + envVal);
+                }
+            }
+            if (costantPreTags.isEmpty()) {
+                constantTagsRendered = null;
+            } else {
+                constantTagsRendered = tagString(costantPreTags.toArray(new String[costantPreTags.size()]), null);
+            }
+            costantPreTags = null;
         }
 
         String transportType = "";
@@ -1008,33 +1037,23 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Updates and returns tags completed with the entityID tag if needed.
      *
-     * @param tags the current constant tags array
+     * @param tags the current constant tags list
      *
      * @param entityID the entityID string provided by argument
      *
-     * @return array of tags
+     * @return true if tags was modified
      */
-    private String[] updateTagsWithEntityID(String[] tags, String entityID) {
+    private static boolean updateTagsWithEntityID(final List<String> tags, String entityID) {
         // Support "dd.internal.entity_id" internal tag.
         if (entityID == null || entityID.trim().isEmpty()) {
             // if the entityID parameter is null, default to the environment variable
             entityID = System.getenv(DD_ENTITY_ID_ENV_VAR);
         }
         if (entityID != null && !entityID.trim().isEmpty()) {
-            final String entityTag = new StringBuilder(ENTITY_ID_TAG_NAME)
-                    .append(":")
-                    .append(entityID)
-                    .toString();
-
-            if (tags == null) {
-                tags = new String[]{entityTag};
-            } else {
-                tags = Arrays.copyOf(tags, tags.length + 1);
-                // Now that tags is one element longer, tags.length has changed...
-                tags[tags.length - 1] = entityTag;
-            }
+            final String entityTag = ENTITY_ID_TAG_NAME + ":" + entityID;
+            return tags.add(entityTag);
         }
-        return tags;
+        return false;
     }
 
     private String toStatsDString(final ServiceCheck sc) {
