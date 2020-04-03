@@ -9,8 +9,6 @@ import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -127,9 +125,8 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), contains("my.prefix.myinc:1|c"));
     }
 
-    @Test//(timeout = 5000L)
-    public void sends_counter_increment_to_statsd_with_tags() throws Exception {
-
+    @Test(timeout = 5000L)
+    public void sends_counter_increment_to_statsd_with_tags() {
 
         client.incrementCounter("myinc", "foo:bar", "baz");
         server.waitForMessage();
