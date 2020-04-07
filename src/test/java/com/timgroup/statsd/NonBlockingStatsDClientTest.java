@@ -951,8 +951,9 @@ public class NonBlockingStatsDClientTest {
                 Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize,
                 final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
                 final int senderWorkers, boolean blocking) throws StatsDClientException {
-            super(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize, maxPacketSizeBytes,
-                    entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0);
+
+            super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,bufferSize,
+                    maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0);
             lock = new CountDownLatch(1);
         }
 
