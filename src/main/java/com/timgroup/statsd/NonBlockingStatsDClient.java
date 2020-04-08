@@ -306,14 +306,23 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param client
      *    source object to copy
      */
-    private NonBlockingStatsDClient(NonBlockingStatsDClient client) {
+    private NonBlockingStatsDClient(NonBlockingStatsDClient client)
+            throws StatsDClientException {
 
-        this.prefix = client.prefix;
-        this.handler = client.handler;
-        this.constantTagsRendered = client.constantTagsRendered;
-        this.clientChannel = client.clientChannel;
-        this.statsDProcessor = client.statsDProcessor;
-        this.statsDSender = client.statsDSender;
+        prefix = client.prefix;
+        handler = client.handler;
+        constantTagsRendered = client.constantTagsRendered;
+        clientChannel = client.clientChannel;
+        try {
+            statsDProcessor = createProcessor(client.statsDProcessor);
+            statsDSender = new StatsDSender(
+                    client.statsDSender, statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue());
+        } catch (Exception e) {
+            throw new StatsDClientException("Failed to instantiate StatsD client copy", e);
+        }
+
+        executor.submit(statsDProcessor);
+        executor.submit(statsDSender);
     }
 
 
@@ -879,6 +888,15 @@ public class NonBlockingStatsDClient implements StatsDClient {
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize, workers);
         }
+    }
+
+    protected StatsDProcessor createProcessor(StatsDProcessor processor) throws Exception {
+
+        if (processor instanceof StatsDNonBlockingProcessor) {
+            return new StatsDNonBlockingProcessor((StatsDNonBlockingProcessor) processor);
+        }
+
+        return new StatsDBlockingProcessor((StatsDBlockingProcessor) processor);
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
