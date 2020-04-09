@@ -20,8 +20,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         private final int processorQueueId;
 
         public ProcessingTask(int id) {
-            super();
-            this.processorQueueId = id;
+            super(id);
         }
 
         @Override
@@ -144,8 +143,8 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     }
 
     @Override
-    protected ProcessingTask createProcessingTask() {
-        return new ProcessingTask();
+    protected ProcessingTask createProcessingTask(int id) {
+        return new ProcessingTask(id);
     }
 
     StatsDNonBlockingProcessor(final StatsDNonBlockingProcessor processor) throws Exception {

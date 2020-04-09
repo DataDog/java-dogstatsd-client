@@ -16,6 +16,10 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
+        public ProcessingTask(int id) {
+            super(id);
+        }
+
         @Override
         public void run() {
             ByteBuffer sendBuffer;
@@ -76,7 +80,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                             writeBuilderToSendBuffer(sendBuffer);
                         }
 
-                        if (null == messages.peek()) {
+                        if (null == processorWorkQueue[this.processorQueueId].peek()) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
                         }
@@ -96,7 +100,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             aggregator.stop();
             endSignal.countDown();
         }
-
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
@@ -115,8 +118,8 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     }
 
     @Override
-    protected ProcessingTask createProcessingTask() {
-        return new ProcessingTask();
+    protected ProcessingTask createProcessingTask(int id) {
+        return new ProcessingTask(id);
     }
 
     StatsDBlockingProcessor(final StatsDBlockingProcessor processor)
