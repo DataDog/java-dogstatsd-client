@@ -94,7 +94,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.endSignal = new CountDownLatch(workers);
     }
 
-    protected abstract ProcessingTask createProcessingTask();
+    protected abstract ProcessingTask createProcessingTask(int id);
 
     protected abstract boolean send(final Message message);
 
@@ -115,7 +115,7 @@ public abstract class StatsDProcessor implements Runnable {
     public void run() {
 
         for (int i = 0 ; i < workers ; i++) {
-            executor.submit(createProcessingTask());
+            executor.submit(createProcessingTask(i));
         }
 
         boolean done = false;

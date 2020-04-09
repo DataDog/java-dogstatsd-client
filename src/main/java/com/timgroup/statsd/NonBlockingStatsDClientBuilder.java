@@ -142,9 +142,9 @@ public class NonBlockingStatsDClientBuilder {
                     enableTelemetry, telemetryFlushInterval);
         } else {
             return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                    staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
-                    entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                    telemetryFlushInterval);
+                    staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize,
+                    maxPacketSizeBytes, entityID, bufferPoolSize, processorWorkers, senderWorkers,
+                    lockShardGrain, blocking, enableTelemetry, telemetryFlushInterval);
         }
     }
 

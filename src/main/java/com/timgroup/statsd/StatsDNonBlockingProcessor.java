@@ -17,13 +17,13 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     private final int qcapacity;
     private final AtomicInteger[] qsize;  // qSize will not reflect actual size, but a close estimate.
 
-    private class ProcessingTask implements Runnable {
-        private final int processorQueueId;
+    private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
         public ProcessingTask(int id) {
-            this.processorQueueId = id;
+            super(id);
         }
 
+        @Override
         public void run() {
             boolean empty;
             ByteBuffer sendBuffer;
@@ -48,68 +48,9 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     }
 
                     final int messageQueueIdx = processorWorkQueue[this.processorQueueId].poll();
-                    final String message = messages[messageQueueIdx].poll();
+                    final Message message = messages[messageQueueIdx].poll();
                     if (message != null) {
                         qsize[messageQueueIdx].decrementAndGet();
-                        final byte[] data = message.getBytes(MESSAGE_CHARSET);
-                        if (sendBuffer.capacity() < data.length) {
-                            throw new InvalidMessageException(MESSAGE_TOO_LONG, message);
-                        }
-                        if (sendBuffer.remaining() < (data.length + 1)) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                        }
-                        if (sendBuffer.position() > 0) {
-                            sendBuffer.put((byte) '\n');
-                        }
-                        sendBuffer.put(data);
-                        if (null == processorWorkQueue[this.processorQueueId].peek()) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                        }
-                    }
-                } catch (final InterruptedException e) {
-                    if (shutdown) {
-                        endSignal.countDown();
-                        return;
-                    }
-                } catch (final Exception e) {
-                    handler.handle(e);
-                }
-            }
-            endSignal.countDown();
-        }
-    }
-
-    private class ProcessingTask extends StatsDProcessor.ProcessingTask {
-
-        @Override
-        public void run() {
-            boolean empty;
-            ByteBuffer sendBuffer;
-
-            try {
-                sendBuffer = bufferPool.borrow();
-            } catch (final InterruptedException e) {
-                handler.handle(e);
-                return;
-            }
-
-            while (!((empty = messages.isEmpty()) && shutdown)) {
-
-                try {
-                    if (empty) {
-                        Thread.sleep(WAIT_SLEEP_MS);
-                        continue;
-                    }
-
-                    if (Thread.interrupted()) {
-                        return;
-                    }
-                    final Message message = messages.poll();
-                    if (message != null) {
-
-                        qsize.decrementAndGet();
                         builder.setLength(0);
 
                         message.writeTo(builder);
@@ -137,7 +78,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                             writeBuilderToSendBuffer(sendBuffer);
                         }
 
-                        if (null == messages.peek()) {
+                        if (null == processorWorkQueue[this.processorQueueId].peek()) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
                         }
@@ -179,8 +120,8 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     }
 
     @Override
-    protected ProcessingTask createProcessingTask() {
-        return new ProcessingTask();
+    protected ProcessingTask createProcessingTask(int id) {
+        return new ProcessingTask(id);
     }
 
     @Override
