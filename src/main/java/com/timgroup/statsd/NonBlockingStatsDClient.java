@@ -247,7 +247,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             if (costantPreTags.isEmpty()) {
                 constantTagsRendered = null;
             } else {
-                constantTagsRendered = tagString(costantPreTags.toArray(new String[costantPreTags.size()]), null);
+                constantTagsRendered = tagString(
+                        costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder()).toString();
             }
             costantPreTags = null;
         }
