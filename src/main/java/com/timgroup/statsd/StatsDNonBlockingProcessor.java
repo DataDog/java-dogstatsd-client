@@ -97,7 +97,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
         this.qsize = new AtomicInteger(0);
-        this.qcapacity = queueSize;
         this.messages = new ConcurrentLinkedQueue<>();
     }
 

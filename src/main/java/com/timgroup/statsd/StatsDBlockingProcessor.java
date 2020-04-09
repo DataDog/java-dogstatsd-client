@@ -100,7 +100,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             throws Exception {
 
         super(processor);
-        this.messages = new ArrayBlockingQueue<String>(processor.getQcapacity());
+        this.messages = new ArrayBlockingQueue<>(processor.getQcapacity());
     }
 
     @Override
