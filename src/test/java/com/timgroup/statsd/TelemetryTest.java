@@ -90,9 +90,9 @@ public class TelemetryTest {
                                        final int senderWorkers, final int lockShardGrain, boolean blocking,
                                        final boolean enableTelemetry, final int telemetryFlushInterval)
                 throws StatsDClientException {
-                super(prefix, queueSize, constantTags, errorHandler, addressLookup, timeout, bufferSize,
-                        maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, lockShardGrain,
-                        blocking, enableTelemetry, telemetryFlushInterval);
+                super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
+                        bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
+                        lockShardGrain, blocking, enableTelemetry, telemetryFlushInterval);
         }
     };
 

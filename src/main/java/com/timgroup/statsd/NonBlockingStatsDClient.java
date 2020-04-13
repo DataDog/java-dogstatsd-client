@@ -162,8 +162,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     });
 
+    // Typically the telemetry and regular processors will be the same,
+    // but a separate destination for telemetry is supported.
     protected final StatsDProcessor statsDProcessor;
+    protected StatsDProcessor telemetryStatsDProcessor;
     protected final StatsDSender statsDSender;
+    protected StatsDSender telemetryStatsDSender;
     protected final Telemetry telemetry;
 
     /**
@@ -185,6 +189,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     handler to use when an exception occurs during usage, may be null to indicate noop
      * @param addressLookup
      *     yields the IP address and socket of the StatsD server
+     * @param telemetryAddressLookup
+     *     yields the IP address and socket of the StatsD telemetry server destination
      * @param queueSize
      *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
@@ -217,8 +223,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
                                    final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
-                                   final int timeout, final int bufferSize, final int maxPacketSizeBytes,
-                                   String entityID, final int poolSize, final int processorWorkers,
+                                   Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
+                                   final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
                                    final int senderWorkers, final int lockShardGrain, boolean blocking,
                                    final boolean enableTelemetry, final int telemetryFlushInterval)
             throws StatsDClientException {
@@ -278,6 +284,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
                     processorWorkers, lockShardGrain, blocking);
+            telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream("version.properties"));
@@ -286,10 +293,40 @@ public class NonBlockingStatsDClient implements StatsDClient {
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
                                                           CLIENT_TAG}, new StringBuilder()).toString();
 
-            this.telemetry = new Telemetry(telemetrytags, statsDProcessor);
+            if (addressLookup != telemetryAddressLookup) {
+                DatagramChannel telemetryClientChannel;
 
-            statsDSender = createSender(addressLookup, handler, clientChannel,
-                    statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
+                final SocketAddress telemetryAddress = addressLookup.call();
+                if (telemetryAddress instanceof UnixSocketAddress) {
+                    telemetryClientChannel = UnixDatagramChannel.open();
+                    // Set send timeout, to handle the case where the transmission buffer is full
+                    // If no timeout is set, the send becomes blocking
+                    if (timeout > 0) {
+                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+                    }
+                    if (bufferSize > 0) {
+                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                    }
+                } else {
+                    telemetryClientChannel = DatagramChannel.open();
+                }
+
+                // similar settings, but a single worker and non-blocking.
+                telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
+                        poolSize, 1, false);
+            }
+
+            this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
+
+            statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
+                    statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
+            telemetryStatsDSender = statsDSender;
+
+            if (telemetryStatsDProcessor != statsDProcessor) {
+                telemetryStatsDSender = createSender(addressLookup, handler, clientChannel,
+                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
+                        1, this.telemetry);
+            }
 
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
