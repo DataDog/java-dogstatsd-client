@@ -313,7 +313,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false);
+                        poolSize, 1, 1, false);
             }
 
             this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
