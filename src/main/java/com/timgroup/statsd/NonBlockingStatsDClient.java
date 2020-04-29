@@ -298,6 +298,591 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port.
+     * This is a shallow copy constructor meant to be used internally only.
+     *
+     * @param client
+     *    source object to copy
+     */
+    private NonBlockingStatsDClient(NonBlockingStatsDClient client)
+            throws StatsDClientException {
+
+        prefix = client.prefix;
+        handler = client.handler;
+        constantTagsRendered = client.constantTagsRendered;
+        clientChannel = client.clientChannel;
+        try {
+            statsDProcessor = createProcessor(client.statsDProcessor);
+            statsDSender = new StatsDSender(
+                    client.statsDSender, statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue());
+        } catch (Exception e) {
+            throw new StatsDClientException("Failed to instantiate StatsD client copy", e);
+        }
+
+        telemetry = new Telemetry(client.telemetry.getTags(), statsDProcessor);
+
+        executor.submit(statsDProcessor);
+        executor.submit(statsDSender);
+    }
+
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance. It
+     * uses Environment variables ("DD_AGENT_HOST" and "DD_DOGSTATSD_PORT")
+     * in order to configure the communication with a StatsD instance.
+     * All messages send via this client will have their keys prefixed with
+     * the specified string. The new client will attempt to open a connection
+     * to the StatsD server immediately upon instantiation, and may throw an
+     * exception if that a connection cannot be established. Once a client has
+     * been instantiated in this way, all exceptions thrown during subsequent
+     * usage are consumed, guaranteeing that failures in metrics will not
+     * affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are consumed, guaranteeing
+     * that failures in metrics will not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are consumed, guaranteeing
+     * that failures in metrics will not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
+            final int queueSize) throws StatsDClientException {
+
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .queueSize(queueSize)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are consumed, guaranteeing
+     * that failures in metrics will not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
+            final String... constantTags) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .constantTags(constantTags)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are consumed, guaranteeing
+     * that failures in metrics will not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
+            final String[] constantTags, final int maxPacketSizeBytes) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .constantTags(constantTags)
+            .maxPacketSizeBytes(maxPacketSizeBytes)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are consumed, guaranteeing
+     * that failures in metrics will not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
+            final int queueSize, final String... constantTags) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix,final String hostname, final int port,
+                                   final String[] constantTags, final StatsDClientErrorHandler errorHandler)
+        throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
+            final String[] constantTags, final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .build());
+    }
+
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param entityID
+     *     the entity id value used with an internal tag for tracking client entity.
+     *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
+     *     If the environment variable is not defined, the internal tag is not added.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port, final int queueSize,
+            final String[] constantTags, final StatsDClientErrorHandler errorHandler, String entityID)
+        throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .entityID(entityID)
+            .build());
+    }
+
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
+            final int queueSize, final String[] constantTags, final StatsDClientErrorHandler errorHandler,
+            final int maxPacketSizeBytes) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .maxPacketSizeBytes(maxPacketSizeBytes)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param hostname
+     *     the host name of the targeted StatsD server. If 'null' the environment variable
+     *     "DD_AGENT_HOST" is used to get the host name.
+     * @param port
+     *     the port of the targeted StatsD server. If the parameter 'hostname' is 'null' and
+     *     this parameter is equal to '0', the environment variable
+     *     "DD_DOGSTATSD_PORT" is used to get the port, else the default value '8125' is used.
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param timeout
+     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
+     * @param bufferSize
+     *     the socket buffer size in bytes. Applies to unix sockets only.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final String hostname, final int port,
+            final int queueSize, int timeout, int bufferSize, final String[] constantTags,
+            final StatsDClientErrorHandler errorHandler) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .hostname(hostname)
+            .port(port)
+            .queueSize(queueSize)
+            .timeout(timeout)
+            .socketBufferSize(bufferSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param addressLookup
+     *     yields the IP address and socket of the StatsD server
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup)
+        throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .addressLookup(addressLookup)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param addressLookup
+     *     yields the IP address and socket of the StatsD server
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param timeout
+     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
+     * @param bufferSize
+     *     the socket buffer size in bytes. Applies to unix sockets only.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
+            final int timeout, final int bufferSize) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .addressLookup(addressLookup)
+            .timeout(timeout)
+            .socketBufferSize(bufferSize)
+            .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param addressLookup
+     *     yields the IP address and socket of the StatsD server
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     * @param timeout
+     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
+     * @param bufferSize
+     *     the socket buffer size in bytes. Applies to unix sockets only.
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    @Deprecated
+    public NonBlockingStatsDClient(final String prefix,  final int queueSize, String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
+            final int timeout, final int bufferSize, final int maxPacketSizeBytes) throws StatsDClientException {
+        this(new NonBlockingStatsDClientBuilder()
+            .prefix(prefix)
+            .queueSize(queueSize)
+            .constantTags(constantTags)
+            .errorHandler(errorHandler)
+            .addressLookup(addressLookup)
+            .timeout(timeout)
+            .socketBufferSize(bufferSize)
+            .maxPacketSizeBytes(maxPacketSizeBytes)
+            .build());
+    }
+
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, boolean blocking) throws Exception {
         if (blocking) {
@@ -305,6 +890,15 @@ public class NonBlockingStatsDClient implements StatsDClient {
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize, workers);
         }
+    }
+
+    protected StatsDProcessor createProcessor(StatsDProcessor processor) throws Exception {
+
+        if (processor instanceof StatsDNonBlockingProcessor) {
+            return new StatsDNonBlockingProcessor((StatsDNonBlockingProcessor) processor);
+        }
+
+        return new StatsDBlockingProcessor((StatsDBlockingProcessor) processor);
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,

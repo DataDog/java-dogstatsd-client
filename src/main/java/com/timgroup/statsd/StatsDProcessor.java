@@ -35,6 +35,7 @@ public abstract class StatsDProcessor implements Runnable {
     protected final CountDownLatch endSignal;
 
     protected final int workers;
+    protected final int qcapacity;
 
     protected volatile boolean shutdown;
 
@@ -70,11 +71,25 @@ public abstract class StatsDProcessor implements Runnable {
 
         this.handler = handler;
         this.workers = workers;
+        this.qcapacity = queueSize;
 
         this.executor = Executors.newFixedThreadPool(workers);
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
+    }
+
+    StatsDProcessor(final StatsDProcessor processor)
+            throws Exception {
+
+        this.handler = processor.handler;
+        this.workers = processor.workers;
+        this.qcapacity = processor.getQcapacity();
+
+        this.executor = Executors.newFixedThreadPool(this.workers);
+        this.bufferPool = new BufferPool(processor.bufferPool);
+        this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
+        this.endSignal = new CountDownLatch(this.workers);
     }
 
     protected abstract ProcessingTask createProcessingTask();
@@ -87,6 +102,10 @@ public abstract class StatsDProcessor implements Runnable {
 
     public BlockingQueue<ByteBuffer> getOutboundQueue() {
         return this.outboundQueue;
+    }
+
+    public int getQcapacity() {
+        return this.qcapacity;
     }
 
     @Override

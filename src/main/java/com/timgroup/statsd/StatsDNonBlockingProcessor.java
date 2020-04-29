@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     private final Queue<Message> messages;
-    private final int qcapacity;
     private final AtomicInteger qsize;  // qSize will not reflect actual size, but a close estimate.
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
@@ -98,13 +97,18 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
         this.qsize = new AtomicInteger(0);
-        this.qcapacity = queueSize;
         this.messages = new ConcurrentLinkedQueue<>();
     }
 
     @Override
     protected ProcessingTask createProcessingTask() {
         return new ProcessingTask();
+    }
+
+    StatsDNonBlockingProcessor(final StatsDNonBlockingProcessor processor) throws Exception {
+        super(processor);
+        this.qsize = new AtomicInteger(0);
+        this.messages = new ConcurrentLinkedQueue<>();
     }
 
     @Override

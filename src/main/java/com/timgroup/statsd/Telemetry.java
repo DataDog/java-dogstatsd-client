@@ -161,4 +161,12 @@ public class Telemetry {
         this.packetsDropped.set(0);
         this.packetsDroppedQueue.set(0);
     }
+
+    /**
+     * Gets the telemetry tags string.
+     * @return this Telemetry instance applied tags.
+     */
+    public String getTags() {
+        return this.tags;
+    }
 }

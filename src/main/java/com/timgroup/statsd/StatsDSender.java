@@ -57,6 +57,16 @@ public class StatsDSender implements Runnable {
         this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS, telemetry);
     }
 
+    StatsDSender(final StatsDSender sender) throws Exception {
+        this(sender.addressLookup, sender.clientChannel, sender.handler,
+                sender.pool, sender.buffers, sender.workers, sender.telemetry);
+    }
+
+    StatsDSender(final StatsDSender sender, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
+        this(sender.addressLookup, sender.clientChannel, sender.handler,
+                pool, buffers, sender.workers, sender.telemetry);
+    }
+
     @Override
     public void run() {
 
