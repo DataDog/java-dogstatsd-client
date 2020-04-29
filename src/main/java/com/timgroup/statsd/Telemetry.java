@@ -71,8 +71,6 @@ public class Telemetry {
     }
 
     Telemetry(final String tags, final StatsDProcessor processor) {
-        this.tags = tags;
-
         // precompute metrics lines with tags
         this.tags = tags;
         this.processor = processor;
