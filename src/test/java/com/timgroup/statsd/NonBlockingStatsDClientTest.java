@@ -7,8 +7,6 @@ import org.junit.Test;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
-import com.timgroup.statsd.Message;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.List;
@@ -618,6 +616,8 @@ public class NonBlockingStatsDClientTest {
             server.waitForMessage();
             assertThat(server.messagesReceived(), contains("checkEnvVars.value:42|g|#" +
                     literal.tag() + ":" + randomString));
+            assertThat(server.messagesReceived(), contains("checkEnvVars.value:42|g|#" +
+                    envVarName.replace("DD_", "").toLowerCase() + ":" + randomString));
             server.clear();
 
             environmentVariables.clear(envVarName);
