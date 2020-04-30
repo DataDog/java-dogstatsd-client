@@ -62,10 +62,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
 
     enum Literal {
-        service,
-        env,
-        version,
-        tags;
+        SERVICE,
+        ENV,
+        VERSION
+        ;
         private static final String PREFIX = "dd";
         String envName() {
             return (PREFIX + "_" + toString()).toUpperCase();
@@ -76,7 +76,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         String tag() {
-            return PREFIX + "." + toString();
+            return toString().toLowerCase();
         }
     }
 
