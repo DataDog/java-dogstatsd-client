@@ -20,6 +20,8 @@ import java.util.logging.Logger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -916,6 +918,45 @@ public class NonBlockingStatsDClientTest {
             final List<String> messages = server.messagesReceived();
             assertEquals(1, messages.size());
             assertEquals("_sc|fine|0", messages.get(0));
+        }
+    }
+
+    @Test(timeout=10000L)
+    public void sends_telemetry_elsewhere() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final DummyStatsDServer telemetryServer = new DummyStatsDServer(STATSD_SERVER_PORT+10);
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .telemetryHostname("localhost")
+            .telemetryPort(STATSD_SERVER_PORT+10)
+            .telemetryFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            testClient.gauge("top.level.value", 423);
+            server.waitForMessage();
+
+            assertThat(server.messagesReceived(), contains("my.prefix.top.level.value:423|g"));
+
+            telemetryServer.waitForMessage();
+
+            // 8 messages in telemetry batch
+            final List<String> messages = telemetryServer.messagesReceived();
+            assertEquals(8, messages.size());
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.metrics:1|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.events:0|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.service_checks:0|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.bytes_sent:31|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.bytes_dropped:0|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_sent:1|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_dropped:0|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_dropped_queue:0|c")));
+        } finally {
+            testClient.stop();
+            telemetryServer.close();
         }
     }
 

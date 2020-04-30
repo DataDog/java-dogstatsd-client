@@ -151,7 +151,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final StatsDClientErrorHandler handler;
     private final String constantTagsRendered;
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(2, new ThreadFactory() {
+    private final ExecutorService executor = Executors.newFixedThreadPool(4, new ThreadFactory() {
         final ThreadFactory delegate = Executors.defaultThreadFactory();
         @Override public Thread newThread(final Runnable runnable) {
             final Thread result = delegate.newThread(runnable);
@@ -288,10 +288,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
                                                           CLIENT_TAG}, new StringBuilder()).toString();
 
+            DatagramChannel telemetryClientChannel = clientChannel;
             if (addressLookup != telemetryAddressLookup) {
-                DatagramChannel telemetryClientChannel;
 
-                final SocketAddress telemetryAddress = addressLookup.call();
+                final SocketAddress telemetryAddress = telemetryAddressLookup.call();
                 if (telemetryAddress instanceof UnixSocketAddress) {
                     telemetryClientChannel = UnixDatagramChannel.open();
                     // Set send timeout, to handle the case where the transmission buffer is full
@@ -302,7 +302,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
                     if (bufferSize > 0) {
                         telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
                     }
-                } else {
+                } else if (transportType == "uds") {
+                    // UDP clientChannel can submit to multiple addresses, we only need
+                    // a new channel if transport type is UDS for main traffic.
                     telemetryClientChannel = DatagramChannel.open();
                 }
 
@@ -313,14 +315,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
 
-            statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
+            statsDSender = createSender(addressLookup, handler, telemetryClientChannel, statsDProcessor.getBufferPool(),
                     statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
-            telemetryStatsDSender = statsDSender;
 
+            telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
-                telemetryStatsDSender = createSender(addressLookup, handler, clientChannel,
+                // TODO: figure out why the hell telemetryClientChannel does not work here!
+                telemetryStatsDSender = createSender(telemetryAddressLookup, handler, clientChannel,
                         telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
                         1, this.telemetry);
+
             }
 
         } catch (final Exception e) {
@@ -331,7 +335,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         executor.submit(statsDSender);
 
         if (enableTelemetry) {
+            if (telemetryStatsDProcessor != statsDProcessor) {
+                executor.submit(telemetryStatsDProcessor);
+                executor.submit(telemetryStatsDSender);
+            }
             this.telemetry.start(telemetryFlushInterval);
+
         }
     }
 
@@ -1013,6 +1022,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry.stop();
             statsDProcessor.shutdown();
             statsDSender.shutdown();
+
+            // shut down telemetry workers if need be
+            if (telemetryStatsDProcessor != statsDProcessor) {
+                telemetryStatsDProcessor.shutdown();
+                telemetryStatsDSender.shutdown();
+            }
+
             executor.shutdown();
             try {
                 executor.awaitTermination(30, TimeUnit.SECONDS);

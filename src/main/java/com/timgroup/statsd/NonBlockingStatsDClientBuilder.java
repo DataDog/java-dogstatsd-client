@@ -148,7 +148,7 @@ public class NonBlockingStatsDClientBuilder {
      */
     public NonBlockingStatsDClient build() throws StatsDClientException {
         Callable<SocketAddress> lookup = addressLookup;
-        Callable<SocketAddress> telemetryLookup = null;
+        Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
 
         if (lookup == null) {
             lookup = staticStatsDAddressResolution(hostname, port);
