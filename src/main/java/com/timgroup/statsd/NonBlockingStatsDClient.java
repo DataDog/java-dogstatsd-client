@@ -151,7 +151,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final StatsDClientErrorHandler handler;
     private final String constantTagsRendered;
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(2, new ThreadFactory() {
+    private final ExecutorService executor = Executors.newFixedThreadPool(4, new ThreadFactory() {
         final ThreadFactory delegate = Executors.defaultThreadFactory();
         @Override public Thread newThread(final Runnable runnable) {
             final Thread result = delegate.newThread(runnable);
@@ -161,8 +161,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     });
 
+    // Typically the telemetry and regular processors will be the same,
+    // but a separate destination for telemetry is supported.
     protected final StatsDProcessor statsDProcessor;
+    protected StatsDProcessor telemetryStatsDProcessor;
     protected final StatsDSender statsDSender;
+    protected StatsDSender telemetryStatsDSender;
     protected final Telemetry telemetry;
 
     /**
@@ -184,6 +188,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     handler to use when an exception occurs during usage, may be null to indicate noop
      * @param addressLookup
      *     yields the IP address and socket of the StatsD server
+     * @param telemetryAddressLookup
+     *     yields the IP address and socket of the StatsD telemetry server destination
      * @param queueSize
      *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
@@ -205,18 +211,18 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param blocking
      *     Blocking or non-blocking implementation for statsd message queue.
      * @param enableTelemetry
-     *     Should telemetry be enabled for the client.
+     *     Boolean to enable client telemetry.
      * @param telemetryFlushInterval
-     *     Telemetry flush interval in seconds when the feature is enabled.
+     *     Telemetry flush interval integer, in milliseconds.
      * @throws StatsDClientException
      *     if the client could not be started
      */
     public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
-                                   final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
-                                   final int timeout, final int bufferSize, final int maxPacketSizeBytes,
-                                   String entityID, final int poolSize, final int processorWorkers,
-                                   final int senderWorkers, boolean blocking, final boolean enableTelemetry,
-                                   final int telemetryFlushInterval)
+            final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
+            Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
+            final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
+            final int senderWorkers, boolean blocking, final boolean enableTelemetry,
+            final int telemetryFlushInterval)
             throws StatsDClientException {
         if ((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = prefix + ".";
@@ -273,6 +279,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
 
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize, processorWorkers, blocking);
+            telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream("version.properties"));
@@ -281,10 +288,44 @@ public class NonBlockingStatsDClient implements StatsDClient {
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
                                                           CLIENT_TAG}, new StringBuilder()).toString();
 
-            this.telemetry = new Telemetry(telemetrytags, statsDProcessor);
+            DatagramChannel telemetryClientChannel = clientChannel;
+            if (addressLookup != telemetryAddressLookup) {
 
-            statsDSender = createSender(addressLookup, handler, clientChannel,
-                    statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
+                final SocketAddress telemetryAddress = telemetryAddressLookup.call();
+                if (telemetryAddress instanceof UnixSocketAddress) {
+                    telemetryClientChannel = UnixDatagramChannel.open();
+                    // Set send timeout, to handle the case where the transmission buffer is full
+                    // If no timeout is set, the send becomes blocking
+                    if (timeout > 0) {
+                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+                    }
+                    if (bufferSize > 0) {
+                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                    }
+                } else if (transportType == "uds") {
+                    // UDP clientChannel can submit to multiple addresses, we only need
+                    // a new channel if transport type is UDS for main traffic.
+                    telemetryClientChannel = DatagramChannel.open();
+                }
+
+                // similar settings, but a single worker and non-blocking.
+                telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
+                        poolSize, 1, false);
+            }
+
+            this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
+
+            statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
+                    statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
+
+            telemetryStatsDSender = statsDSender;
+            if (telemetryStatsDProcessor != statsDProcessor) {
+                // TODO: figure out why the hell telemetryClientChannel does not work here!
+                telemetryStatsDSender = createSender(telemetryAddressLookup, handler, telemetryClientChannel,
+                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
+                        1, this.telemetry);
+
+            }
 
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
@@ -294,7 +335,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         executor.submit(statsDSender);
 
         if (enableTelemetry) {
+            if (telemetryStatsDProcessor != statsDProcessor) {
+                executor.submit(telemetryStatsDProcessor);
+                executor.submit(telemetryStatsDSender);
+            }
             this.telemetry.start(telemetryFlushInterval);
+
         }
     }
 
@@ -858,6 +904,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     yields the IP address and socket of the StatsD server
      * @param queueSize
      *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
      * @param timeout
      *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
      * @param bufferSize
@@ -881,6 +928,64 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .socketBufferSize(bufferSize)
             .maxPacketSizeBytes(maxPacketSizeBytes)
             .build());
+    }
+
+    /**
+     * Create a new StatsD client communicating with a StatsD instance on the
+     * specified host and port. All messages send via this client will have
+     * their keys prefixed with the specified string. The new client will
+     * attempt to open a connection to the StatsD server immediately upon
+     * instantiation, and may throw an exception if that a connection cannot
+     * be established. Once a client has been instantiated in this way, all
+     * exceptions thrown during subsequent usage are passed to the specified
+     * handler and then consumed, guaranteeing that failures in metrics will
+     * not affect normal code execution.
+     *
+     * @param prefix
+     *     the prefix to apply to keys sent via this client
+     * @param constantTags
+     *     tags to be added to all content sent
+     * @param errorHandler
+     *     handler to use when an exception occurs during usage, may be null to indicate noop
+     * @param addressLookup
+     *     yields the IP address and socket of the StatsD server
+     * @param queueSize
+     *     the maximum amount of unprocessed messages in the BlockingQueue.
+     *     the maximum amount of unprocessed messages in the Queue.
+     * @param timeout
+     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
+     * @param bufferSize
+     *     the socket buffer size in bytes. Applies to unix sockets only.
+     * @param maxPacketSizeBytes
+     *     the maximum number of bytes for a message that can be sent
+     * @param entityID
+     *     the entity id value used with an internal tag for tracking client entity.
+     *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
+     *     If the environment variable is not defined, the internal tag is not added.
+     * @param poolSize
+     *     The size for the network buffer pool.
+     * @param processorWorkers
+     *     The number of processor worker threads assembling buffers for submission.
+     * @param senderWorkers
+     *     The number of sender worker threads submitting buffers to the socket.
+     * @param blocking
+     *     Blocking or non-blocking implementation for statsd message queue.
+     * @param enableTelemetry
+     *     Should telemetry be enabled for the client.
+     * @param telemetryFlushInterval
+     *     Telemetry flush interval in seconds when the feature is enabled.
+     * @throws StatsDClientException
+     *     if the client could not be started
+     */
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
+            final int timeout, final int bufferSize, final int maxPacketSizeBytes, String entityID,
+            final int poolSize, final int processorWorkers, final int senderWorkers, boolean blocking,
+            final boolean enableTelemetry, final int telemetryFlushInterval) throws StatsDClientException {
+
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
+                bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
+                blocking, enableTelemetry, telemetryFlushInterval);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
@@ -917,6 +1022,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry.stop();
             statsDProcessor.shutdown();
             statsDSender.shutdown();
+
+            // shut down telemetry workers if need be
+            if (telemetryStatsDProcessor != statsDProcessor) {
+                telemetryStatsDProcessor.shutdown();
+                telemetryStatsDSender.shutdown();
+            }
+
             executor.shutdown();
             try {
                 executor.awaitTermination(30, TimeUnit.SECONDS);

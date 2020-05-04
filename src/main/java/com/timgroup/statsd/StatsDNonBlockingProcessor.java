@@ -48,6 +48,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                         message.writeTo(builder);
                         int lowerBoundSize = builder.length();
 
+
                         if (sendBuffer.capacity() < lowerBoundSize) {
                             throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
                         }

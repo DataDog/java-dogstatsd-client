@@ -81,7 +81,7 @@ public class Telemetry {
      * Startsthe flush timer for the telemetry.
      *
      * @param flushInterval
-     *     Telemetry flush interval in seconds.
+     *     Telemetry flush interval, in milliseconds.
      */
     public void start(final long flushInterval) {
         // flush the telemetry at regualar interval
