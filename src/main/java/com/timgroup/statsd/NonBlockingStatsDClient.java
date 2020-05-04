@@ -315,13 +315,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
 
-            statsDSender = createSender(addressLookup, handler, telemetryClientChannel, statsDProcessor.getBufferPool(),
+            statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
                     statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
                 // TODO: figure out why the hell telemetryClientChannel does not work here!
-                telemetryStatsDSender = createSender(telemetryAddressLookup, handler, clientChannel,
+                telemetryStatsDSender = createSender(telemetryAddressLookup, handler, telemetryClientChannel,
                         telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
                         1, this.telemetry);
 
