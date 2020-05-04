@@ -34,6 +34,29 @@ By default, all exceptions are ignored, mimicking UDP behaviour. When using Unix
 Once your DogStatsD client is installed, instantiate it in your code:
 
 ```java
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
+import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.StatsDClient;
+
+public class DogStatsdClient {
+
+    public static void main(String[] args) throws Exception {
+
+        StatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("statsd")
+            .hostname("localhost")
+            .port(8125)
+            .build();
+
+        // use your client...
+    }
+}
+```
+
+or
+
+**DEPRECATED**
+```java
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 
