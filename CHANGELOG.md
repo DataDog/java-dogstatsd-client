@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2.10.0 / 2020.05.04 
+* [FEATURE] Architecture revamp + non-blocking queue, improved performance. See [#94][]
+* [FEATURE] Enable buffer pool, concurrent sending threads. See [#95][]
+* [FEATURE] Adding dogstatsd telemetry to client. See [#97][]
+* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION; DD_TAGS env vars support. See [#107][]
+* [FEATURE] Allow different remote destination for telemetry. See [#109][]
+* [IMPROVEMENT] Improved abstractions + better object construction. See [#96][]
+* [IMPROVEMENT] Reduce number of allocations. Thanks [@njhill][]. See [#105][]
+* [DOCS] Container specific tags. See [#110][]
+
 ## 2.9.0 / 2020.02.20 
 * [FIX] Add source type name to event payload. See [#101][]
 * [IMPROVEMENT] Bump jnr-unixsocket to 0.27. See [#102][]
@@ -79,7 +89,16 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#67]: https://github.com/DataDog/java-dogstatsd-client/issues/67
 [#91]: https://github.com/DataDog/java-dogstatsd-client/issues/91
 [#93]: https://github.com/DataDog/java-dogstatsd-client/issues/93
+[#94]: https://github.com/DataDog/java-dogstatsd-client/issues/94
+[#95]: https://github.com/DataDog/java-dogstatsd-client/issues/95
+[#96]: https://github.com/DataDog/java-dogstatsd-client/issues/96
+[#97]: https://github.com/DataDog/java-dogstatsd-client/issues/97
 [#101]: https://github.com/DataDog/java-dogstatsd-client/issues/101
 [#102]: https://github.com/DataDog/java-dogstatsd-client/issues/102
+[#105]: https://github.com/DataDog/java-dogstatsd-client/issues/105
+[#107]: https://github.com/DataDog/java-dogstatsd-client/issues/107
+[#109]: https://github.com/DataDog/java-dogstatsd-client/issues/109
+[#110]: https://github.com/DataDog/java-dogstatsd-client/issues/110
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@cithal]: https://github.com/cithal
+[@njhill]: https://github.com/njhill
