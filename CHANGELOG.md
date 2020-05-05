@@ -4,7 +4,7 @@
 * [FEATURE] Architecture revamp + non-blocking queue, improved performance. See [#94][]
 * [FEATURE] Enable buffer pool, concurrent sending threads. See [#95][]
 * [FEATURE] Adding dogstatsd telemetry to client. See [#97][]
-* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION; DD_TAGS env vars support. See [#107][]
+* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION; DD_TAGS env vars support. See [#107][], [#108][], [#111][]
 * [FEATURE] Allow different remote destination for telemetry. See [#109][]
 * [IMPROVEMENT] Improved abstractions + better object construction. See [#96][]
 * [IMPROVEMENT] Reduce number of allocations. Thanks [@njhill][]. See [#105][]
@@ -97,8 +97,10 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#102]: https://github.com/DataDog/java-dogstatsd-client/issues/102
 [#105]: https://github.com/DataDog/java-dogstatsd-client/issues/105
 [#107]: https://github.com/DataDog/java-dogstatsd-client/issues/107
+[#108]: https://github.com/DataDog/java-dogstatsd-client/issues/108
 [#109]: https://github.com/DataDog/java-dogstatsd-client/issues/109
 [#110]: https://github.com/DataDog/java-dogstatsd-client/issues/110
+[#111]: https://github.com/DataDog/java-dogstatsd-client/issues/111
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@cithal]: https://github.com/cithal
 [@njhill]: https://github.com/njhill
