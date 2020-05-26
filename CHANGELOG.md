@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.10.1 / 2020.05.26 
+* [BUGFIX] Fixes build issue on JDK8. No code changes.
+
 ## 2.10.0 / 2020.05.04 
 * [FEATURE] Architecture revamp + non-blocking queue, improved performance. See [#94][]
 * [FEATURE] Enable buffer pool, concurrent sending threads. See [#95][]
