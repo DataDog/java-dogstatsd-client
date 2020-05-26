@@ -185,7 +185,12 @@ public class NonBlockingStatsDClientBuilder {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() throws UnknownHostException {
                 if (port == 0) { // Hostname is a file path to the socket
-                    return new UnixSocketAddress(hostname);
+                    // Use of reflection to avoid hard dependency on UnixSocketAddress
+                    // Replace original code : "return new UnixSocketAddress(hostname);"
+                    Class<?> clazz = Class.forName("jnr.unixsocket.UnixSocketAddress.UnixSocketAddress");
+                    Constructor<?> ctor = clazz.getConstructor(String.class);
+                    Object object = ctor.newInstance(new Object[]{hostname});
+                    return (SocketAddress) object;
                 } else {
                     return new InetSocketAddress(InetAddress.getByName(hostname), port);
                 }
