@@ -9,6 +9,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +46,15 @@ public class StatsDSender implements Runnable {
         this.address = addressLookup.call();
         this.clientChannel = clientChannel;
 
-        this.executor = Executors.newFixedThreadPool(workers);
+        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
+            final ThreadFactory delegate = Executors.defaultThreadFactory();
+            @Override public Thread newThread(final Runnable runnable) {
+                final Thread result = delegate.newThread(runnable);
+                result.setName("StatsD-Sender-" + result.getName());
+                result.setDaemon(true);
+                return result;
+            }
+        });
         this.endSignal = new CountDownLatch(workers);
 
         this.telemetry = telemetry;
@@ -139,5 +148,6 @@ public class StatsDSender implements Runnable {
 
     void shutdown() {
         shutdown = true;
+        executor.shutdown();
     }
 }
