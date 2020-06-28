@@ -31,7 +31,7 @@ public class TelemetryTest {
         public final List<Message> messages = new ArrayList<>();
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1);
+            super(0, handler, 0, 1, 1, 0);
         }
 
 
@@ -87,7 +87,7 @@ public class TelemetryTest {
                 throws StatsDClientException {
                 super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                         bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                        blocking, enableTelemetry, telemetryFlushInterval);
+                        blocking, enableTelemetry, telemetryFlushInterval, 0);
         }
     };
 

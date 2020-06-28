@@ -994,7 +994,7 @@ public class NonBlockingStatsDClientTest {
                 final int senderWorkers, boolean blocking) throws StatsDClientException {
 
             super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,bufferSize,
-                    maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0);
+                    maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0, 0);
             lock = new CountDownLatch(1);
         }
 

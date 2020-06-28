@@ -27,12 +27,18 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
+            aggregator.start();
+
             while (!(shutdown && messages.isEmpty())) {
 
                 try {
 
                     final Message message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                     if (message != null) {
+
+                        if (aggregator.aggregateMessage(message)) {
+                            continue;
+                        }
 
                         builder.setLength(0);
 
@@ -78,16 +84,17 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
+            aggregator.stop();
             endSignal.countDown();
         }
 
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
-            throws Exception {
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 

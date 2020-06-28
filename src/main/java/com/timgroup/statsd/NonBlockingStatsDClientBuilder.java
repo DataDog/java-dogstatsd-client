@@ -26,7 +26,9 @@ public class NonBlockingStatsDClientBuilder {
     public int processorWorkers = NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
+    public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
+    public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
     public boolean blocking;
 
     public Callable<SocketAddress> addressLookup;
@@ -89,6 +91,11 @@ public class NonBlockingStatsDClientBuilder {
 
     public NonBlockingStatsDClientBuilder blocking(boolean val) {
         blocking = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder enableAggregation(boolean val) {
+        enableAggregation = val;
         return this;
     }
 
@@ -165,7 +172,8 @@ public class NonBlockingStatsDClientBuilder {
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                 lookup, telemetryLookup, timeout, socketBufferSize, maxPacketSizeBytes,
                 entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
-                enableTelemetry, telemetryFlushInterval);
+                enableTelemetry, telemetryFlushInterval,
+                (enableAggregation ? aggregationFlushInterval : 0));
     }
 
     /**

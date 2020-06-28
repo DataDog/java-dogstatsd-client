@@ -10,8 +10,6 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -37,6 +35,8 @@ public abstract class StatsDProcessor implements Runnable {
 
     protected final int workers;
     protected final int qcapacity;
+
+    protected StatsDAggregator aggregator;
 
     protected volatile boolean shutdown;
 
@@ -65,9 +65,9 @@ public abstract class StatsDProcessor implements Runnable {
         }
     }
 
-
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval)
             throws Exception {
 
         this.handler = handler;
@@ -88,6 +88,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
+        this.aggregator = new StatsDAggregator(this, aggregatorFlushInterval);  // TODO: fix period
     }
 
     StatsDProcessor(final StatsDProcessor processor)
@@ -110,6 +111,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(processor.bufferPool);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
         this.endSignal = new CountDownLatch(this.workers);
+        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getFlushInterval());
     }
 
     protected abstract ProcessingTask createProcessingTask();
@@ -144,6 +146,10 @@ public abstract class StatsDProcessor implements Runnable {
                 // NOTHING
             }
         }
+    }
+
+    public StatsDAggregator getAggregator() {
+        return this.aggregator;
     }
 
     boolean isShutdown() {

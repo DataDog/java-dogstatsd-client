@@ -28,6 +28,8 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
+            aggregator.start();
+
             while (!((empty = messages.isEmpty()) && shutdown)) {
 
                 try {
@@ -43,6 +45,12 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     if (message != null) {
 
                         qsize.decrementAndGet();
+
+                        // TODO: Aggregate and fix, there's some duplicate logic
+                        if (aggregator.aggregateMessage(message)) {
+                            continue;
+                        }
+
                         builder.setLength(0);
 
                         message.writeTo(builder);
@@ -88,15 +96,17 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
+            aggregator.stop();
             endSignal.countDown();
         }
     }
 
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval)
             throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
     }
