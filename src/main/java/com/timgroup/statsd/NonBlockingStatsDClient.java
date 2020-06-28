@@ -7,6 +7,7 @@ import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketOptions;
 
 import java.io.IOException;
+import java.lang.Double;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -16,6 +17,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -142,7 +144,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return numberFormatter;
     }
 
-    private static String format(ThreadLocal<NumberFormat> formatter, double value) {
+    private static String format(ThreadLocal<NumberFormat> formatter, Number value) {
         return formatter.get().format(value);
     }
 
@@ -1093,15 +1095,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return tagString(tags, constantTagsRendered, builder);
     }
 
-    abstract class StatsDMessage implements Message {
-        final String aspect;
-        final String type;
+    abstract class StatsDMessage<T extends Number> extends Message<T> {
         final double sampleRate; // NaN for none
         final String[] tags;
 
-        protected StatsDMessage(String aspect, String type, double sampleRate, String[] tags) {
-            this.aspect = aspect;
-            this.type = type;
+        protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, String[] tags) {
+            super(aspect, type, value);
             this.sampleRate = sampleRate;
             this.tags = tags;
         }
@@ -1115,6 +1114,17 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
             }
             tagString(tags, builder);
+        }
+
+        @Override
+        public int hashCode() {
+
+            // cache it
+            if (this.hash == 0) {
+                this.hash = Objects.hash(this.aspect, this.tags);
+            }
+
+            return this.hash;
         }
 
         protected abstract void writeValue(StringBuilder builder);
@@ -1133,35 +1143,35 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     // send double with sample rate
-    private void send(String aspect, final double value, String type, double sampleRate, String[] tags) {
+    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage(aspect, type, sampleRate, tags) {
+            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
-                    builder.append(format(NUMBER_FORMATTER, value));
+                    builder.append(format(NUMBER_FORMATTER, this.value));
                 }
             });
         }
     }
 
     // send double without sample rate
-    private void send(String aspect, final double value, String type, String[] tags) {
+    private void send(String aspect, final double value, Message.Type type, String[] tags) {
         send(aspect, value, type, Double.NaN, tags);
     }
 
     // send long with sample rate
-    private void send(String aspect, final long value, String type, double sampleRate, String[] tags) {
+    private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
-            sendMetric(new StatsDMessage(aspect, type, sampleRate, tags) {
+            sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
-                    builder.append(value);
+                    builder.append(this.value);
                 }
             });
         }
     }
 
     // send long without sample rate
-    private void send(String aspect, final long value, String type, String[] tags) {
+    private void send(String aspect, final long value, Message.Type type, String[] tags) {
         send(aspect, value, type, Double.NaN, tags);
     }
 
@@ -1179,7 +1189,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final long delta, final String... tags) {
-        send(aspect, delta, "c", tags);
+        send(aspect, delta, Message.Type.COUNT, tags);
     }
 
     /**
@@ -1187,7 +1197,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final long delta, final double sampleRate, final String...tags) {
-        send(aspect, delta, "c", sampleRate, tags);
+        send(aspect, delta, Message.Type.COUNT, sampleRate, tags);
     }
 
     /**
@@ -1204,7 +1214,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final double delta, final String... tags) {
-        send(aspect, delta, "c", tags);
+        send(aspect, delta, Message.Type.COUNT, tags);
     }
 
     /**
@@ -1212,7 +1222,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void count(final String aspect, final double delta, final double sampleRate, final String...tags) {
-        send(aspect, delta, "c", sampleRate, tags);
+        send(aspect, delta, Message.Type.COUNT, sampleRate, tags);
     }
 
     /**
@@ -1307,7 +1317,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordGaugeValue(final String aspect, final double value, final String... tags) {
-        send(aspect, value, "g", tags);
+        send(aspect, value, Message.Type.GAUGE, tags);
     }
 
     /**
@@ -1315,7 +1325,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordGaugeValue(final String aspect, final double value, final double sampleRate, final String... tags) {
-        send(aspect, value, "g", sampleRate, tags);
+        send(aspect, value, Message.Type.GAUGE, sampleRate, tags);
     }
 
     /**
@@ -1332,7 +1342,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordGaugeValue(final String aspect, final long value, final String... tags) {
-        send(aspect, value, "g", tags);
+        send(aspect, value, Message.Type.GAUGE, tags);
     }
 
     /**
@@ -1340,7 +1350,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordGaugeValue(final String aspect, final long value, final double sampleRate, final String... tags) {
-        send(aspect, value, "g", sampleRate, tags);
+        send(aspect, value, Message.Type.GAUGE, sampleRate, tags);
     }
 
     /**
@@ -1390,7 +1400,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordExecutionTime(final String aspect, final long timeInMs, final String... tags) {
-        send(aspect, timeInMs, "ms", tags);
+        send(aspect, timeInMs, Message.Type.TIME, tags);
     }
 
     /**
@@ -1398,7 +1408,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordExecutionTime(final String aspect, final long timeInMs, final double sampleRate, final String... tags) {
-        send(aspect, timeInMs, "ms", sampleRate, tags);
+        send(aspect, timeInMs, Message.Type.TIME, sampleRate, tags);
     }
 
     /**
@@ -1431,7 +1441,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordHistogramValue(final String aspect, final double value, final String... tags) {
-        send(aspect, value, "h", tags);
+        send(aspect, value, Message.Type.HISTOGRAM, tags);
     }
 
     /**
@@ -1439,7 +1449,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordHistogramValue(final String aspect, final double value, final double sampleRate, final String... tags) {
-        send(aspect, value, "h", sampleRate, tags);
+        send(aspect, value, Message.Type.HISTOGRAM, sampleRate, tags);
     }
 
     /**
@@ -1456,7 +1466,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordHistogramValue(final String aspect, final long value, final String... tags) {
-        send(aspect, value, "h", tags);
+        send(aspect, value, Message.Type.HISTOGRAM, tags);
     }
 
     /**
@@ -1464,7 +1474,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordHistogramValue(final String aspect, final long value, final double sampleRate, final String... tags) {
-        send(aspect, value, "h", sampleRate, tags);
+        send(aspect, value, Message.Type.HISTOGRAM, sampleRate, tags);
     }
 
     /**
@@ -1515,7 +1525,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordDistributionValue(final String aspect, final double value, final String... tags) {
-        send(aspect, value, "d", tags);
+        send(aspect, value, Message.Type.DISTRIBUTION, tags);
     }
 
     /**
@@ -1523,7 +1533,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordDistributionValue(final String aspect, final double value, final double sampleRate, final String... tags) {
-        send(aspect, value, "d", sampleRate, tags);
+        send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, tags);
     }
 
     /**
@@ -1542,7 +1552,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordDistributionValue(final String aspect, final long value, final String... tags) {
-        send(aspect, value, "d", tags);
+        send(aspect, value, Message.Type.DISTRIBUTION, tags);
     }
 
     /**
@@ -1550,7 +1560,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordDistributionValue(final String aspect, final long value, final double sampleRate, final String... tags) {
-        send(aspect, value, "d", sampleRate, tags);
+        send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, tags);
     }
 
     /**
@@ -1636,11 +1646,17 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordEvent(final Event event, final String... tags) {
-        statsDProcessor.send(new Message() {
+        statsDProcessor.send(new Message(Message.Type.EVENT) {
             @Override public void writeTo(StringBuilder builder) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
-                builder.append("_e{").append(title.length()).append(",").append(text.length()).append("}:").append(title)
+                builder.append(Message.Type.EVENT.toString())
+                    .append("{")
+                    .append(title.length())
+                    .append(",")
+                    .append(text.length())
+                    .append("}:")
+                    .append(title)
                 .append("|").append(text);
                 eventMap(event, builder);
                 tagString(tags, builder);
@@ -1665,10 +1681,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
-        statsDProcessor.send(new Message() {
+        statsDProcessor.send(new Message(Message.Type.SERVICE_CHECK) {
             @Override public void writeTo(StringBuilder sb) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
-                sb.append("_sc|").append(sc.getName()).append("|").append(sc.getStatus());
+                sb.append(Message.Type.SERVICE_CHECK.toString())
+                    .append("|")
+                    .append(sc.getName())
+                    .append("|")
+                    .append(sc.getStatus());
                 if (sc.getTimestamp() > 0) {
                     sb.append("|d:").append(sc.getTimestamp());
                 }
@@ -1727,7 +1747,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *
      * @param aspect
      *     the name of the set
-     * @param value
+     * @param val
      *     the value to track
      * @param tags
      *     array of tags to be added to the data
@@ -1735,12 +1755,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#sets">http://docs.datadoghq.com/guides/dogstatsd/#sets</a>
      */
     @Override
-    public void recordSetValue(final String aspect, final String value, final String... tags) {
+    public void recordSetValue(final String aspect, final String val, final String... tags) {
         // documentation is light, but looking at dogstatsd source, we can send string values
         // here instead of numbers
-        statsDProcessor.send(new StatsDMessage(aspect, "s", Double.NaN, tags) {
+        statsDProcessor.send(new StatsDMessage<Double>(aspect, Message.Type.SET, Double.NaN, Double.NaN, tags) {
+            final String set = val;
+
             @Override protected void writeValue(StringBuilder builder) {
-                builder.append(value);
+                builder.append(this.set);
             }
         });
     }

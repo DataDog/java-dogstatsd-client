@@ -47,16 +47,12 @@ public class Telemetry {
         }
     }
 
-    class TelemetryMessage implements Message {
-        private final String aspect;
-        private final String type = "c";  // all counters
+    class TelemetryMessage extends Message {
         private final String tags;  // pre-baked comma separeated tags string
-        private final int value;
 
         protected TelemetryMessage(String metric, int value, String tags) {
-            this.aspect = metric;
+            super(metric, Message.Type.COUNT, value);
             this.tags = tags;
-            this.value = value;
         }
 
         @Override

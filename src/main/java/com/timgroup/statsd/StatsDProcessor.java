@@ -10,8 +10,6 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -64,7 +62,6 @@ public abstract class StatsDProcessor implements Runnable {
             }
         }
     }
-
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers)

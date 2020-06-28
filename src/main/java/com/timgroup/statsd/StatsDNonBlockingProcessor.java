@@ -13,6 +13,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     private final Queue<Message> messages;
     private final AtomicInteger qsize;  // qSize will not reflect actual size, but a close estimate.
+    private final StatsDAggregator aggregator;
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
@@ -43,6 +44,11 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     if (message != null) {
 
                         qsize.decrementAndGet();
+
+                        if (message.canAggregate()) {
+                            // TODO: Aggregate
+                            continue;
+                        }
                         builder.setLength(0);
 
                         message.writeTo(builder);
@@ -99,6 +105,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
+        this.aggregator = new StatsDAggregator(this, 15);  // TODO: fix period
     }
 
     @Override
@@ -110,6 +117,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         super(processor);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
+        this.aggregator = new StatsDAggregator(this, 15);  // TODO: fix period
     }
 
     @Override
