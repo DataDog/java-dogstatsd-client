@@ -13,7 +13,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     private final Queue<Message> messages;
     private final AtomicInteger qsize;  // qSize will not reflect actual size, but a close estimate.
-    private final StatsDAggregator aggregator;
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
@@ -28,6 +27,8 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                 handler.handle(e);
                 return;
             }
+
+            aggregator.start();
 
             while (!((empty = messages.isEmpty()) && shutdown)) {
 
@@ -45,10 +46,11 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
                         qsize.decrementAndGet();
 
-                        if (message.canAggregate()) {
-                            // TODO: Aggregate
+                        // TODO: Aggregate and fix, there's some duplicate logic
+                        if (aggregator.aggregateMessage(message)) {
                             continue;
                         }
+
                         builder.setLength(0);
 
                         message.writeTo(builder);
@@ -94,18 +96,19 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
+            aggregator.stop();
             endSignal.countDown();
         }
     }
 
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval)
             throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
-        this.aggregator = new StatsDAggregator(this, 15);  // TODO: fix period
     }
 
     @Override
@@ -117,7 +120,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         super(processor);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
-        this.aggregator = new StatsDAggregator(this, 15);  // TODO: fix period
     }
 
     @Override

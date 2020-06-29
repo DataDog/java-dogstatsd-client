@@ -36,6 +36,8 @@ public abstract class StatsDProcessor implements Runnable {
     protected final int workers;
     protected final int qcapacity;
 
+    protected StatsDAggregator aggregator;
+
     protected volatile boolean shutdown;
 
     protected abstract class ProcessingTask implements Runnable {
@@ -64,7 +66,8 @@ public abstract class StatsDProcessor implements Runnable {
     }
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval)
             throws Exception {
 
         this.handler = handler;
@@ -85,6 +88,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
+        this.aggregator = new StatsDAggregator(this, aggregatorFlushInterval);  // TODO: fix period
     }
 
     StatsDProcessor(final StatsDProcessor processor)

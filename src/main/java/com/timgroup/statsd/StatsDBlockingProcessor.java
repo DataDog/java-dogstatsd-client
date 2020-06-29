@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 public class StatsDBlockingProcessor extends StatsDProcessor {
 
     private final BlockingQueue<Message> messages;
-    private final StatsDAggregator aggregator;
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
@@ -28,12 +27,18 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
+            aggregator.start();
+
             while (!(shutdown && messages.isEmpty())) {
 
                 try {
 
                     final Message message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                     if (message != null) {
+
+                        if (aggregator.aggregateMessage(message)) {
+                            continue;
+                        }
 
                         builder.setLength(0);
 
@@ -79,18 +84,18 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
+            aggregator.stop();
             endSignal.countDown();
         }
 
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
-            throws Exception {
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval);
         this.messages = new ArrayBlockingQueue<>(queueSize);
-        this.aggregator = new StatsDAggregator(this, 15);  // TODO: fix period
     }
 
     @Override
@@ -103,7 +108,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
         super(processor);
         this.messages = new ArrayBlockingQueue<>(processor.getQcapacity());
-        this.aggregator = new StatsDAggregator(this, 15);  // TODO: fix period
     }
 
     @Override
