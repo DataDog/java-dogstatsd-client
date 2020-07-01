@@ -111,6 +111,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(processor.bufferPool);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
         this.endSignal = new CountDownLatch(this.workers);
+        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getFlushInterval());
     }
 
     protected abstract ProcessingTask createProcessingTask();
@@ -145,6 +146,10 @@ public abstract class StatsDProcessor implements Runnable {
                 // NOTHING
             }
         }
+    }
+
+    public StatsDAggregator getAggregator() {
+        return this.aggregator;
     }
 
     boolean isShutdown() {
