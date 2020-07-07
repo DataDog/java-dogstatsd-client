@@ -1,9 +1,12 @@
 # CHANGELOG
 
-## 2.10.1 / 2020.05.26 
+## 2.10.2 / 2020.07.07
+* [BUGFIX] Fix thread leak on shutdown: release StatsDSender executor. See [#115][] (Thanks [@hanny24][])
+
+## 2.10.1 / 2020.05.26
 * [BUGFIX] Fixes build issue on JDK8. No code changes.
 
-## 2.10.0 / 2020.05.04 
+## 2.10.0 / 2020.05.04
 * [FEATURE] Architecture revamp + non-blocking queue, improved performance. See [#94][]
 * [FEATURE] Enable buffer pool, concurrent sending threads. See [#95][]
 * [FEATURE] Adding dogstatsd telemetry to client. See [#97][]
@@ -13,7 +16,7 @@
 * [IMPROVEMENT] Reduce number of allocations. Thanks [@njhill][]. See [#105][]
 * [DOCS] Container specific tags. See [#110][]
 
-## 2.9.0 / 2020.02.20 
+## 2.9.0 / 2020.02.20
 * [FIX] Add source type name to event payload. See [#101][]
 * [IMPROVEMENT] Bump jnr-unixsocket to 0.27. See [#102][]
 * [IMPROVEMENT] Bump maven-compiler-plugin to 3.8.1. See [#93][]
@@ -104,6 +107,8 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#109]: https://github.com/DataDog/java-dogstatsd-client/issues/109
 [#110]: https://github.com/DataDog/java-dogstatsd-client/issues/110
 [#111]: https://github.com/DataDog/java-dogstatsd-client/issues/111
+[#115]: https://github.com/DataDog/java-dogstatsd-client/issues/115
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@cithal]: https://github.com/cithal
+[@hanny24]: https://github.com/hanny24
 [@njhill]: https://github.com/njhill
