@@ -34,7 +34,7 @@
     <url>https://github.com/DataDog/java-dogstatsd-client</url>
     <connection>scm:git:git://github.com/DataDog/java-dogstatsd-client.git</connection>
     <developerConnection>scm:git:git@github.com:Datadog/java-dogstatsd-client.git</developerConnection>
-    <tag>v2.9.0</tag>
+    <tag>v2.10.0</tag>
   </scm>
 
   <developers>
