@@ -14,6 +14,7 @@ import java.nio.channels.DatagramChannel;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -1112,6 +1113,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.tags = tags;
         }
 
+        public String[] getTags() {
+            return this.tags;
+        }
+
         @Override
         public final void writeTo(StringBuilder builder) {
             builder.append(prefix).append(aspect).append(':');
@@ -1128,10 +1133,22 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             // cache it
             if (this.hash == 0) {
-                this.hash = Objects.hash(this.aspect, this.tags);
+                super.hashCode();
+                this.hash += Objects.hash(this.tags);
             }
 
             return this.hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+
+            if (o instanceof StatsDMessage) {
+                return super.equals(o)
+                    && Arrays.equals(this.tags, ((StatsDMessage)o).getTags());
+            }
+
+            return false;
         }
 
         protected abstract void writeValue(StringBuilder builder);

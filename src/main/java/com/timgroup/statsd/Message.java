@@ -53,6 +53,15 @@ public abstract class Message<T extends Number> {
     abstract void writeTo(StringBuilder builder);
 
     /**
+     * Return the message aspect.
+     *
+     * @return returns the string representing the Message aspect
+     */
+    public final String getAspect() {
+        return this.aspect;
+    }
+
+    /**
      * Return the message type.
      *
      * @return returns the dogstatsd type for the Message
@@ -90,12 +99,18 @@ public abstract class Message<T extends Number> {
      */
     public void aggregate(Message message) {
         Number value = message.getValue();
-        if (value instanceof Double) {
-            this.value = getValue().doubleValue() + value.doubleValue();
-        } else if (value instanceof Integer) {
-            this.value = getValue().intValue() + value.intValue();
-        } else if (value instanceof Long) {
-            this.value = getValue().longValue() + value.longValue();
+        switch(message.getType()) {
+            case GAUGE:
+                this.value = value;
+                break;
+            default:
+                if (value instanceof Double) {
+                    this.value = getValue().doubleValue() + value.doubleValue();
+                } else if (value instanceof Integer) {
+                    this.value = getValue().intValue() + value.intValue();
+                } else if (value instanceof Long) {
+                    this.value = getValue().longValue() + value.longValue();
+                }
         }
 
         return;
@@ -112,6 +127,7 @@ public abstract class Message<T extends Number> {
     /**
      * Messages must implement hashCode.
      */
+    @Override
     public int hashCode() {
         // cache it
         if (this.hash == 0) {
@@ -121,5 +137,25 @@ public abstract class Message<T extends Number> {
         return this.hash;
     }
 
+    /**
+     * Messages must implement hashCode.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+        if (o instanceof Message) {
+            final Message msg = (Message)o;
+
+            boolean equals = (this.getAspect() == msg.getAspect())
+                && (this.getType() == msg.getType())
+                && (this.done == msg.getDone());
+
+            return equals;
+        }
+
+        return false;
+    }
 }
 

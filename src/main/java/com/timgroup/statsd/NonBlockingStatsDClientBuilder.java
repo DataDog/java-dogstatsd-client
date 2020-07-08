@@ -94,11 +94,6 @@ public class NonBlockingStatsDClientBuilder {
         return this;
     }
 
-    public NonBlockingStatsDClientBuilder enableAggregation(boolean val) {
-        enableAggregation = val;
-        return this;
-    }
-
     public NonBlockingStatsDClientBuilder addressLookup(Callable<SocketAddress> val) {
         addressLookup = val;
         return this;
@@ -144,8 +139,18 @@ public class NonBlockingStatsDClientBuilder {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableAggregation(boolean val) {
+        enableAggregation = val;
+        return this;
+    }
+
     public NonBlockingStatsDClientBuilder telemetryFlushInterval(int val) {
         telemetryFlushInterval = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder aggregationFlushInterval(int val) {
+        aggregationFlushInterval = val;
         return this;
     }
 
