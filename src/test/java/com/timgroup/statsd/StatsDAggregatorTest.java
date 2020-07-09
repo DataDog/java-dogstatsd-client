@@ -74,12 +74,42 @@ public class StatsDAggregatorTest {
             server.waitForMessage("my.prefix");
 
             List<String> messages = server.messagesReceived();
-            for (String msg : messages) {
-                System.out.println("message: " + msg);
-            }
 
             assertThat(messages.size(), comparesEqualTo(1));
             assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.value:9|g")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
+    public void testBasicCountAggregation() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                testClient.count("top.level.count", i);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.increment("top.level.count");
+            }
+
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(1));
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.count:55|c")));
 
         } finally {
             testClient.stop();
