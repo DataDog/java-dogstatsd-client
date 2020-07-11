@@ -115,4 +115,37 @@ public class StatsDAggregatorTest {
             testClient.stop();
         }
     }
+
+    @Test(timeout=5000L)
+    public void testBasicUnaggregatedMetrics() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            int submitted = 0;
+            for (int i=0 ; i<10 ; i++) {
+                testClient.histogram("top.level.hist", i);
+                testClient.distribution("top.level.dist", i);
+                testClient.time("top.level.time", i);
+                submitted += 3;
+            }
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            // there should be one message per
+            assertThat(messages.size(), comparesEqualTo(submitted));
+
+        } finally {
+            testClient.stop();
+        }
+    }
 }

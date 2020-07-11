@@ -67,7 +67,7 @@ public abstract class StatsDProcessor implements Runnable {
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval)
+            final int aggregatorFlushInterval, final int aggregatorShards)
             throws Exception {
 
         this.handler = handler;
@@ -88,7 +88,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
-        this.aggregator = new StatsDAggregator(this, aggregatorFlushInterval);  // TODO: fix period
+        this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);  // TODO: fix period
     }
 
     StatsDProcessor(final StatsDProcessor processor)
@@ -111,7 +111,8 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(processor.bufferPool);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
         this.endSignal = new CountDownLatch(this.workers);
-        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getFlushInterval());
+        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getShardGranularity(),
+                processor.getAggregator().getFlushInterval());
     }
 
     protected abstract ProcessingTask createProcessingTask();
