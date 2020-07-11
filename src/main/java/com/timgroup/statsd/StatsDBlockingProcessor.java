@@ -92,9 +92,9 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval) throws Exception {
+            final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 

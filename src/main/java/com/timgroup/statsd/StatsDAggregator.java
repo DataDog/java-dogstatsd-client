@@ -3,6 +3,7 @@ package com.timgroup.statsd;
 import com.timgroup.statsd.Message;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -15,12 +16,17 @@ import java.util.TimerTask;
 
 public class StatsDAggregator {
     public static int DEFAULT_FLUSH_INTERVAL = 15000; // 15s
+    public static int DEFAULT_SHARDS = 4;  // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
     protected final Set<Message.Type> aggregateSet = new HashSet<>(
             Arrays.asList(Message.Type.COUNT, Message.Type.GAUGE));
-    protected final Map<Message, Message> aggregateMetrics = new HashMap<>();
+    protected final ArrayList<Map<Message, Message>> aggregateMetrics;
+
+    // protected final Map<Message, Message> aggregateMetrics = new HashMap<>();
     protected final Timer scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
+
+    protected final int shardGranularity;
     protected final long flushInterval;
 
     private final StatsDProcessor processor;
@@ -28,22 +34,32 @@ public class StatsDAggregator {
     private class FlushTask extends TimerTask {
         @Override
         public void run() {
-            synchronized (aggregateMetrics) {
-                Iterator<Map.Entry<Message, Message>> iter = aggregateMetrics.entrySet().iterator();
-                while (iter.hasNext()) {
-                    Message msg = iter.next().getValue();
-                    msg.setDone(true);
-                    processor.send(msg);
+            for (int i=0 ; i<shardGranularity ; i++) {
+                Map<Message, Message> map = aggregateMetrics.get(i);
 
-                    iter.remove();
+                synchronized (map) {
+                    Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
+                    while (iter.hasNext()) {
+                        Message msg = iter.next().getValue();
+                        msg.setDone(true);
+                        processor.send(msg);
+
+                        iter.remove();
+                    }
                 }
             }
         }
     }
 
-    public StatsDAggregator(final StatsDProcessor processor, final long flushInterval) {
+    public StatsDAggregator(final StatsDProcessor processor, final int shards, final long flushInterval) {
         this.processor = processor;
         this.flushInterval = flushInterval;
+        this.shardGranularity = shards;
+        this.aggregateMetrics = new ArrayList<>(shards);
+
+        for (int i=0 ; i<this.shardGranularity ; i++) {
+            this.aggregateMetrics.add(i, new HashMap<Message, Message>());
+        }
     }
 
     /**
@@ -82,12 +98,17 @@ public class StatsDAggregator {
             return false;
         }
 
-        synchronized (aggregateMetrics) {
+
+        int hash = message.hashCode();
+        int bucket = Math.abs(hash % this.shardGranularity);
+        Map<Message, Message> map = aggregateMetrics.get(bucket);
+
+        synchronized (map) {
             // For now let's just put the message in the map
-            if (!aggregateMetrics.containsKey(message)) {
-                aggregateMetrics.put(message, message);
+            if (!map.containsKey(message)) {
+                map.put(message, message);
             } else {
-                Message msg = aggregateMetrics.get(message);
+                Message msg = map.get(message);
                 msg.aggregate(message);
             }
         }
@@ -97,5 +118,9 @@ public class StatsDAggregator {
 
     public final long getFlushInterval() {
         return this.flushInterval;
+    }
+
+    public final int getShardGranularity() {
+        return this.shardGranularity;
     }
 }
