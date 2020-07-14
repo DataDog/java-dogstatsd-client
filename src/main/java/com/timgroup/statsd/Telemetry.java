@@ -85,7 +85,7 @@ public class Telemetry {
      */
     public void start(final long flushInterval) {
         // flush the telemetry at regualar interval
-        this.timer = new Timer();
+        this.timer = new Timer(true);
         this.timer.scheduleAtFixedRate(new TelemetryTask(this), flushInterval, flushInterval);
     }
 
