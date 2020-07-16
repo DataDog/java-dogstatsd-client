@@ -125,10 +125,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         return false;
     }
 
-    boolean isShutdown() {
-        return shutdown;
-    }
-
     void shutdown() {
         shutdown = true;
     }

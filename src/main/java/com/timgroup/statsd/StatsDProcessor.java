@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class StatsDProcessor implements Runnable {
@@ -73,7 +74,17 @@ public abstract class StatsDProcessor implements Runnable {
         this.workers = workers;
         this.qcapacity = queueSize;
 
-        this.executor = Executors.newFixedThreadPool(workers);
+        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
+            final ThreadFactory delegate = Executors.defaultThreadFactory();
+            @Override
+            public Thread newThread(final Runnable runnable) {
+                final Thread result = delegate.newThread(runnable);
+                result.setName("StatsD-Processor-" + result.getName());
+                result.setDaemon(true);
+                return result;
+            }
+        });
+
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
@@ -86,7 +97,16 @@ public abstract class StatsDProcessor implements Runnable {
         this.workers = processor.workers;
         this.qcapacity = processor.getQcapacity();
 
-        this.executor = Executors.newFixedThreadPool(this.workers);
+        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
+            final ThreadFactory delegate = Executors.defaultThreadFactory();
+            @Override
+            public Thread newThread(final Runnable runnable) {
+                final Thread result = delegate.newThread(runnable);
+                result.setName("StatsD-Processor-" + result.getName());
+                result.setDaemon(true);
+                return result;
+            }
+        });
         this.bufferPool = new BufferPool(processor.bufferPool);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
         this.endSignal = new CountDownLatch(this.workers);
@@ -127,6 +147,7 @@ public abstract class StatsDProcessor implements Runnable {
     }
 
     boolean isShutdown() {
+        executor.shutdown();
         return shutdown;
     }
 
