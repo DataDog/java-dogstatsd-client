@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.10.3 / 2020.07.17
+* [BUGFIX] Fix library shutdown: use daemon threads for StatsDProcess + TimerTask. See [#117][] (Thanks [@blevz][])
+
 ## 2.10.2 / 2020.07.07
 * [BUGFIX] Fix thread leak on shutdown: release StatsDSender executor. See [#115][] (Thanks [@hanny24][])
 
@@ -108,7 +111,9 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#110]: https://github.com/DataDog/java-dogstatsd-client/issues/110
 [#111]: https://github.com/DataDog/java-dogstatsd-client/issues/111
 [#115]: https://github.com/DataDog/java-dogstatsd-client/issues/115
+[#117]: https://github.com/DataDog/java-dogstatsd-client/issues/117
 [@PatrickAuld]: https://github.com/PatrickAuld
+[@blevz]: https://github.com/blevz
 [@cithal]: https://github.com/cithal
 [@hanny24]: https://github.com/hanny24
 [@njhill]: https://github.com/njhill
