@@ -1,6 +1,7 @@
 # Java DogStatsD Client
 
-[![Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.com/DataDog/java-dogstatsd-client)
+[![CircleCI Build Status](https://circleci.com/gh/DataDog/java-dogstatsd-client/tree/master.svg?style=svg)](https://circleci.com/gh/DataDog/java-dogstatsd-client)
+[![Travis Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.com/DataDog/java-dogstatsd-client)
 
 A StatsD client library implemented in Java. Allows for Java applications to easily communicate with statsd.
 
