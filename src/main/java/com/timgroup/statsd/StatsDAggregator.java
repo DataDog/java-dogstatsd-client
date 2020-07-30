@@ -31,6 +31,8 @@ public class StatsDAggregator {
 
     private final StatsDProcessor processor;
 
+    private Telemetry telemetry;
+
     private class FlushTask extends TimerTask {
         @Override
         public void run() {
@@ -68,6 +70,9 @@ public class StatsDAggregator {
      * */
     public void start() {
         if (flushInterval > 0) {
+            // snapshot of processor telemetry - avoid volatile reference to harness CPU cache
+            // caller responsible of setting telemetry before starting
+            telemetry = processor.getTelemetry();
             scheduler.scheduleAtFixedRate(new FlushTask(), flushInterval, flushInterval);
         }
     }
@@ -110,6 +115,9 @@ public class StatsDAggregator {
             } else {
                 Message msg = map.get(message);
                 msg.aggregate(message);
+                if (telemetry != null) {
+                    telemetry.incrAggregatedContexts(1);
+                }
             }
         }
 

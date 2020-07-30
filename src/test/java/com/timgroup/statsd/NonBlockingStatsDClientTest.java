@@ -409,7 +409,6 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_timer_to_statsd_with_tags() throws Exception {
 
-
         client.recordExecutionTime("mytime", 123, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
@@ -418,7 +417,6 @@ public class NonBlockingStatsDClientTest {
 
     @Test(timeout = 5000L)
     public void sends_timer_with_sample_rate_to_statsd_with_tags() throws Exception {
-
 
         client.recordExecutionTime("mytime", 123, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
@@ -430,10 +428,14 @@ public class NonBlockingStatsDClientTest {
     public void sends_gauge_mixed_tags_deprecated() throws Exception {
 
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        client.gauge("value", 423, "baz");
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423, "baz");
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo,baz")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo,baz")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -446,22 +448,29 @@ public class NonBlockingStatsDClientTest {
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
             .build();
-        client.gauge("value", 423, "baz");
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423, "baz");
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo,baz")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo,baz")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
     public void sends_gauge_mixed_tags_with_sample_rate_deprecated() throws Exception {
 
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        client.gauge("value", 423, 1, "baz");
-        server.waitForMessage("my.prefix.value:423");
+        try {
+            client.gauge("value", 423, 1, "baz");
+            server.waitForMessage("my.prefix.value:423");
 
-        List<String> messages = server.messagesReceived();
-
-        assertThat(messages, hasItem(comparesEqualTo("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz")));
+            List<String> messages = server.messagesReceived();
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -474,20 +483,28 @@ public class NonBlockingStatsDClientTest {
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
             .build();
-        client.gauge("value", 423, 1, "baz");
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423, 1, "baz");
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|@1.000000|#app:bar,instance:foo,baz")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
     public void sends_gauge_constant_tags_only_deprecated() throws Exception {
 
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -500,10 +517,14 @@ public class NonBlockingStatsDClientTest {
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
             .build();
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#app:bar,instance:foo")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -511,10 +532,14 @@ public class NonBlockingStatsDClientTest {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE);
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -527,10 +552,14 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .build();
-        client.gauge("value", 423);
-        server.waitForMessage();
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage();
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -539,10 +568,14 @@ public class NonBlockingStatsDClientTest {
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final String constantTags = "arbitraryTag:arbitraryValue";
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, constantTags);
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -556,10 +589,14 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .constantTags(constantTags)
             .build();
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -567,10 +604,14 @@ public class NonBlockingStatsDClientTest {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, null, null, entity_value+"-arg");
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -584,10 +625,14 @@ public class NonBlockingStatsDClientTest {
             .queueSize(Integer.MAX_VALUE)
             .entityID(entity_value+"-arg")
             .build();
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+        } finally {
+            client.stop();
+        }
     }
 
 
@@ -599,10 +644,14 @@ public class NonBlockingStatsDClientTest {
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
             .build();
-        client.gauge("value", 423);
-        server.waitForMessage("my.prefix");
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -635,10 +684,14 @@ public class NonBlockingStatsDClientTest {
     public void sends_gauge_empty_prefix_deprecated() throws Exception {
 
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
-        client.gauge("top.level.value", 423);
-        server.waitForMessage("top.level");
+        try {
+            client.gauge("top.level.value", 423);
+            server.waitForMessage("top.level");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -649,20 +702,28 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .build();
-        client.gauge("top.level.value", 423);
-        server.waitForMessage("top.level");
+        try {
+            client.gauge("top.level.value", 423);
+            server.waitForMessage("top.level");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
     public void sends_gauge_null_prefix_deprecated() throws Exception {
 
         final NonBlockingStatsDClient client = new NonBlockingStatsDClient(null, "localhost", STATSD_SERVER_PORT);
-        client.gauge("top.level.value", 423);
-        server.waitForMessage("top.level");
+        try {
+            client.gauge("top.level.value", 423);
+            server.waitForMessage("top.level");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -673,10 +734,14 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .build();
-        client.gauge("top.level.value", 423);
-        server.waitForMessage("top.level");
+        try {
+            client.gauge("top.level.value", 423);
+            server.waitForMessage("top.level");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -686,10 +751,14 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .build();
-        no_prefix_client.gauge("top.level.value", 423);
-        server.waitForMessage("top.level");
+        try {
+            no_prefix_client.gauge("top.level.value", 423);
+            server.waitForMessage("top.level");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("top.level.value:423|g")));
+        } finally {
+            no_prefix_client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -772,10 +841,14 @@ public class NonBlockingStatsDClientTest {
                 .withAlertType(Event.AlertType.ERROR)
                 .withSourceTypeName("sourcetype1")
                 .build();
-        client.recordEvent(event, "foo:bar", "baz");
-        server.waitForMessage("_e");
+        try {
+            client.recordEvent(event, "foo:bar", "baz");
+            server.waitForMessage("_e");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|#baz,foo:bar")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|#baz,foo:bar")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -797,10 +870,14 @@ public class NonBlockingStatsDClientTest {
                 .withAlertType(Event.AlertType.ERROR)
                 .withSourceTypeName("sourcetype1")
                 .build();
-        client.recordEvent(event, "foo:bar", "baz");
-        server.waitForMessage("_e");
+        try {
+            client.recordEvent(event, "foo:bar", "baz");
+            server.waitForMessage("_e");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|#baz,foo:bar")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("_e{6,5}:title1|text1|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|#baz,foo:bar")));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
@@ -953,7 +1030,7 @@ public class NonBlockingStatsDClientTest {
 
             // 8 messages in telemetry batch
             final List<String> messages = telemetryServer.messagesReceived();
-            assertEquals(8, messages.size());
+            assertEquals(9, messages.size());
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.metrics:1|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.events:0|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.service_checks:0|c")));
@@ -962,6 +1039,7 @@ public class NonBlockingStatsDClientTest {
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_sent:1|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_dropped:0|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_dropped_queue:0|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.aggregated_context:0|c")));
         } finally {
             testClient.stop();
             telemetryServer.close();

@@ -325,16 +325,19 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
 
             statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
-                    statsDProcessor.getOutboundQueue(), senderWorkers, this.telemetry);
+                    statsDProcessor.getOutboundQueue(), senderWorkers);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
                 // TODO: figure out why the hell telemetryClientChannel does not work here!
                 telemetryStatsDSender = createSender(telemetryAddressLookup, handler, telemetryClientChannel,
-                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
-                        1, this.telemetry);
+                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(), 1);
 
             }
+
+            // set telemetry
+            statsDProcessor.setTelemetry(this.telemetry);
+            statsDSender.setTelemetry(this.telemetry);
 
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
@@ -349,7 +352,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 executor.submit(telemetryStatsDSender);
             }
             this.telemetry.start(telemetryFlushInterval);
-
         }
     }
 
@@ -1019,9 +1021,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
-            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                                        final int senderWorkers, final Telemetry telemetry) throws Exception {
-        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers, telemetry);
+            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers)
+            throws Exception {
+        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers);
     }
 
     /**

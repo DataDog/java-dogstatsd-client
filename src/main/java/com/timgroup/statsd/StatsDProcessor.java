@@ -37,6 +37,7 @@ public abstract class StatsDProcessor implements Runnable {
     protected final int qcapacity;
 
     protected StatsDAggregator aggregator;
+    protected volatile Telemetry telemetry;
 
     protected volatile boolean shutdown;
 
@@ -88,7 +89,7 @@ public abstract class StatsDProcessor implements Runnable {
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
-        this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);  // TODO: fix period
+        this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
     }
 
     StatsDProcessor(final StatsDProcessor processor)
@@ -151,6 +152,14 @@ public abstract class StatsDProcessor implements Runnable {
 
     public StatsDAggregator getAggregator() {
         return this.aggregator;
+    }
+
+    public void setTelemetry(final Telemetry telemetry) {
+        this.telemetry = telemetry;
+    }
+
+    public Telemetry getTelemetry() {
+        return telemetry;
     }
 
     boolean isShutdown() {

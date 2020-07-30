@@ -107,6 +107,9 @@ public class StatsDAggregatorTest {
             server.waitForMessage("my.prefix");
 
             List<String> messages = server.messagesReceived();
+            for (String msg : messages) {
+                System.out.println("message: " + msg);
+            }
 
             assertThat(messages.size(), comparesEqualTo(1));
             assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.count:55|c")));
