@@ -19,6 +19,7 @@ public class Telemetry {
     protected final AtomicInteger packetsSent = new AtomicInteger(0);
     protected final AtomicInteger packetsDropped = new AtomicInteger(0);
     protected final AtomicInteger packetsDroppedQueue = new AtomicInteger(0);
+    protected final AtomicInteger aggregatedContexts = new AtomicInteger(0);
 
     protected final String metricsSentMetric = "datadog.dogstatsd.client.metrics";
     protected final String eventsSentMetric = "datadog.dogstatsd.client.events";
@@ -28,6 +29,7 @@ public class Telemetry {
     protected final String packetsSentMetric = "datadog.dogstatsd.client.packets_sent";
     protected final String packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped";
     protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
+    protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
 
     protected String tags;
 
@@ -110,6 +112,7 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.packetsSentMetric, this.packetsSent.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
     }
 
     public void incrMetricsSent(final int value) {
@@ -142,6 +145,10 @@ public class Telemetry {
 
     public void incrPacketDroppedQueue(final int value) {
         this.packetsDroppedQueue.addAndGet(value);
+    }
+
+    public void incrAggregatedContexts(final int value) {
+        this.aggregatedContexts.addAndGet(value);
     }
 
     /**

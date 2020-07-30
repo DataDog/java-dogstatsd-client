@@ -30,12 +30,12 @@ public class StatsDSender implements Runnable {
     private final CountDownLatch endSignal;
     private volatile boolean shutdown;
 
-    private final Telemetry telemetry;
+    private volatile Telemetry telemetry;
 
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
                  final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                 final int workers, final Telemetry telemetry) throws Exception {
+                 final int workers) throws Exception {
 
         this.pool = pool;
         this.buffers = buffers;
@@ -56,25 +56,34 @@ public class StatsDSender implements Runnable {
             }
         });
         this.endSignal = new CountDownLatch(workers);
-
-        this.telemetry = telemetry;
     }
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
-                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                 final Telemetry telemetry) throws Exception {
-        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS, telemetry);
+                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers)
+            throws Exception {
+        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS);
     }
 
     StatsDSender(final StatsDSender sender) throws Exception {
         this(sender.addressLookup, sender.clientChannel, sender.handler,
-                sender.pool, sender.buffers, sender.workers, sender.telemetry);
+                sender.pool, sender.buffers, sender.workers);
+        this.setTelemetry(sender.getTelemetry());
     }
 
     StatsDSender(final StatsDSender sender, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
         this(sender.addressLookup, sender.clientChannel, sender.handler,
-                pool, buffers, sender.workers, sender.telemetry);
+                pool, buffers, sender.workers);
+        this.setTelemetry(sender.getTelemetry());
     }
+
+    public void setTelemetry(final Telemetry telemetry) {
+        this.telemetry = telemetry;
+    }
+
+    public Telemetry getTelemetry() {
+        return telemetry;
+    }
+
 
     @Override
     public void run() {
@@ -83,6 +92,7 @@ public class StatsDSender implements Runnable {
             executor.submit(new Runnable() {
                 public void run() {
                     ByteBuffer buffer = null;
+                    Telemetry telemetry = getTelemetry();  // attribute snapshot to harness CPU cache
 
                     while (!(buffers.isEmpty() && shutdown)) {
                         int sizeOfBuffer = 0;
@@ -112,8 +122,10 @@ public class StatsDSender implements Runnable {
                                             sizeOfBuffer));
                             }
 
-                            telemetry.incrBytesSent(sizeOfBuffer);
-                            telemetry.incrPacketSent(1);
+                            if (telemetry != null) {
+                                telemetry.incrBytesSent(sizeOfBuffer);
+                                telemetry.incrPacketSent(1);
+                            }
 
                         } catch (final InterruptedException e) {
                             if (shutdown) {
@@ -121,8 +133,10 @@ public class StatsDSender implements Runnable {
                                 return;
                             }
                         } catch (final Exception e) {
-                            telemetry.incrBytesDropped(sizeOfBuffer);
-                            telemetry.incrPacketDropped(1);
+                            if (telemetry != null) {
+                                telemetry.incrBytesDropped(sizeOfBuffer);
+                                telemetry.incrPacketDropped(1);
+                            }
                             handler.handle(e);
                         }
                     }
