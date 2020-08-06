@@ -180,6 +180,9 @@ public class NonBlockingStatsDClientBuilder {
             }
         }
 
+        System.out.println("Aggregation is: " + enableAggregation
+                + " flush interval is: " + aggregationFlushInterval);
+
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                 lookup, telemetryLookup, timeout, socketBufferSize, maxPacketSizeBytes,
                 entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
