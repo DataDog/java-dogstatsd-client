@@ -55,6 +55,7 @@ public class Telemetry {
         protected TelemetryMessage(String metric, int value, String tags) {
             super(metric, Message.Type.COUNT, value);
             this.tags = tags;
+            this.done = true;
         }
 
         @Override
