@@ -117,6 +117,7 @@ public class StatsDAggregator {
                 msg.aggregate(message);
                 if (telemetry != null) {
                     telemetry.incrAggregatedContexts(1);
+                    System.out.println("Message was aggregated. Aggregation count: " + telemetry.aggregatedContexts.get());
                 }
             }
         }
