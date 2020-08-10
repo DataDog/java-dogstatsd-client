@@ -120,6 +120,41 @@ public class StatsDAggregatorTest {
     }
 
     @Test(timeout=5000L)
+    public void testAggregationTelemetry() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .telemetryFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                testClient.gauge("top.level.value", i);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.count("top.level.count", i);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.increment("top.level.count.other");
+            }
+
+            server.waitForMessage("datadog");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(3+9));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.aggregated_context:27|c")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
     public void testBasicUnaggregatedMetrics() throws Exception {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
         final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()

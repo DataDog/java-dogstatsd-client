@@ -176,6 +176,8 @@ public class TelemetryTest {
         client.telemetry.incrPacketSent(6);
         client.telemetry.incrPacketDropped(7);
         client.telemetry.incrPacketDroppedQueue(8);
+        client.telemetry.incrAggregatedContexts(9);
+
 
         assertThat(client.telemetry.metricsSent.get(), equalTo(1));
         assertThat(client.telemetry.eventsSent.get(), equalTo(2));
@@ -185,6 +187,7 @@ public class TelemetryTest {
         assertThat(client.telemetry.packetsSent.get(), equalTo(6));
         assertThat(client.telemetry.packetsDropped.get(), equalTo(7));
         assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(8));
+        assertThat(client.telemetry.aggregatedContexts.get(), equalTo(9));
 
         client.telemetry.flush();
 
@@ -196,6 +199,7 @@ public class TelemetryTest {
         assertThat(client.telemetry.packetsSent.get(), equalTo(0));
         assertThat(client.telemetry.packetsDropped.get(), equalTo(0));
         assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(0));
+        assertThat(client.telemetry.aggregatedContexts.get(), equalTo(0));
 
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
@@ -222,6 +226,9 @@ public class TelemetryTest {
 
         assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped_queue:8|c|#test," + telemetryTags));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.aggregated_context:9|c|#test," + telemetryTags));
     }
 
     @Test(timeout = 5000L)
@@ -262,6 +269,9 @@ public class TelemetryTest {
 
         assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags));
     }
 
     @Test(timeout = 5000L)
