@@ -11,7 +11,6 @@ public class Telemetry {
     public static int DEFAULT_FLUSH_INTERVAL = 10000; // 10s
 
     protected final AtomicInteger metricsSent = new AtomicInteger(0);
-
     protected final AtomicInteger eventsSent = new AtomicInteger(0);
     protected final AtomicInteger serviceChecksSent = new AtomicInteger(0);
     protected final AtomicInteger bytesSent = new AtomicInteger(0);
@@ -55,7 +54,7 @@ public class Telemetry {
         protected TelemetryMessage(String metric, int value, String tags) {
             super(metric, Message.Type.COUNT, value);
             this.tags = tags;
-            this.done = true;
+            this.done = true;  // dont aggregate telemetry messages for now
         }
 
         @Override
@@ -164,6 +163,7 @@ public class Telemetry {
         this.packetsSent.set(0);
         this.packetsDropped.set(0);
         this.packetsDroppedQueue.set(0);
+        this.aggregatedContexts.set(0);
     }
 
     /**
