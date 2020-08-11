@@ -104,15 +104,15 @@ public class Telemetry {
         // be spread out among processor worker and we flush every 5s by
         // default
 
-        processor.send(new TelemetryMessage(this.metricsSentMetric, this.metricsSent.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.eventsSentMetric, this.eventsSent.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.serviceChecksSentMetric, this.serviceChecksSent.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.bytesSentMetric, this.bytesSent.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.bytesDroppedMetric, this.bytesDropped.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.packetsSentMetric, this.packetsSent.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.metricsSentMetric, this.metricsSent.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.eventsSentMetric, this.eventsSent.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.serviceChecksSentMetric, this.serviceChecksSent.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.bytesSentMetric, this.bytesSent.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.bytesDroppedMetric, this.bytesDropped.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.packetsSentMetric, this.packetsSent.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
-        processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
+        // processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
     }
 
     public void incrMetricsSent(final int value) {
