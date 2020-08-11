@@ -118,6 +118,8 @@ public class StatsDAggregator {
                 if (telemetry != null) {
                     telemetry.incrAggregatedContexts(1);
                     System.out.println("Message was aggregated. Aggregation count: " + telemetry.aggregatedContexts.get());
+                } else {
+                    System.out.println("Cannot compute aggregate telemetry is null.");
                 }
             }
         }
