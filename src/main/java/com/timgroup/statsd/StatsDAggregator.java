@@ -37,6 +37,7 @@ public class StatsDAggregator {
         @Override
         public void run() {
             System.out.printf("[%s] Aggregator logging - flushing begins%n", java.time.LocalDateTime.now().toString());
+            int enqueued = 0;
             for (int i=0 ; i<shardGranularity ; i++) {
                 Map<Message, Message> map = aggregateMetrics.get(i);
 
@@ -53,12 +54,15 @@ public class StatsDAggregator {
 
                         if (!processor.send(msg)) {
                             telemetry.incrPacketDroppedQueue(1);
+                        } else {
+                            enqueued++;
                         }
 
                         iter.remove();
                     }
                 }
             }
+            System.out.printf("[%s] Aggregator logging - enqueued mesages: %d%n", java.time.LocalDateTime.now().toString(), enqueued);
             System.out.printf("[%s] Aggregator logging - flushing ends%n", java.time.LocalDateTime.now().toString());
         }
     }
