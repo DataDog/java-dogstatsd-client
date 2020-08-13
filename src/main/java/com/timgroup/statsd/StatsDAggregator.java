@@ -36,11 +36,17 @@ public class StatsDAggregator {
     private class FlushTask extends TimerTask {
         @Override
         public void run() {
+            System.out.printf("[%s] Aggregator logging - flushing begins%n", java.time.LocalDateTime.now().toString());
             for (int i=0 ; i<shardGranularity ; i++) {
                 Map<Message, Message> map = aggregateMetrics.get(i);
 
                 synchronized (map) {
                     Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
+
+                    // FIXME: cleanup
+                    System.out.printf("[%s] Aggregator logging - flushing bucket: %d%n",
+                            java.time.LocalDateTime.now().toString(), i);
+
                     while (iter.hasNext()) {
                         Message msg = iter.next().getValue();
                         msg.setDone(true);
@@ -50,6 +56,7 @@ public class StatsDAggregator {
                     }
                 }
             }
+            System.out.printf("[%s] Aggregator logging - flushing ends%n", java.time.LocalDateTime.now().toString());
         }
     }
 
