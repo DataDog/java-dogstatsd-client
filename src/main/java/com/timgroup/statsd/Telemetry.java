@@ -11,6 +11,7 @@ public class Telemetry {
     public static int DEFAULT_FLUSH_INTERVAL = 10000; // 10s
 
     protected final AtomicInteger metricsSent = new AtomicInteger(0);
+    protected final AtomicInteger metricsSentInternal = new AtomicInteger(0);
     protected final AtomicInteger eventsSent = new AtomicInteger(0);
     protected final AtomicInteger serviceChecksSent = new AtomicInteger(0);
     protected final AtomicInteger bytesSent = new AtomicInteger(0);
@@ -113,10 +114,14 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
+
+        // FIXME: cleanup
+        System.out.println("Telemetry logging - metrics sent getting flushed: " + this.metricsSentInternal.getAndSet(0));
     }
 
     public void incrMetricsSent(final int value) {
         this.metricsSent.addAndGet(value);
+        this.metricsSentInternal.addAndGet(value);
     }
 
     public void incrEventsSent(final int value) {
