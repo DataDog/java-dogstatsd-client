@@ -91,6 +91,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int DEFAULT_DOGSTATSD_PORT = 8125;
     public static final int SOCKET_TIMEOUT_MS = 100;
     public static final int SOCKET_BUFFER_BYTES = -1;
+    public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
     public static final boolean DEFAULT_ENABLE_AGGREGATION = false;
 
