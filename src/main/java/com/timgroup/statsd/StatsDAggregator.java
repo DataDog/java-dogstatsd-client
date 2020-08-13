@@ -50,7 +50,10 @@ public class StatsDAggregator {
                     while (iter.hasNext()) {
                         Message msg = iter.next().getValue();
                         msg.setDone(true);
-                        processor.send(msg);
+
+                        if (!processor.send(msg)) {
+                            telemetry.incrPacketDroppedQueue(1);
+                        }
 
                         iter.remove();
                     }
