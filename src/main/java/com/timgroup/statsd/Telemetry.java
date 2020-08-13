@@ -116,7 +116,8 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
 
         // FIXME: cleanup
-        System.out.println("Telemetry logging - metrics sent getting flushed: " + this.metricsSentInternal.getAndSet(0));
+        System.out.printf("[%s] Telemetry logging - metrics sent getting flushed: %d",
+                java.time.LocalDateTime.now().toString(), this.metricsSentInternal.getAndSet(0));
     }
 
     public void incrMetricsSent(final int value) {
