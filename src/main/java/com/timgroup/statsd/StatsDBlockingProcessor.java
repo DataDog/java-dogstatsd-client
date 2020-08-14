@@ -29,6 +29,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             aggregator.start();
 
+            // TODO: implement high priority messaging
             while (!(shutdown && messages.isEmpty())) {
 
                 try {
