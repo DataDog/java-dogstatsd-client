@@ -45,7 +45,7 @@ public class StatsDAggregator {
                         Message msg = iter.next().getValue();
                         msg.setDone(true);
 
-                        if (!processor.send(msg)) {
+                        if (!processor.sendHighPrio(msg)) {
                             telemetry.incrPacketDroppedQueue(1);
                         }
 

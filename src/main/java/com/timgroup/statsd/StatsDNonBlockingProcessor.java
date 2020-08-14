@@ -18,8 +18,9 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
         @Override
         public void run() {
-            boolean empty;
             ByteBuffer sendBuffer;
+            boolean empty = true;
+            boolean emptyHighPrio = true;
 
             try {
                 sendBuffer = bufferPool.borrow();
@@ -30,10 +31,11 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             aggregator.start();
 
-            while (!((empty = messages.isEmpty()) && shutdown)) {
+            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
 
                 try {
-                    if (empty) {
+
+                    if (emptyHighPrio && empty) {
                         Thread.sleep(WAIT_SLEEP_MS);
                         continue;
                     }
@@ -41,7 +43,14 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     if (Thread.interrupted()) {
                         return;
                     }
-                    final Message message = messages.poll();
+
+                    final Message message;
+                    if (!emptyHighPrio) {
+                        message = highPrioMessages.poll();
+                    } else {
+                        message = messages.poll();
+                    }
+
                     if (message != null) {
 
                         qsize.decrementAndGet();

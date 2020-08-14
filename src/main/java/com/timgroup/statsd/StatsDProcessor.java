@@ -29,6 +29,7 @@ public abstract class StatsDProcessor implements Runnable {
     protected final StatsDClientErrorHandler handler;
 
     protected final BufferPool bufferPool;
+    protected final Queue<Message> highPrioMessages; // FIFO queue for high priority messages
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
@@ -87,6 +88,7 @@ public abstract class StatsDProcessor implements Runnable {
         });
 
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
+        this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
         this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
@@ -109,7 +111,9 @@ public abstract class StatsDProcessor implements Runnable {
                 return result;
             }
         });
+
         this.bufferPool = new BufferPool(processor.bufferPool);
+        this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
         this.endSignal = new CountDownLatch(this.workers);
         this.aggregator = new StatsDAggregator(this, processor.getAggregator().getShardGranularity(),
@@ -119,6 +123,16 @@ public abstract class StatsDProcessor implements Runnable {
     protected abstract ProcessingTask createProcessingTask();
 
     protected abstract boolean send(final Message message);
+
+    protected boolean sendHighPrio(final Message message) {
+        if (!shutdown) {
+            // TODO: unbounded for now...
+            highPrioMessages.offer(message);
+            return true;
+        }
+
+        return false;
+    }
 
     public BufferPool getBufferPool() {
         return this.bufferPool;
