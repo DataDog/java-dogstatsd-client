@@ -36,23 +36,7 @@ public class StatsDAggregator {
     private class FlushTask extends TimerTask {
         @Override
         public void run() {
-            for (int i=0 ; i<shardGranularity ; i++) {
-                Map<Message, Message> map = aggregateMetrics.get(i);
-
-                synchronized (map) {
-                    Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Message msg = iter.next().getValue();
-                        msg.setDone(true);
-
-                        if (!processor.sendHighPrio(msg)) {
-                            telemetry.incrPacketDroppedQueue(1);
-                        }
-
-                        iter.remove();
-                    }
-                }
-            }
+            flush();
         }
     }
 
@@ -133,5 +117,25 @@ public class StatsDAggregator {
 
     public final int getShardGranularity() {
         return this.shardGranularity;
+    }
+
+    protected void flush() {
+        for (int i=0 ; i<shardGranularity ; i++) {
+            Map<Message, Message> map = aggregateMetrics.get(i);
+
+            synchronized (map) {
+                Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
+                while (iter.hasNext()) {
+                    Message msg = iter.next().getValue();
+                    msg.setDone(true);
+
+                    if (!processor.sendHighPrio(msg) && (telemetry != null)) {
+                        telemetry.incrPacketDroppedQueue(1);
+                    }
+
+                    iter.remove();
+                }
+            }
+        }
     }
 }

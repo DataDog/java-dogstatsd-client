@@ -677,6 +677,7 @@ public class NonBlockingStatsDClientTest {
 
             environmentVariables.clear(envVarName);
             log.info("passed for '" + literal + "'; env cleaned.");
+            client.stop();
         }
     }
 
@@ -1043,6 +1044,136 @@ public class NonBlockingStatsDClientTest {
         } finally {
             testClient.stop();
             telemetryServer.close();
+        }
+    }
+
+    @Test(timeout=5000L)
+    public void testBasicGaugeAggregation() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                testClient.gauge("top.level.value", i);
+            }
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(1));
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.value:9|g")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
+    public void testBasicCountAggregation() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                testClient.count("top.level.count", i);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.increment("top.level.count");
+            }
+
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(1));
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.count:55|c")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
+    public void testAggregationTelemetry() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .telemetryFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                testClient.gauge("top.level.value", i);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.count("top.level.count", i);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.increment("top.level.count.other");
+            }
+
+            server.waitForMessage("datadog");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(3+9));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.aggregated_context:27|c")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
+    public void testBasicUnaggregatedMetrics() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            int submitted = 0;
+            for (int i=0 ; i<10 ; i++) {
+                testClient.histogram("top.level.hist", i);
+                testClient.distribution("top.level.dist", i);
+                testClient.time("top.level.time", i);
+                submitted += 3;
+            }
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            // there should be one message per
+            assertThat(messages.size(), comparesEqualTo(submitted));
+
+        } finally {
+            testClient.stop();
         }
     }
 

@@ -11,179 +11,222 @@ import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.logging.Logger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.comparesEqualTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class StatsDAggregatorTest {
 
+    private static final String TEST_NAME = "StatsDAggregatorTest";
     private static final int STATSD_SERVER_PORT = 17254;
     private static DummyStatsDServer server;
+    private static FakeProcessor fakeProcessor;
 
-    private static Logger log = Logger.getLogger("StatsDAggregatorTest");
+    private static Logger log = Logger.getLogger(TEST_NAME);
+
+    private static final ExecutorService executor = Executors.newFixedThreadPool(2, new ThreadFactory() {
+        final ThreadFactory delegate = Executors.defaultThreadFactory();
+        @Override public Thread newThread(final Runnable runnable) {
+            final Thread result = delegate.newThread(runnable);
+            result.setName(TEST_NAME + result.getName());
+            result.setDaemon(true);
+            return result;
+        }
+    });
 
     @Rule
     public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
+    private static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
+        @Override public void handle(final Exception ex) { /* No-op */ }
+    };
+
+    public static class FakeMessage<T extends Number> extends Message<T> {
+        protected FakeMessage(String aspect, Message.Type type, T value) {
+            super(aspect, type, value);
+        }
+
+        @Override
+        protected void writeTo(StringBuilder builder){}
+    }
+
+
+    // fakeProcessor store messages from the telemetry only
+    public static class FakeProcessor extends StatsDProcessor {
+
+        private final Queue<Message> messages;
+        private final AtomicInteger messageSent = new AtomicInteger(0);
+        private final AtomicInteger messageAggregated = new AtomicInteger(0);
+
+        FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
+            super(0, handler, 0, 1, 1, 0, 0);
+            this.messages = new ConcurrentLinkedQueue<>();
+        }
+
+
+        private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
+            @Override
+            public void run() {
+
+                while (!shutdown) {
+                    final Message message = messages.poll();
+                    if (message == null) {
+
+                        try{
+                            Thread.sleep(50L);
+                        } catch (InterruptedException e) {}
+
+                        continue;
+                    }
+
+                    if (aggregator.aggregateMessage(message)) {
+                        messageAggregated.incrementAndGet();
+                        continue;
+                    }
+
+                    // otherwise just "send" it
+                    messageSent.incrementAndGet();
+                }
+            }
+        }
+
+        @Override
+        protected StatsDProcessor.ProcessingTask createProcessingTask() {
+            return new FakeProcessingTask();
+        }
+
+        @Override
+        public boolean send(final Message msg) {
+            messages.offer(msg);
+            return true;
+        }
+
+        public Queue<Message> getMessages() {
+            return messages;
+        }
+
+        public void clear() {
+            try {
+                messages.clear();
+                highPrioMessages.clear();
+            } catch (Exception e) {}
+        }
+    }
+
     @BeforeClass
-    public static void start() throws IOException {
-        server = new DummyStatsDServer(STATSD_SERVER_PORT);
+    public static void start() throws Exception {
+        fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
+        // 15s flush period should be enough for all tests to be done - flushes will be manual
+        StatsDAggregator aggregator = new StatsDAggregator(fakeProcessor, StatsDAggregator.DEFAULT_SHARDS, 3000L);
+        fakeProcessor.aggregator = aggregator;
+        executor.submit(fakeProcessor);
     }
 
     @AfterClass
     public static void stop() {
-        try {
-            server.close();
-        } catch (java.io.IOException ignored) {
-        }
+        fakeProcessor.shutdown();
     }
 
     @After
     public void clear() {
-        server.clear();
+        // we should probably clear all queues
+        fakeProcessor.clear();
     }
 
-    @Test(timeout=5000L)
-    public void testBasicGaugeAggregation() throws Exception {
-        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
-        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .port(STATSD_SERVER_PORT)
-            .enableTelemetry(false)  // don't want additional packets
-            .enableAggregation(true)
-            .aggregationFlushInterval(3000)
-            .errorHandler(errorHandler)
-            .build();
+    public void waitForQueueSize(Queue queue, int size) {
 
-        try {
-            for (int i=0 ; i<10 ; i++) {
-                testClient.gauge("top.level.value", i);
-            }
-            server.waitForMessage("my.prefix");
-
-            List<String> messages = server.messagesReceived();
-
-            assertThat(messages.size(), comparesEqualTo(1));
-            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.value:9|g")));
-
-        } finally {
-            testClient.stop();
+        // Wait for the flush to happen
+        while (queue.size() != size) {
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {}
         }
     }
 
-    @Test(timeout=5000L)
-    public void testBasicCountAggregation() throws Exception {
-        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
-        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .port(STATSD_SERVER_PORT)
-            .enableTelemetry(false)  // don't want additional packets
-            .enableAggregation(true)
-            .aggregationFlushInterval(3000)
-            .errorHandler(errorHandler)
-            .build();
+    @Test(timeout = 2000L)
+    public void aggregate_messages() throws Exception {
 
-        try {
-            for (int i=0 ; i<10 ; i++) {
-                testClient.count("top.level.count", i);
+        for(int i=0 ; i<10 ; i++) {
+            fakeProcessor.send(new FakeMessage<Integer>("some.gauge", Message.Type.GAUGE, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("some.histogram", Message.Type.HISTOGRAM, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("some.distribution", Message.Type.DISTRIBUTION, 1));
+        }
+
+        waitForQueueSize(fakeProcessor.messages, 0);
+
+        assertEquals(20, fakeProcessor.messageAggregated.get());
+        assertEquals(20, fakeProcessor.messageSent.get());
+
+        // wait for aggregator flush...
+        fakeProcessor.aggregator.flush();
+
+        // 2 metrics (gauge, count), so 2 aggregates
+        assertEquals(2, fakeProcessor.highPrioMessages.size());
+
+    }
+
+    @Test(timeout = 2000L)
+    public void aggregation_sharding() throws Exception {
+        final int iterations = 10;
+
+        for(int i=0 ; i<StatsDAggregator.DEFAULT_SHARDS*iterations ; i++) {
+            FakeMessage<Integer> gauge = new FakeMessage<>("some.gauge", Message.Type.GAUGE, 1);
+            gauge.hash = i+1;
+            fakeProcessor.send(gauge);
+        }
+
+        waitForQueueSize(fakeProcessor.messages, 0);
+
+        for (int i=0 ; i<StatsDAggregator.DEFAULT_SHARDS ; i++) {
+            Map<Message, Message> map = fakeProcessor.aggregator.aggregateMetrics.get(i);
+            synchronized (map) {
+                Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
+                int count = 0;
+                while (iter.hasNext()) {
+                    count++;
+                    iter.next();
+                }
+
+                // sharding should be balanced
+                assertEquals(iterations, count);
             }
-            for (int i=0 ; i<10 ; i++) {
-                testClient.increment("top.level.count");
-            }
-
-            server.waitForMessage("my.prefix");
-
-            List<String> messages = server.messagesReceived();
-            for (String msg : messages) {
-                System.out.println("message: " + msg);
-            }
-
-            assertThat(messages.size(), comparesEqualTo(1));
-            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.count:55|c")));
-
-        } finally {
-            testClient.stop();
         }
     }
 
-    @Test(timeout=5000L)
-    public void testAggregationTelemetry() throws Exception {
-        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
-        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
-            .hostname("localhost")
-            .port(STATSD_SERVER_PORT)
-            .enableAggregation(true)
-            .aggregationFlushInterval(3000)
-            .telemetryFlushInterval(3000)
-            .errorHandler(errorHandler)
-            .build();
+    @Test(timeout = 5000L)
+    public void aggregation_flushing() throws Exception {
+        // start clockwork
+        fakeProcessor.aggregator.start();
 
-        try {
-            for (int i=0 ; i<10 ; i++) {
-                testClient.gauge("top.level.value", i);
-            }
-            for (int i=0 ; i<10 ; i++) {
-                testClient.count("top.level.count", i);
-            }
-            for (int i=0 ; i<10 ; i++) {
-                testClient.increment("top.level.count.other");
-            }
-
-            server.waitForMessage("datadog");
-
-            List<String> messages = server.messagesReceived();
-
-            assertThat(messages.size(), comparesEqualTo(3+9));
-            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.aggregated_context:27|c")));
-
-        } finally {
-            testClient.stop();
+        for(int i=0 ; i<10 ; i++) {
+            fakeProcessor.send(new FakeMessage<>("some.gauge", Message.Type.GAUGE, i));
         }
-    }
 
-    @Test(timeout=5000L)
-    public void testBasicUnaggregatedMetrics() throws Exception {
-        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
-        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .port(STATSD_SERVER_PORT)
-            .enableTelemetry(false)  // don't want additional packets
-            .enableAggregation(true)
-            .aggregationFlushInterval(3000)
-            .errorHandler(errorHandler)
-            .build();
+        // processor should auto-flush within 2s
+        waitForQueueSize(fakeProcessor.highPrioMessages, 1);
 
-        try {
-            int submitted = 0;
-            for (int i=0 ; i<10 ; i++) {
-                testClient.histogram("top.level.hist", i);
-                testClient.distribution("top.level.dist", i);
-                testClient.time("top.level.time", i);
-                submitted += 3;
-            }
-            server.waitForMessage("my.prefix");
+        //aggregated message should take last value -  10
+        Message message = fakeProcessor.highPrioMessages.element();
+        assertEquals(9, message.value);
 
-            List<String> messages = server.messagesReceived();
-
-            // there should be one message per
-            assertThat(messages.size(), comparesEqualTo(submitted));
-
-        } finally {
-            testClient.stop();
-        }
     }
 }
