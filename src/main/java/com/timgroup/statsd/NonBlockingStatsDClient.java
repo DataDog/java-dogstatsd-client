@@ -1146,11 +1146,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(Object object) {
 
-            if (o instanceof StatsDMessage) {
-                return super.equals(o)
-                    && Arrays.equals(this.tags, ((StatsDMessage)o).getTags());
+            if (object instanceof StatsDMessage) {
+                return super.equals(object)
+                    && Arrays.equals(this.tags, ((StatsDMessage)object).getTags());
             }
 
             return false;

@@ -40,6 +40,14 @@ public class StatsDAggregator {
         }
     }
 
+    /**
+     * StatsDAggregtor constructor.
+     *
+     * @param processor     the message processor, aggregated messages will be queued in the high priority queue.
+     * @param shards        number of shards for the aggregation map.
+     * @param flushInterval flush interval in miliseconds, 0 disables message aggregation.
+     *
+     * */
     public StatsDAggregator(final StatsDProcessor processor, final int shards, final long flushInterval) {
         this.processor = processor;
         this.flushInterval = flushInterval;
