@@ -2,8 +2,8 @@ package com.timgroup.statsd;
 
 import com.timgroup.statsd.Message;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -46,7 +46,7 @@ public class StatsDAggregator {
         this.shardGranularity = shards;
         this.aggregateMetrics = new ArrayList<>(shards);
 
-        for (int i=0 ; i<this.shardGranularity ; i++) {
+        for (int i = 0 ; i < this.shardGranularity ; i++) {
             this.aggregateMetrics.add(i, new HashMap<Message, Message>());
         }
     }
@@ -120,7 +120,7 @@ public class StatsDAggregator {
     }
 
     protected void flush() {
-        for (int i=0 ; i<shardGranularity ; i++) {
+        for (int i = 0 ; i < shardGranularity ; i++) {
             Map<Message, Message> map = aggregateMetrics.get(i);
 
             synchronized (map) {

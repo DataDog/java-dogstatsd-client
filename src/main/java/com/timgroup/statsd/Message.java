@@ -99,7 +99,7 @@ public abstract class Message<T extends Number> {
      */
     public void aggregate(Message message) {
         Number value = message.getValue();
-        switch(message.getType()) {
+        switch (message.getType()) {
             case GAUGE:
                 this.value = value;
                 break;
@@ -141,12 +141,12 @@ public abstract class Message<T extends Number> {
      * Messages must implement hashCode.
      */
     @Override
-    public boolean equals(Object o) {
-        if (o == null) {
+    public boolean equals(Object object) {
+        if (object == null) {
             return false;
         }
-        if (o instanceof Message) {
-            final Message msg = (Message)o;
+        if (object instanceof Message) {
+            final Message msg = (Message)object;
 
             boolean equals = (this.getAspect() == msg.getAspect())
                 && (this.getType() == msg.getType())
