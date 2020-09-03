@@ -7,7 +7,7 @@ public abstract class Message<T extends Number> {
     final Message.Type type;
     protected Number value;
     protected boolean done;
-    protected int hash;
+    protected Integer hash;
 
     public enum Type {
         GAUGE("g"),
@@ -130,11 +130,11 @@ public abstract class Message<T extends Number> {
     @Override
     public int hashCode() {
         // cache it
-        if (this.hash == 0) {
-            this.hash = Objects.hash(this.aspect);
+        if (this.hash == null) {
+            this.hash = new Integer(Objects.hash(this.aspect));
         }
 
-        return this.hash;
+        return this.hash.intValue();
     }
 
     /**

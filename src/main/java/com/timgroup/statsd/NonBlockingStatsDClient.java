@@ -1137,8 +1137,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         public int hashCode() {
 
             // cache it
-            if (this.hash == 0) {
-                super.hashCode();
+            if (this.hash == null) {
+                super.hashCode();  // will instantiate hash if null
                 this.hash += Objects.hash(this.tags);
             }
 
