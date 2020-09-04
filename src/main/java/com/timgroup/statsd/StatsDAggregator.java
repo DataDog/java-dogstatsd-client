@@ -20,7 +20,7 @@ public class StatsDAggregator {
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
     protected final Set<Message.Type> aggregateSet = new HashSet<>(
-            Arrays.asList(Message.Type.COUNT, Message.Type.GAUGE));
+            Arrays.asList(Message.Type.COUNT, Message.Type.GAUGE, Message.Type.SET));
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
 
     // protected final Map<Message, Message> aggregateMetrics = new HashMap<>();

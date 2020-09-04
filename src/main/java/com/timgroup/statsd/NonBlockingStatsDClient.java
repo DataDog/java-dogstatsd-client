@@ -1108,18 +1108,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return tagString(tags, constantTagsRendered, builder);
     }
 
-    abstract class StatsDMessage<T extends Number> extends Message<T> {
+    abstract class StatsDMessage<T extends Number> extends NumericMessage<T> {
         final double sampleRate; // NaN for none
-        final String[] tags;
 
         protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, String[] tags) {
-            super(aspect, type, value);
+            super(aspect, type, value, tags);
             this.sampleRate = sampleRate;
-            this.tags = tags;
-        }
-
-        public String[] getTags() {
-            return this.tags;
         }
 
         @Override
@@ -1130,30 +1124,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             if (!Double.isNaN(sampleRate)) {
                 builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
             }
-            tagString(tags, builder);
-        }
-
-        @Override
-        public int hashCode() {
-
-            // cache it
-            if (this.hash == null) {
-                super.hashCode();  // will instantiate hash if null
-                this.hash += Objects.hash(this.tags);
-            }
-
-            return this.hash;
-        }
-
-        @Override
-        public boolean equals(Object object) {
-
-            if (object instanceof StatsDMessage) {
-                return super.equals(object)
-                    && Arrays.equals(this.tags, ((StatsDMessage)object).getTags());
-            }
-
-            return false;
+            tagString(this.tags, builder);
         }
 
         protected abstract void writeValue(StringBuilder builder);
@@ -1674,8 +1645,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     http://docs.datadoghq.com/guides/dogstatsd/#events-1</a>
      */
     @Override
-    public void recordEvent(final Event event, final String... tags) {
-        statsDProcessor.send(new Message(Message.Type.EVENT) {
+    public void recordEvent(final Event event, final String... eventTags) {
+        statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT) {
             @Override public void writeTo(StringBuilder builder) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
@@ -1688,7 +1659,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                     .append(title)
                 .append("|").append(text);
                 eventMap(event, builder);
-                tagString(tags, builder);
+                tagString(eventTags, builder);
             }
         });
         this.telemetry.incrEventsSent(1);
@@ -1710,7 +1681,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
-        statsDProcessor.send(new Message(Message.Type.SERVICE_CHECK) {
+        statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK) {
             @Override public void writeTo(StringBuilder sb) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
                 sb.append(Message.Type.SERVICE_CHECK.toString())
@@ -1787,11 +1758,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordSetValue(final String aspect, final String val, final String... tags) {
         // documentation is light, but looking at dogstatsd source, we can send string values
         // here instead of numbers
-        statsDProcessor.send(new StatsDMessage<Double>(aspect, Message.Type.SET, Double.NaN, Double.NaN, tags) {
-            final String set = val;
+        statsDProcessor.send(new AlphaNumericMessage(aspect, Message.Type.SET, val, tags) {
+            protected void writeValue(StringBuilder builder) {
+                builder.append(getValue());
+            }
 
-            @Override protected void writeValue(StringBuilder builder) {
-                builder.append(this.set);
+            @Override protected final void writeTo(StringBuilder builder) {
+                builder.append(prefix).append(aspect).append(':');
+                writeValue(builder);
+                builder.append('|').append(type);
+                tagString(this.tags, builder);
             }
         });
     }

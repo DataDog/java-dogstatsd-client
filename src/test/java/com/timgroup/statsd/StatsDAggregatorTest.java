@@ -59,9 +59,9 @@ public class StatsDAggregatorTest {
         @Override public void handle(final Exception ex) { /* No-op */ }
     };
 
-    public static class FakeMessage<T extends Number> extends Message<T> {
+    public static class FakeMessage<T extends Number> extends NumericMessage<T> {
         protected FakeMessage(String aspect, Message.Type type, T value) {
-            super(aspect, type, value);
+            super(aspect, type, value, null);
         }
 
         @Override
@@ -225,8 +225,8 @@ public class StatsDAggregatorTest {
         waitForQueueSize(fakeProcessor.highPrioMessages, 1);
 
         //aggregated message should take last value -  10
-        Message message = fakeProcessor.highPrioMessages.element();
-        assertEquals(9, message.value);
+        NumericMessage message = (NumericMessage)fakeProcessor.highPrioMessages.element();
+        assertEquals(9, message.getValue());
 
     }
 }

@@ -1,11 +1,12 @@
 package com.timgroup.statsd;
 
+import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class Message<T extends Number> {
+public abstract class Message {
     final String aspect;
     final Message.Type type;
-    protected Number value;
+    final String[] tags;
     protected boolean done;
     protected Integer hash;
 
@@ -34,13 +35,14 @@ public abstract class Message<T extends Number> {
         this.aspect = "";
         this.type = type;
         this.done = false;
+        this.tags = null;
     }
 
-    protected Message(String aspect, Message.Type type, T value) {
+    protected Message(String aspect, Message.Type type, String[] tags) {
         this.aspect = aspect;
         this.type = type;
-        this.value = value;
         this.done = false;
+        this.tags = tags;
     }
 
     /**
@@ -51,6 +53,15 @@ public abstract class Message<T extends Number> {
      *     StringBuilder the text representation will be written to.
      */
     abstract void writeTo(StringBuilder builder);
+
+    /**
+     * Aggregate message.
+     *
+     * @param message
+     *     Message to aggregate.
+     */
+    abstract public void aggregate(Message message);
+
 
     /**
      * Return the message aspect.
@@ -71,13 +82,12 @@ public abstract class Message<T extends Number> {
     }
 
     /**
-     * Get underlying message value.
-     * TODO: handle/throw exceptions
+     * Return the array of tags for the message.
      *
-     * @return returns the value for the Message
+     * @return returns the string array of tags for the Message
      */
-    public Number getValue() {
-        return this.value;
+    public String[] getTags() {
+        return this.tags;
     }
 
     /**
@@ -89,31 +99,6 @@ public abstract class Message<T extends Number> {
     public boolean canAggregate() {
         // return (this.type == m.type);
         return false;
-    }
-
-    /**
-     * Aggregate message.
-     *
-     * @param message
-     *     Message to aggregate.
-     */
-    public void aggregate(Message message) {
-        Number value = message.getValue();
-        switch (message.getType()) {
-            case GAUGE:
-                this.value = value;
-                break;
-            default:
-                if (value instanceof Double) {
-                    this.value = getValue().doubleValue() + value.doubleValue();
-                } else if (value instanceof Integer) {
-                    this.value = getValue().intValue() + value.intValue();
-                } else if (value instanceof Long) {
-                    this.value = getValue().longValue() + value.longValue();
-                }
-        }
-
-        return;
     }
 
     public void setDone(boolean done) {
@@ -132,6 +117,7 @@ public abstract class Message<T extends Number> {
         // cache it
         if (this.hash == null) {
             this.hash = new Integer(Objects.hash(this.aspect));
+            this.hash += Objects.hash(this.tags);
         }
 
         return this.hash.intValue();
@@ -150,7 +136,8 @@ public abstract class Message<T extends Number> {
 
             boolean equals = (this.getAspect() == msg.getAspect())
                 && (this.getType() == msg.getType())
-                && (this.done == msg.getDone());
+                && (this.done == msg.getDone())
+                && Arrays.equals(this.tags, (msg.getTags()));
 
             return equals;
         }
@@ -158,4 +145,3 @@ public abstract class Message<T extends Number> {
         return false;
     }
 }
-

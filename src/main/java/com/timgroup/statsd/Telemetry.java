@@ -48,12 +48,12 @@ public class Telemetry {
         }
     }
 
-    class TelemetryMessage extends Message {
-        private final String tags;  // pre-baked comma separeated tags string
+    class TelemetryMessage extends NumericMessage<Integer> {
+        private final String tagsString;  // pre-baked comma separeated tags string
 
-        protected TelemetryMessage(String metric, int value, String tags) {
-            super(metric, Message.Type.COUNT, value);
-            this.tags = tags;
+        protected TelemetryMessage(String metric, Integer value, String tags) {
+            super(metric, Message.Type.COUNT, value, null);
+            this.tagsString = tags;
             this.done = true;  // dont aggregate telemetry messages for now
         }
 
@@ -64,7 +64,7 @@ public class Telemetry {
                 .append(this.value)
                 .append('|')
                 .append(type)
-                .append(tags);  // already has the statsd separator baked-in
+                .append(tagsString);  // already has the statsd separator baked-in
         }
     }
 
