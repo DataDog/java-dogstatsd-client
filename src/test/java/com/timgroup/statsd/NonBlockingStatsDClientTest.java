@@ -1110,6 +1110,38 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout=5000L)
+    public void testBasicSetAggregation() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                testClient.recordSetValue("top.level.set", "foo", null);
+                testClient.recordSetValue("top.level.set", "bar", null);
+            }
+
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(2));
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.set:foo|s")));
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.set:bar|s")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
     public void testAggregationTelemetry() throws Exception {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
         final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
