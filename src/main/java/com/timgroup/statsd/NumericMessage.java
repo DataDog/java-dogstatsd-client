@@ -44,7 +44,6 @@ public abstract class NumericMessage<T extends Number> extends Message {
 
     /**
      * Get underlying message value.
-     * TODO: handle/throw exceptions
      *
      * @return returns the value for the Message
      */
@@ -54,9 +53,8 @@ public abstract class NumericMessage<T extends Number> extends Message {
 
     /**
      * Set underlying message value.
-     * TODO: handle/throw exceptions
      *
-     * @return returns the value for the Message
+     * @param value the numeric value for the underlying message
      */
     public void setValue(Number value) {
         this.value = value;

@@ -60,7 +60,7 @@ public abstract class Message {
      * @param message
      *     Message to aggregate.
      */
-    abstract public void aggregate(Message message);
+    public abstract void aggregate(Message message);
 
 
     /**

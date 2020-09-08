@@ -27,7 +27,6 @@ public abstract class AlphaNumericMessage extends Message {
 
     /**
      * Get underlying message value.
-     * TODO: handle/throw exceptions
      *
      * @return returns the value for the Message
      */

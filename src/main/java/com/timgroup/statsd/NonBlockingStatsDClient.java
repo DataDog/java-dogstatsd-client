@@ -1638,7 +1638,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *
      * @param event
      *     The event to record
-     * @param tags
+     * @param eventTags
      *     array of tags to be added to the data
      *
      * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#events-1">
