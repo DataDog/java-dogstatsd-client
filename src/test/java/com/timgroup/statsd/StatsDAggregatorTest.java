@@ -68,6 +68,15 @@ public class StatsDAggregatorTest {
         protected void writeTo(StringBuilder builder){}
     }
 
+    public static class FakeAlphaMessage extends AlphaNumericMessage {
+        protected FakeAlphaMessage(String aspect, Message.Type type, String value) {
+            super(aspect, type, value, null);
+        }
+
+        @Override
+        protected void writeTo(StringBuilder builder){}
+    }
+
 
     // fakeProcessor store messages from the telemetry only
     public static class FakeProcessor extends StatsDProcessor {
@@ -169,18 +178,21 @@ public class StatsDAggregatorTest {
             fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.histogram", Message.Type.HISTOGRAM, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.distribution", Message.Type.DISTRIBUTION, 1));
+            fakeProcessor.send(new FakeAlphaMessage("some.set", Message.Type.SET, "value"));
         }
 
         waitForQueueSize(fakeProcessor.messages, 0);
 
-        assertEquals(20, fakeProcessor.messageAggregated.get());
+        // 10 gauges, 10 counts, 10 sets
+        assertEquals(30, fakeProcessor.messageAggregated.get());
+        // 10 histogram, 10 distribution
         assertEquals(20, fakeProcessor.messageSent.get());
 
         // wait for aggregator flush...
         fakeProcessor.aggregator.flush();
 
-        // 2 metrics (gauge, count), so 2 aggregates
-        assertEquals(2, fakeProcessor.highPrioMessages.size());
+        // 2 metrics (gauge, count) + 1 set, so 3 aggregates
+        assertEquals(3, fakeProcessor.highPrioMessages.size());
 
     }
 
