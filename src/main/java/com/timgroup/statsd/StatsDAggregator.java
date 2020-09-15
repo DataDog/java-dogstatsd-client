@@ -15,7 +15,7 @@ import java.util.TimerTask;
 
 
 public class StatsDAggregator {
-    public static int DEFAULT_FLUSH_INTERVAL = 5000; // 5s
+    public static int DEFAULT_FLUSH_INTERVAL = 3000; // 3s
     public static int DEFAULT_SHARDS = 4;  // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
