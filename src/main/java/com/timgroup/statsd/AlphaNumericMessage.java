@@ -5,10 +5,11 @@ import java.util.Objects;
 
 public abstract class AlphaNumericMessage extends Message {
 
-    protected String value;
+    protected final String value;
 
-    protected AlphaNumericMessage(Message.Type type) {
+    protected AlphaNumericMessage(Message.Type type, String value) {
         super(type);
+        this.value = value;
     }
 
     protected AlphaNumericMessage(String aspect, Message.Type type, String value, String[] tags) {
@@ -39,10 +40,7 @@ public abstract class AlphaNumericMessage extends Message {
 
         // cache it
         if (this.hash == null) {
-            super.hashCode();  // will instantiate hash if null
-            if (this.value != null) {
-                this.hash += Objects.hash(this.value);
-            }
+            this.hash = super.hashCode() * HASH_MULTIPLIER + Objects.hash(this.value);
         }
 
         return this.hash;

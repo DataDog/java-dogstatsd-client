@@ -1646,7 +1646,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordEvent(final Event event, final String... eventTags) {
-        statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT) {
+        statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "") {
             @Override public void writeTo(StringBuilder builder) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
@@ -1681,7 +1681,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
-        statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK) {
+        statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "") {
             @Override public void writeTo(StringBuilder sb) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
                 sb.append(Message.Type.SERVICE_CHECK.toString())

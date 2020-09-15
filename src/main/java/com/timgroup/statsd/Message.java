@@ -10,6 +10,10 @@ public abstract class Message {
     protected boolean done;
     protected Integer hash;
 
+    // borrowed from Array.hashCode implementation:
+    // https://github.com/openjdk/jdk11/blob/master/src/java.base/share/classes/java/util/Arrays.java#L4454-L4465
+    protected final int HASH_MULTIPLIER = 31;
+
     public enum Type {
         GAUGE("g"),
         COUNT("c"),
@@ -116,11 +120,11 @@ public abstract class Message {
     public int hashCode() {
         // cache it
         if (this.hash == null) {
-            this.hash = new Integer(Objects.hash(this.aspect));
+            this.hash = new Integer(Objects.hash(this.aspect)) * HASH_MULTIPLIER;
             this.hash += Objects.hash(this.tags);
         }
 
-        return this.hash.intValue();
+        return this.hash;
     }
 
     /**
