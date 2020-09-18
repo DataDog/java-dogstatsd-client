@@ -57,7 +57,9 @@ class DummyStatsDServer {
 
                             packet.flip();
                             for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
-                                messagesReceived.add(msg.trim());
+                                synchronized(messagesReceived) {
+                                    messagesReceived.add(msg.trim());
+                                }
                             }
                         } catch (IOException e) {
                         }
@@ -70,16 +72,37 @@ class DummyStatsDServer {
     }
 
     public void waitForMessage() {
-        while (messagesReceived.isEmpty()) {
+        waitForMessage(null);
+    }
+
+    public void waitForMessage(String prefix) {
+        boolean done = false;
+
+        while (!done) {
             try {
-                Thread.sleep(50L);
+                synchronized(messagesReceived) {
+                    done = !messagesReceived.isEmpty();
+                }
+
+                if (done && prefix != null && prefix != "") {
+                    done = false;
+                    List<String> messages = this.messagesReceived();
+                    for (String message : messages) {
+                        if(message.contains(prefix)) {
+                            return;
+                        }
+                    }
+                }
+                Thread.sleep(100L);
             } catch (InterruptedException e) {
             }
         }
     }
 
     public List<String> messagesReceived() {
-        return new ArrayList<String>(messagesReceived);
+        synchronized(messagesReceived) {
+            return new ArrayList<String>(messagesReceived);
+        }
     }
 
     public int packetsReceived() {

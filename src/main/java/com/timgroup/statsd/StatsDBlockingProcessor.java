@@ -17,8 +17,9 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
         @Override
         public void run() {
-            boolean empty;
             ByteBuffer sendBuffer;
+            boolean empty = true;
+            boolean emptyHighPrio = true;
 
             try {
                 sendBuffer = bufferPool.borrow();
@@ -27,12 +28,24 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
-            while (!(shutdown && messages.isEmpty())) {
+            aggregator.start();
+
+            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
 
                 try {
 
-                    final Message message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                    final Message message;
+                    if (!emptyHighPrio) {
+                        message = highPrioMessages.poll();
+                    } else {
+                        message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                    }
+
                     if (message != null) {
+
+                        if (aggregator.aggregateMessage(message)) {
+                            continue;
+                        }
 
                         builder.setLength(0);
 
@@ -78,16 +91,17 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
+            aggregator.stop();
             endSignal.countDown();
         }
 
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
-            throws Exception {
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 

@@ -25,9 +25,12 @@ public class NonBlockingStatsDClientBuilder {
     public int maxPacketSizeBytes = NonBlockingStatsDClient.DEFAULT_MAX_PACKET_SIZE_BYTES;
     public int processorWorkers = NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
+    public boolean blocking = NonBlockingStatsDClient.DEFAULT_BLOCKING;
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
+    public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
-    public boolean blocking;
+    public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
+    public int aggregationShards = StatsDAggregator.DEFAULT_SHARDS;
 
     public Callable<SocketAddress> addressLookup;
     public Callable<SocketAddress> telemetryAddressLookup;
@@ -137,8 +140,23 @@ public class NonBlockingStatsDClientBuilder {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableAggregation(boolean val) {
+        enableAggregation = val;
+        return this;
+    }
+
     public NonBlockingStatsDClientBuilder telemetryFlushInterval(int val) {
         telemetryFlushInterval = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder aggregationFlushInterval(int val) {
+        aggregationFlushInterval = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder aggregationShards(int val) {
+        aggregationShards = val;
         return this;
     }
 
@@ -165,7 +183,8 @@ public class NonBlockingStatsDClientBuilder {
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                 lookup, telemetryLookup, timeout, socketBufferSize, maxPacketSizeBytes,
                 entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
-                enableTelemetry, telemetryFlushInterval);
+                enableTelemetry, telemetryFlushInterval,
+                (enableAggregation ? aggregationFlushInterval : 0), aggregationShards);
     }
 
     /**

@@ -11,7 +11,6 @@ public class Telemetry {
     public static int DEFAULT_FLUSH_INTERVAL = 10000; // 10s
 
     protected final AtomicInteger metricsSent = new AtomicInteger(0);
-
     protected final AtomicInteger eventsSent = new AtomicInteger(0);
     protected final AtomicInteger serviceChecksSent = new AtomicInteger(0);
     protected final AtomicInteger bytesSent = new AtomicInteger(0);
@@ -19,6 +18,7 @@ public class Telemetry {
     protected final AtomicInteger packetsSent = new AtomicInteger(0);
     protected final AtomicInteger packetsDropped = new AtomicInteger(0);
     protected final AtomicInteger packetsDroppedQueue = new AtomicInteger(0);
+    protected final AtomicInteger aggregatedContexts = new AtomicInteger(0);
 
     protected final String metricsSentMetric = "datadog.dogstatsd.client.metrics";
     protected final String eventsSentMetric = "datadog.dogstatsd.client.events";
@@ -28,6 +28,7 @@ public class Telemetry {
     protected final String packetsSentMetric = "datadog.dogstatsd.client.packets_sent";
     protected final String packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped";
     protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
+    protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
 
     protected String tags;
 
@@ -47,16 +48,13 @@ public class Telemetry {
         }
     }
 
-    class TelemetryMessage implements Message {
-        private final String aspect;
-        private final String type = "c";  // all counters
-        private final String tags;  // pre-baked comma separeated tags string
-        private final int value;
+    class TelemetryMessage extends NumericMessage<Integer> {
+        private final String tagsString;  // pre-baked comma separeated tags string
 
-        protected TelemetryMessage(String metric, int value, String tags) {
-            this.aspect = metric;
-            this.tags = tags;
-            this.value = value;
+        protected TelemetryMessage(String metric, Integer value, String tags) {
+            super(metric, Message.Type.COUNT, value, null);
+            this.tagsString = tags;
+            this.done = true;  // dont aggregate telemetry messages for now
         }
 
         @Override
@@ -66,7 +64,7 @@ public class Telemetry {
                 .append(this.value)
                 .append('|')
                 .append(type)
-                .append(tags);  // already has the statsd separator baked-in
+                .append(tagsString);  // already has the statsd separator baked-in
         }
     }
 
@@ -114,6 +112,7 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.packetsSentMetric, this.packetsSent.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
+        processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
     }
 
     public void incrMetricsSent(final int value) {
@@ -148,6 +147,10 @@ public class Telemetry {
         this.packetsDroppedQueue.addAndGet(value);
     }
 
+    public void incrAggregatedContexts(final int value) {
+        this.aggregatedContexts.addAndGet(value);
+    }
+
     /**
      * Resets all counter in the telemetry (this is useful for tests purposes).
      */
@@ -160,6 +163,7 @@ public class Telemetry {
         this.packetsSent.set(0);
         this.packetsDropped.set(0);
         this.packetsDroppedQueue.set(0);
+        this.aggregatedContexts.set(0);
     }
 
     /**

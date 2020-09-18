@@ -10,8 +10,6 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -31,12 +29,16 @@ public abstract class StatsDProcessor implements Runnable {
     protected final StatsDClientErrorHandler handler;
 
     protected final BufferPool bufferPool;
+    protected final Queue<Message> highPrioMessages; // FIFO queue for high priority messages
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
 
     protected final int workers;
     protected final int qcapacity;
+
+    protected StatsDAggregator aggregator;
+    protected volatile Telemetry telemetry;
 
     protected volatile boolean shutdown;
 
@@ -65,9 +67,9 @@ public abstract class StatsDProcessor implements Runnable {
         }
     }
 
-
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval, final int aggregatorShards)
             throws Exception {
 
         this.handler = handler;
@@ -86,8 +88,10 @@ public abstract class StatsDProcessor implements Runnable {
         });
 
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
+        this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
+        this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
     }
 
     StatsDProcessor(final StatsDProcessor processor)
@@ -107,14 +111,28 @@ public abstract class StatsDProcessor implements Runnable {
                 return result;
             }
         });
+
         this.bufferPool = new BufferPool(processor.bufferPool);
+        this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
         this.endSignal = new CountDownLatch(this.workers);
+        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getShardGranularity(),
+                processor.getAggregator().getFlushInterval());
     }
 
     protected abstract ProcessingTask createProcessingTask();
 
     protected abstract boolean send(final Message message);
+
+    protected boolean sendHighPrio(final Message message) {
+        if (!shutdown) {
+            // TODO: unbounded for now...
+            highPrioMessages.offer(message);
+            return true;
+        }
+
+        return false;
+    }
 
     public BufferPool getBufferPool() {
         return this.bufferPool;
@@ -144,6 +162,18 @@ public abstract class StatsDProcessor implements Runnable {
                 // NOTHING
             }
         }
+    }
+
+    public StatsDAggregator getAggregator() {
+        return this.aggregator;
+    }
+
+    public void setTelemetry(final Telemetry telemetry) {
+        this.telemetry = telemetry;
+    }
+
+    public Telemetry getTelemetry() {
+        return telemetry;
     }
 
     boolean isShutdown() {

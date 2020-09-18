@@ -18,8 +18,9 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
         @Override
         public void run() {
-            boolean empty;
             ByteBuffer sendBuffer;
+            boolean empty = true;
+            boolean emptyHighPrio = true;
 
             try {
                 sendBuffer = bufferPool.borrow();
@@ -28,10 +29,13 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
-            while (!((empty = messages.isEmpty()) && shutdown)) {
+            aggregator.start();
+
+            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
 
                 try {
-                    if (empty) {
+
+                    if (emptyHighPrio && empty) {
                         Thread.sleep(WAIT_SLEEP_MS);
                         continue;
                     }
@@ -39,10 +43,23 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     if (Thread.interrupted()) {
                         return;
                     }
-                    final Message message = messages.poll();
+
+                    final Message message;
+                    if (!emptyHighPrio) {
+                        message = highPrioMessages.poll();
+                    } else {
+                        message = messages.poll();
+                    }
+
                     if (message != null) {
 
                         qsize.decrementAndGet();
+
+                        // TODO: Aggregate and fix, there's some duplicate logic
+                        if (aggregator.aggregateMessage(message)) {
+                            continue;
+                        }
+
                         builder.setLength(0);
 
                         message.writeTo(builder);
@@ -88,15 +105,17 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
+            aggregator.stop();
             endSignal.countDown();
         }
     }
 
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers)
+            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int aggregatorFlushInterval, final int aggregatorShards)
             throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
     }
@@ -123,9 +142,5 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         }
 
         return false;
-    }
-
-    void shutdown() {
-        shutdown = true;
     }
 }

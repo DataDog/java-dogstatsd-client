@@ -8,3 +8,9 @@ build
 /.settings/
 *.swp
 *.swo
+
+# jenv
+.java-version
+
+# rbenv for pimpmychangelog
+.ruby-version
