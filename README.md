@@ -106,7 +106,7 @@ You can just enable aggregation by calling the `enableAggregation(bool)` method 
 
 There are two clent-side aggregation knobs available:
 - `aggregationShards(int)`: determines the number of shards in the aggregator, this
- feature is aimed at mitigating the effects of map locking in highly concurrent scenarios.
+ feature is aimed at mitigating the effects of map locking in highly concurrent scenarios. Defaults to 4.
 - `aggregationFlushInterval(int)`: sets the period of time in milliseconds in which the
 aggregator will flush its metrics into the sender. Defaults to 3000 milliseconds.
 
