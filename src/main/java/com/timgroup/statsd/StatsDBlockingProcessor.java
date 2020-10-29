@@ -107,10 +107,12 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, lockShardGrain, aggregatorFlushInterval, aggregatorShards);
+
         this.messages = new ArrayBlockingQueue[lockShardGrain];
         for (int i = 0 ; i < lockShardGrain ; i++) {
             this.messages[i] = new ArrayBlockingQueue<Message>(queueSize);
         }
+
         this.processorWorkQueue = new ArrayBlockingQueue[workers];
         for (int i = 0 ; i < workers ; i++) {
             this.processorWorkQueue[i] = new ArrayBlockingQueue<Integer>(queueSize);
@@ -126,7 +128,16 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             throws Exception {
 
         super(processor);
-        this.messages = new ArrayBlockingQueue<>(processor.getQcapacity());
+
+        this.messages = new ArrayBlockingQueue[lockShardGrain];
+        for (int i = 0 ; i < lockShardGrain ; i++) {
+            this.messages[i] = new ArrayBlockingQueue<Message>(getQcapacity());
+        }
+
+        this.processorWorkQueue = new ArrayBlockingQueue[workers];
+        for (int i = 0 ; i < workers ; i++) {
+            this.processorWorkQueue[i] = new ArrayBlockingQueue<Integer>(getQcapacity());
+        }
     }
 
     @Override

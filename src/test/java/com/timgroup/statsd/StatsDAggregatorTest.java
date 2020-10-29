@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -81,22 +82,42 @@ public class StatsDAggregatorTest {
     // fakeProcessor store messages from the telemetry only
     public static class FakeProcessor extends StatsDProcessor {
 
-        private final Queue<Message> messages;
+        private final Queue<Message>[] messages;
+        private final Queue<Integer>[] processorWorkQueue;
+        private final AtomicInteger[] qsize;  // qSize will not reflect actual size, but a close estimate.
         private final AtomicInteger messageSent = new AtomicInteger(0);
         private final AtomicInteger messageAggregated = new AtomicInteger(0);
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0);
-            this.messages = new ConcurrentLinkedQueue<>();
+            super(50, handler, 0, 1, 1, 1, 0, StatsDAggregator.DEFAULT_SHARDS);
+
+            // 1 queue (lockShardGrain = 1)
+            this.qsize = new AtomicInteger[lockShardGrain];
+            this.messages = new ArrayBlockingQueue[lockShardGrain];
+            for (int i = 0 ; i < lockShardGrain ; i++) {
+                this.qsize[i] = new AtomicInteger();
+                this.messages[i] = new ArrayBlockingQueue<Message>(getQcapacity());
+                this.qsize[i].set(0);
+            }
+
+            // 1 worker
+            this.processorWorkQueue = new ArrayBlockingQueue[workers];
+            for (int i = 0 ; i < workers ; i++) {
+                this.processorWorkQueue[i] = new ArrayBlockingQueue<Integer>(getQcapacity());
+            }
         }
 
-
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
+
+            public FakeProcessingTask(int id) {
+                super(id);
+            }
+
             @Override
             public void run() {
 
                 while (!shutdown) {
-                    final Message message = messages.poll();
+                    final Message message = messages[0].poll();
                     if (message == null) {
 
                         try{
@@ -106,6 +127,7 @@ public class StatsDAggregatorTest {
                         continue;
                     }
 
+                    qsize[0].decrementAndGet();
                     if (aggregator.aggregateMessage(message)) {
                         messageAggregated.incrementAndGet();
                         continue;
@@ -118,23 +140,38 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected StatsDProcessor.ProcessingTask createProcessingTask() {
-            return new FakeProcessingTask();
+        protected StatsDProcessor.ProcessingTask createProcessingTask(int id) {
+            return new FakeProcessingTask(id);
         }
 
         @Override
         public boolean send(final Message msg) {
-            messages.offer(msg);
-            return true;
+        if (!shutdown) {
+            int threadId = getThreadId();
+            int shard = threadId % lockShardGrain;
+            int processQueue = threadId % workers;
+
+            if (qsize[shard].get() < qcapacity) {
+                messages[shard].offer(msg);
+                qsize[shard].incrementAndGet();
+                processorWorkQueue[processQueue].offer(shard);
+                return true;
+            }
         }
 
-        public Queue<Message> getMessages() {
-            return messages;
+        return false;
+        }
+
+        public Queue<Message> getMessages(int id) {
+            return messages[id];
         }
 
         public void clear() {
             try {
-                messages.clear();
+
+                for (int i = 0 ; i < lockShardGrain ; i++) {
+                   messages[i].clear();
+                }
                 highPrioMessages.clear();
             } catch (Exception e) {}
         }
@@ -181,7 +218,7 @@ public class StatsDAggregatorTest {
             fakeProcessor.send(new FakeAlphaMessage("some.set", Message.Type.SET, "value"));
         }
 
-        waitForQueueSize(fakeProcessor.messages, 0);
+        waitForQueueSize(fakeProcessor.messages[0], 0);
 
         // 10 gauges, 10 counts, 10 sets
         assertEquals(30, fakeProcessor.messageAggregated.get());
@@ -206,7 +243,7 @@ public class StatsDAggregatorTest {
             fakeProcessor.send(gauge);
         }
 
-        waitForQueueSize(fakeProcessor.messages, 0);
+        waitForQueueSize(fakeProcessor.messages[0], 0);
 
         for (int i=0 ; i<StatsDAggregator.DEFAULT_SHARDS ; i++) {
             Map<Message, Message> map = fakeProcessor.aggregator.aggregateMetrics.get(i);

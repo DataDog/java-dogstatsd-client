@@ -116,6 +116,7 @@ public abstract class StatsDProcessor implements Runnable {
 
         this.handler = processor.handler;
         this.workers = processor.workers;
+        this.lockShardGrain = processor.lockShardGrain;
         this.qcapacity = processor.getQcapacity();
 
         this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {

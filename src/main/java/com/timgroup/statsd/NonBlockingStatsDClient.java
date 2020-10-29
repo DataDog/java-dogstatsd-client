@@ -324,7 +324,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false, 0, aggregationShards);
+                        poolSize, 1, 1, false, 0, aggregationShards);
             }
 
             this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
@@ -1001,7 +1001,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         this(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                 bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
+                DEFAULT_LOCK_SHARD_GRAIN, blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,

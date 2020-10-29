@@ -17,8 +17,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
-        private final int processorQueueId;
-
         public ProcessingTask(int id) {
             super(id);
         }
@@ -28,6 +26,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
             ByteBuffer sendBuffer;
             boolean empty = true;
             boolean emptyHighPrio = true;
+            int messageQueueIdx = 0;
 
             try {
                 sendBuffer = bufferPool.borrow();
@@ -57,7 +56,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                         message = highPrioMessages.poll();
                     } else {
 
-                        final int messageQueueIdx = processorWorkQueue[this.processorQueueId].poll();
+                        messageQueueIdx = processorWorkQueue[this.processorQueueId].poll();
                         message = messages[messageQueueIdx].poll();
                     }
 
@@ -126,7 +125,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
             final int aggregatorShards) throws Exception {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, lockShardGrain, aggregatorFlushInterval, aggregatorShards);
-        this.qsize = new AtomicInteger(0);
 
         this.qsize = new AtomicInteger[lockShardGrain];
         this.messages = new ConcurrentLinkedQueue[lockShardGrain];
@@ -149,8 +147,19 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     StatsDNonBlockingProcessor(final StatsDNonBlockingProcessor processor) throws Exception {
         super(processor);
-        this.qsize = new AtomicInteger(0);
-        this.messages = new ConcurrentLinkedQueue<>();
+
+        this.qsize = new AtomicInteger[lockShardGrain];
+        this.messages = new ConcurrentLinkedQueue[lockShardGrain];
+        for (int i = 0 ; i < lockShardGrain ; i++) {
+            this.qsize[i] = new AtomicInteger();
+            this.messages[i] = new ConcurrentLinkedQueue<Message>();
+            this.qsize[i].set(0);
+        }
+
+        this.processorWorkQueue = new ConcurrentLinkedQueue[workers];
+        for (int i = 0 ; i < workers ; i++) {
+            this.processorWorkQueue[i] = new ConcurrentLinkedQueue<Integer>();
+        }
     }
 
     @Override
