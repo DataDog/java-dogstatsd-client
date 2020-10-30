@@ -98,6 +98,28 @@ what could be perceived as a loss of resolution by resorting to aggregation on t
 in the Datadog Agent already aggregates messages over a certain flush period, therefore so long as the flush interval configured configured on the client side is smaller
 than said flush interval on the server side there should no loss in resolution.
 
+### Configuration 
+
+Enabling aggregation is simple, you just need to set the appropriate options with the client builder.
+
+You can just enable aggregation by calling the `enableAggregation(bool)` method on the builder. 
+
+There are two clent-side aggregation knobs available:
+- `aggregationShards(int)`: determines the number of shards in the aggregator, this
+ feature is aimed at mitigating the effects of map locking in highly concurrent scenarios. Defaults to 4.
+- `aggregationFlushInterval(int)`: sets the period of time in milliseconds in which the
+aggregator will flush its metrics into the sender. Defaults to 3000 milliseconds.
+
+```java
+StatsDClient client = new NonBlockingStatsDClientBuilder()
+    .hostname("localhost")
+    .port(8125)
+    .enableAggregation(true)
+    .aggregationFlushInterval(3000)  // optional: in milliseconds
+    .aggregationShards(8)  // optional: defaults to 4 
+    .build();
+```
+
 ## Usage
 
 In order to use DogStatsD metrics, events, and Service Checks the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=java).
