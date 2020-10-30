@@ -111,9 +111,7 @@ There are two clent-side aggregation knobs available:
 aggregator will flush its metrics into the sender. Defaults to 3000 milliseconds.
 
 ```java
-
 StatsDClient client = new NonBlockingStatsDClientBuilder()
-    .prefix("statsd")
     .hostname("localhost")
     .port(8125)
     .enableAggregation(true)
