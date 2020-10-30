@@ -35,7 +35,8 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             aggregator.start();
 
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && processorWorkQueue[this.processorQueueId].isEmpty() && shutdown)) {
+            while (!((emptyHighPrio = highPrioMessages.isEmpty())
+                        && processorWorkQueue[this.processorQueueId].isEmpty() && shutdown)) {
 
                 try {
 
@@ -106,7 +107,8 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             final int maxPacketSizeBytes, final int poolSize, final int workers, final int lockShardGrain,
             final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, lockShardGrain, aggregatorFlushInterval, aggregatorShards);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
+                lockShardGrain, aggregatorFlushInterval, aggregatorShards);
 
         this.messages = new ArrayBlockingQueue[lockShardGrain];
         for (int i = 0 ; i < lockShardGrain ; i++) {
