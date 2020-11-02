@@ -54,6 +54,10 @@ public class BufferPool {
         return size;
     }
 
+    int getBufferSize() {
+        return bufferSize;
+    }
+
     int available() {
         return pool.size();
     }

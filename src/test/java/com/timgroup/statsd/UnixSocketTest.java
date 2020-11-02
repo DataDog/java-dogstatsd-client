@@ -14,6 +14,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
+import static org.junit.Assert.assertEquals;
 
 public class UnixSocketTest implements StatsDClientErrorHandler {
     private static File tmpFolder;
@@ -60,6 +61,11 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
     public void stop() throws Exception {
         client.stop();
         server.close();
+    }
+
+    @Test
+    public void assert_default_uds_size() throws Exception {
+        assertEquals(client.statsDProcessor.bufferPool.getBufferSize(), NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
     }
 
     @Test(timeout = 5000L)

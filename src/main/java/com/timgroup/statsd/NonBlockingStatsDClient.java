@@ -83,7 +83,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    public static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
+    public static final int DEFAULT_UDP_MAX_PACKET_SIZE_BYTES = 1432;
+    public static final int DEFAULT_UDS_MAX_PACKET_SIZE_BYTES = 8192;
     public static final int DEFAULT_QUEUE_SIZE = 4096;
     public static final int DEFAULT_POOL_SIZE = 512;
     public static final int DEFAULT_PROCESSOR_WORKERS = 1;
