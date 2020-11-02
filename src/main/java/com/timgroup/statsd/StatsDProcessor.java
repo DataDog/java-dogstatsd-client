@@ -26,6 +26,9 @@ public abstract class StatsDProcessor implements Runnable {
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
     protected static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
 
+    // Atomic integer containing the next thread ID to be assigned
+    private static final AtomicInteger nextId = new AtomicInteger(0);
+
     protected final StatsDClientErrorHandler handler;
 
     protected final BufferPool bufferPool;
@@ -33,9 +36,16 @@ public abstract class StatsDProcessor implements Runnable {
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
+    protected static final ThreadLocal<Integer> threadId = new ThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() {
+            return nextId.getAndIncrement();
+        }
+    };
 
     protected final int workers;
     protected final int qcapacity;
+    protected final int lockShardGrain;
 
     protected StatsDAggregator aggregator;
     protected volatile Telemetry telemetry;
@@ -48,6 +58,11 @@ public abstract class StatsDProcessor implements Runnable {
         protected final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
                 .onMalformedInput(CodingErrorAction.REPLACE)
                 .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        protected final int processorQueueId;
+
+        public ProcessingTask(int id) {
+            this.processorQueueId = id;
+        }
 
         public abstract void run();
 
@@ -69,12 +84,14 @@ public abstract class StatsDProcessor implements Runnable {
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards)
+            final int lockShardGrain, final int aggregatorFlushInterval,
+            final int aggregatorShards)
             throws Exception {
 
         this.handler = handler;
         this.workers = workers;
         this.qcapacity = queueSize;
+        this.lockShardGrain = lockShardGrain;
 
         this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
             final ThreadFactory delegate = Executors.defaultThreadFactory();
@@ -99,6 +116,7 @@ public abstract class StatsDProcessor implements Runnable {
 
         this.handler = processor.handler;
         this.workers = processor.workers;
+        this.lockShardGrain = processor.lockShardGrain;
         this.qcapacity = processor.getQcapacity();
 
         this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
@@ -120,7 +138,7 @@ public abstract class StatsDProcessor implements Runnable {
                 processor.getAggregator().getFlushInterval());
     }
 
-    protected abstract ProcessingTask createProcessingTask();
+    protected abstract ProcessingTask createProcessingTask(int id);
 
     protected abstract boolean send(final Message message);
 
@@ -146,11 +164,16 @@ public abstract class StatsDProcessor implements Runnable {
         return this.qcapacity;
     }
 
+    // Returns the current thread's unique ID, assigning it if necessary
+    public static int getThreadId() {
+        return threadId.get().intValue();
+    }
+
     @Override
     public void run() {
 
         for (int i = 0 ; i < workers ; i++) {
-            executor.submit(createProcessingTask());
+            executor.submit(createProcessingTask(i));
         }
 
         boolean done = false;

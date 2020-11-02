@@ -11,9 +11,14 @@ import java.util.concurrent.TimeUnit;
 
 public class StatsDBlockingProcessor extends StatsDProcessor {
 
-    private final BlockingQueue<Message> messages;
+    private final BlockingQueue<Message>[] messages;
+    private final BlockingQueue<Integer>[] processorWorkQueue;
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
+
+        public ProcessingTask(int id) {
+            super(id);
+        }
 
         @Override
         public void run() {
@@ -30,7 +35,8 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             aggregator.start();
 
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
+            while (!((emptyHighPrio = highPrioMessages.isEmpty())
+                        && processorWorkQueue[this.processorQueueId].isEmpty() && shutdown)) {
 
                 try {
 
@@ -38,7 +44,8 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                     if (!emptyHighPrio) {
                         message = highPrioMessages.poll();
                     } else {
-                        message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                        final int messageQueueIdx = processorWorkQueue[this.processorQueueId].poll();
+                        message = messages[messageQueueIdx].poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
                     }
 
                     if (message != null) {
@@ -74,7 +81,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                             writeBuilderToSendBuffer(sendBuffer);
                         }
 
-                        if (null == messages.peek()) {
+                        if (null == processorWorkQueue[this.processorQueueId].peek()) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
                         }
@@ -94,34 +101,57 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
             aggregator.stop();
             endSignal.countDown();
         }
-
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers,
+            final int maxPacketSizeBytes, final int poolSize, final int workers, final int lockShardGrain,
             final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
-        this.messages = new ArrayBlockingQueue<>(queueSize);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
+                lockShardGrain, aggregatorFlushInterval, aggregatorShards);
+
+        this.messages = new ArrayBlockingQueue[lockShardGrain];
+        for (int i = 0 ; i < lockShardGrain ; i++) {
+            this.messages[i] = new ArrayBlockingQueue<Message>(queueSize);
+        }
+
+        this.processorWorkQueue = new ArrayBlockingQueue[workers];
+        for (int i = 0 ; i < workers ; i++) {
+            this.processorWorkQueue[i] = new ArrayBlockingQueue<Integer>(queueSize);
+        }
     }
 
     @Override
-    protected ProcessingTask createProcessingTask() {
-        return new ProcessingTask();
+    protected ProcessingTask createProcessingTask(int id) {
+        return new ProcessingTask(id);
     }
 
     StatsDBlockingProcessor(final StatsDBlockingProcessor processor)
             throws Exception {
 
         super(processor);
-        this.messages = new ArrayBlockingQueue<>(processor.getQcapacity());
+
+        this.messages = new ArrayBlockingQueue[lockShardGrain];
+        for (int i = 0 ; i < lockShardGrain ; i++) {
+            this.messages[i] = new ArrayBlockingQueue<Message>(getQcapacity());
+        }
+
+        this.processorWorkQueue = new ArrayBlockingQueue[workers];
+        for (int i = 0 ; i < workers ; i++) {
+            this.processorWorkQueue[i] = new ArrayBlockingQueue<Integer>(getQcapacity());
+        }
     }
 
     @Override
     protected boolean send(final Message message) {
         try {
+            int threadId = getThreadId();
+            int shard = threadId % lockShardGrain;
+            int processQueue = threadId % workers;
+
             if (!shutdown) {
-                messages.put(message);
+                messages[shard].put(message);
+                processorWorkQueue[processQueue].put(shard);
                 return true;
             }
         } catch (InterruptedException e) {

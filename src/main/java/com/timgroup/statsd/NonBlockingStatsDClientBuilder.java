@@ -16,16 +16,17 @@ public class NonBlockingStatsDClientBuilder {
      * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
      */
 
+    public int maxPacketSizeBytes = 0;
     public int port = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
     public int telemetryPort = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
     public int queueSize = NonBlockingStatsDClient.DEFAULT_QUEUE_SIZE;
     public int timeout = NonBlockingStatsDClient.SOCKET_TIMEOUT_MS;
     public int bufferPoolSize = NonBlockingStatsDClient.DEFAULT_POOL_SIZE;
     public int socketBufferSize = NonBlockingStatsDClient.SOCKET_BUFFER_BYTES;
-    public int maxPacketSizeBytes = NonBlockingStatsDClient.DEFAULT_MAX_PACKET_SIZE_BYTES;
     public int processorWorkers = NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
     public boolean blocking = NonBlockingStatsDClient.DEFAULT_BLOCKING;
+    public int lockShardGrain = NonBlockingStatsDClient.DEFAULT_LOCK_SHARD_GRAIN;
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
@@ -87,6 +88,11 @@ public class NonBlockingStatsDClientBuilder {
 
     public NonBlockingStatsDClientBuilder senderWorkers(int val) {
         senderWorkers = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder lockShardGrain(int val) {
+        lockShardGrain = val;
         return this;
     }
 
@@ -165,12 +171,20 @@ public class NonBlockingStatsDClientBuilder {
      * @return the built NonBlockingStatsDClient.
      */
     public NonBlockingStatsDClient build() throws StatsDClientException {
+
+        int packetSize = maxPacketSizeBytes;
         Callable<SocketAddress> lookup = addressLookup;
         Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
 
         if (lookup == null) {
             lookup = staticStatsDAddressResolution(hostname, port);
         }
+
+        if (packetSize == 0) {
+            packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
+                NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
+        }
+
 
         if (telemetryLookup == null) {
             if (telemetryHostname == null) {
@@ -181,9 +195,9 @@ public class NonBlockingStatsDClientBuilder {
         }
 
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                lookup, telemetryLookup, timeout, socketBufferSize, maxPacketSizeBytes,
-                entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
-                enableTelemetry, telemetryFlushInterval,
+                lookup, telemetryLookup, timeout, socketBufferSize, packetSize,
+                entityID, bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain,
+                blocking, enableTelemetry, telemetryFlushInterval,
                 (enableAggregation ? aggregationFlushInterval : 0), aggregationShards);
     }
 

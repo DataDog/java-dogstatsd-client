@@ -31,11 +31,16 @@ public class TelemetryTest {
         public final List<Message> messages = new ArrayList<>();
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0);
+            super(0, handler, 0, 1, 1, 1, 0, 0);
         }
 
 
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
+
+            public FakeProcessingTask(int id) {
+                super(id);
+            }
+
             @Override
             public void run() {}
         }
@@ -50,8 +55,8 @@ public class TelemetryTest {
         public void run(){}
 
         @Override
-        protected ProcessingTask createProcessingTask() {
-            return new FakeProcessingTask();
+        protected ProcessingTask createProcessingTask(int id) {
+            return new FakeProcessingTask(id);
         }
 
         public List<Message> getMessages() {
@@ -82,12 +87,12 @@ public class TelemetryTest {
                                        final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
                                        final int timeout, final int bufferSize, final int maxPacketSizeBytes,
                                        String entityID, final int poolSize, final int processorWorkers,
-                                       final int senderWorkers, boolean blocking, final boolean enableTelemetry,
-                                       final int telemetryFlushInterval)
+                                       final int senderWorkers, final int lockShardGrain, boolean blocking,
+                                       final boolean enableTelemetry, final int telemetryFlushInterval)
                 throws StatsDClientException {
                 super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                         bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                        blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
+                        lockShardGrain, blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
         }
     };
 
@@ -95,16 +100,23 @@ public class TelemetryTest {
 
         @Override
         public StatsDNonBlockingTelemetry build() throws StatsDClientException {
+
+            int packetSize = maxPacketSizeBytes;
+            if (packetSize == 0) {
+                packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
+                    NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
+            }
+
             if (addressLookup != null) {
                 return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID,
-                        bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                        telemetryFlushInterval);
+                        addressLookup, timeout, socketBufferSize, packetSize, entityID,
+                        bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain, blocking,
+                        enableTelemetry, telemetryFlushInterval);
             } else {
                 return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
-                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
-                        entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                        telemetryFlushInterval);
+                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
+                        entityID, bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain, blocking,
+                        enableTelemetry, telemetryFlushInterval);
             }
         }
     }
@@ -346,6 +358,8 @@ public class TelemetryTest {
     @Test(timeout = 5000L)
     public void telemetry_droppedData() throws Exception {
         clientError.telemetry.reset();
+
+        assertThat(clientError.statsDProcessor.bufferPool.getBufferSize(), equalTo(8192));
 
         clientError.gauge("gauge", 24);
 

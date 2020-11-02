@@ -83,12 +83,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    public static final int DEFAULT_MAX_PACKET_SIZE_BYTES = 1400;
+    public static final int DEFAULT_UDP_MAX_PACKET_SIZE_BYTES = 1432;
+    public static final int DEFAULT_UDS_MAX_PACKET_SIZE_BYTES = 8192;
     public static final int DEFAULT_QUEUE_SIZE = 4096;
     public static final int DEFAULT_POOL_SIZE = 512;
     public static final int DEFAULT_PROCESSOR_WORKERS = 1;
     public static final int DEFAULT_SENDER_WORKERS = 1;
     public static final int DEFAULT_DOGSTATSD_PORT = 8125;
+    public static final int DEFAULT_LOCK_SHARD_GRAIN = 4;
     public static final int SOCKET_TIMEOUT_MS = 100;
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
@@ -213,6 +215,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     The number of processor worker threads assembling buffers for submission.
      * @param senderWorkers
      *     The number of sender worker threads submitting buffers to the socket.
+     * @param lockShardGrain
+     *     The granularity for the lock sharding - sharding is based of thread id
+     *     so value should not be greater than the application thread count..
      * @param blocking
      *     Blocking or non-blocking implementation for statsd message queue.
      * @param enableTelemetry
@@ -230,7 +235,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
             Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
-            final int senderWorkers, boolean blocking, final boolean enableTelemetry,
+            final int senderWorkers, final int lockShardGrain, boolean blocking, final boolean enableTelemetry,
             final int telemetryFlushInterval, final int aggregationFlushInterval, final int aggregationShards)
             throws StatsDClientException {
         if ((prefix != null) && (!prefix.isEmpty())) {
@@ -288,7 +293,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
 
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
-                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards);
+                    processorWorkers, lockShardGrain, blocking, aggregationFlushInterval, aggregationShards);
             telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
@@ -320,7 +325,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false, 0, aggregationShards);
+                        poolSize, 1, 1, false, 0, aggregationShards);
             }
 
             this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
@@ -997,18 +1002,18 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         this(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                 bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
+                DEFAULT_LOCK_SHARD_GRAIN, blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards) throws Exception {
+            final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final int lockShardGrain,
+            final boolean blocking, final int aggregationFlushInterval, final int aggregationShards) throws Exception {
         if (blocking) {
             return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards);
+                    workers, lockShardGrain, aggregationFlushInterval, aggregationShards);
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards);
+                    workers, lockShardGrain, aggregationFlushInterval, aggregationShards);
         }
     }
 
