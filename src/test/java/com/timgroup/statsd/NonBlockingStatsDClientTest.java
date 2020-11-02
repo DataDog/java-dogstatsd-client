@@ -61,6 +61,11 @@ public class NonBlockingStatsDClientTest {
         server.clear();
     }
 
+    @Test
+    public void assert_default_udp_size() throws Exception {
+        assertEquals(client.statsDProcessor.bufferPool.getBufferSize(), NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES);
+    }
+
     @Test(timeout = 5000L)
     public void sends_counter_value_to_statsd() throws Exception {
 
@@ -1263,13 +1268,19 @@ public class NonBlockingStatsDClientTest {
 
         @Override
         public SlowStatsDNonBlockingStatsDClient build() throws StatsDClientException {
+            int packetSize = maxPacketSizeBytes;
+            if (packetSize == 0) {
+                packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
+                    NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
+            }
+
             if (addressLookup != null) {
                 return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID, bufferPoolSize,
+                        addressLookup, timeout, socketBufferSize, packetSize, entityID, bufferPoolSize,
                         processorWorkers, senderWorkers, lockShardGrain, blocking);
             } else {
                 return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
+                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
                         entityID, bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain, blocking);
             }
         }

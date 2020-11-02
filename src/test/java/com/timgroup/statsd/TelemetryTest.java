@@ -100,14 +100,21 @@ public class TelemetryTest {
 
         @Override
         public StatsDNonBlockingTelemetry build() throws StatsDClientException {
+
+            int packetSize = maxPacketSizeBytes;
+            if (packetSize == 0) {
+                packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
+                    NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
+            }
+
             if (addressLookup != null) {
                 return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, maxPacketSizeBytes, entityID,
+                        addressLookup, timeout, socketBufferSize, packetSize, entityID,
                         bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain, blocking,
                         enableTelemetry, telemetryFlushInterval);
             } else {
                 return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
-                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, maxPacketSizeBytes,
+                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
                         entityID, bufferPoolSize, processorWorkers, senderWorkers, lockShardGrain, blocking,
                         enableTelemetry, telemetryFlushInterval);
             }
@@ -351,6 +358,8 @@ public class TelemetryTest {
     @Test(timeout = 5000L)
     public void telemetry_droppedData() throws Exception {
         clientError.telemetry.reset();
+
+        assertThat(clientError.statsDProcessor.bufferPool.getBufferSize(), equalTo(8192));
 
         clientError.gauge("gauge", 24);
 
