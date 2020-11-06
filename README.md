@@ -73,7 +73,23 @@ public class DogStatsdClient {
 
 See the full list of available [DogStatsD Client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=java#client-instantiation-parameters).
 
-### Origin detection over UDP and UDS
+### Transport and Maximum Packet Size
+
+As mentioned above the client currently supports two forms of transport: UDP and Unix Domain Socketsi (UDS).  
+
+The preferred setup for local transport is UDS, while remote setups will require the use of UDP. For both setups we have tried to set convenient maximum default packet sizes that should help with performance by packing multiple statsd metrics into each network packet all while playing nicely with the respective environments. For this reason we have set the following defaults for the max packet size:
+- UDS: 8192 bytes - recommended default.
+- UDP: 1432 bytes - largest possible size given the Ethernet MTU of 1514 Bytes. This should help avoid UDP fragmentation.
+
+These are both configurable should you have other needs:
+```java
+StatsDClient client = new NonBlockingStatsDClientBuilder()
+    .hostname("/var/run/datadog/dsd.socket")
+    .maxPacketSizeBytes(16384)  // 16kB maximum custom value
+    .build();
+```
+
+#### Origin detection over UDP and UDS
 
 Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list.
 The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod's UID. The Datadog Agent uses this tag to add container tags to the metrics. To avoid overwriting this global tag, make sure to only `append` to the `constant_tags` list.
