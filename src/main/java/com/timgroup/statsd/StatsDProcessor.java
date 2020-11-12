@@ -151,7 +151,7 @@ public abstract class StatsDProcessor implements Runnable {
     }
 
     void shutdown() {
-        executor.shutdown();
         shutdown = true;
+        executor.shutdown();
     }
 }
