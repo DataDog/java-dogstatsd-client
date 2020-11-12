@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.10.4 / 2020.11.12
+* [BUGFIX] Fix processor shutdown: shutdown on cue, prevent leak. See [#126][]
+
 ## 2.10.3 / 2020.07.17
 * [BUGFIX] Fix library shutdown: use daemon threads for StatsDProcess + TimerTask. See [#117][] (Thanks [@blevz][])
 
@@ -112,6 +115,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#111]: https://github.com/DataDog/java-dogstatsd-client/issues/111
 [#115]: https://github.com/DataDog/java-dogstatsd-client/issues/115
 [#117]: https://github.com/DataDog/java-dogstatsd-client/issues/117
+[#126]: https://github.com/DataDog/java-dogstatsd-client/issues/126
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
 [@cithal]: https://github.com/cithal
