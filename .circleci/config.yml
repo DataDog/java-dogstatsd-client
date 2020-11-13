@@ -7,16 +7,16 @@ default_steps: &default_steps
     # Download and cache dependencies
     - restore_cache:
         keys:
-          - -v3-dependencies-{{ checksum "pom.xml" }}-{{ arch }}
+          - -v5-dependencies-{{ checksum "pom.xml" }}-{{ arch }}
           # fallback to using the latest cache if no exact match is found
-          # - -v3-dependencies-
+          - -v5-dependencies-
 
     - run: mvn dependency:go-offline
 
     - save_cache:
         paths:
           - ~/.m2
-        key: -v3-dependencies-{{ checksum "pom.xml" }}-{{ arch }}
+        key: -v5-dependencies-{{ checksum "pom.xml" }}-{{ arch }}
     - run: |
         mvn clean install -Dgpg.skip $MVN_EXTRA_OPTS
 
@@ -42,6 +42,10 @@ jobs:
   openjdk13:
     docker:
       - image: circleci/openjdk:13.0.2-buster
+    <<: *default_steps
+  openjdk14:
+    docker:
+      - image: circleci/openjdk:14.0.2-buster
     <<: *default_steps
 
 workflows:
