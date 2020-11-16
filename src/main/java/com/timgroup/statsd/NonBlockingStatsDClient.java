@@ -1145,6 +1145,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     // send double with sample rate
     private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
+        if (statsDProcessor.getAggregator().getFlushInterval() != 0
+                && type == Message.Type.COUNT && !Double.isNaN(sampleRate)) {
+            sampleRate = Double.NaN;
+        }
+
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
             sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, tags) {
@@ -1162,6 +1167,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     // send long with sample rate
     private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
+        if (statsDProcessor.getAggregator().getFlushInterval() != 0
+                && type == Message.Type.COUNT && !Double.isNaN(sampleRate)) {
+            sampleRate = Double.NaN;
+        }
+
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
             sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {

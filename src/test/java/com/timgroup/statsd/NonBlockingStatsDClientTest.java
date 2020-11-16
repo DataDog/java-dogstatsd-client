@@ -1115,6 +1115,41 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout=5000L)
+    public void testSampledCountAggregation() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // don't want additional packets
+            .enableAggregation(true)
+            .aggregationFlushInterval(3000)
+            .errorHandler(errorHandler)
+            .build();
+
+        try {
+            for (int i=0 ; i<10 ; i++) {
+                // NOTE: because aggregation is enabled, sampling is disabled, so all
+                // counts should be accounted for, as if sample rate were 1.0.
+                testClient.count("top.level.count", i, 0.1);
+            }
+            for (int i=0 ; i<10 ; i++) {
+                testClient.increment("top.level.count");
+            }
+
+            server.waitForMessage("my.prefix");
+
+            List<String> messages = server.messagesReceived();
+
+            assertThat(messages.size(), comparesEqualTo(1));
+            assertThat(messages, hasItem(comparesEqualTo("my.prefix.top.level.count:55|c")));
+
+        } finally {
+            testClient.stop();
+        }
+    }
+
+    @Test(timeout=5000L)
     public void testBasicSetAggregation() throws Exception {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
         final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
