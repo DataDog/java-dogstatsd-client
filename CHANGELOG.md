@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.10.5 / 2020.11.19
+* [BUGFIX] Method override preventing previous processor leak fix from working. See [#128][]
+
 ## 2.10.4 / 2020.11.12
 * [BUGFIX] Fix processor shutdown: shutdown on cue, prevent leak. See [#126][]
 
@@ -116,6 +119,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#115]: https://github.com/DataDog/java-dogstatsd-client/issues/115
 [#117]: https://github.com/DataDog/java-dogstatsd-client/issues/117
 [#126]: https://github.com/DataDog/java-dogstatsd-client/issues/126
+[#128]: https://github.com/DataDog/java-dogstatsd-client/issues/128
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
 [@cithal]: https://github.com/cithal
