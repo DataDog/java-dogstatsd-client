@@ -28,8 +28,6 @@ public class StatsDAggregator {
 
     private final StatsDProcessor processor;
 
-    // protected final Map<Message, Message> aggregateMetrics = new HashMap<>();
-    // protected final Timer scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
     protected Timer scheduler = null;
 
     private Telemetry telemetry;
