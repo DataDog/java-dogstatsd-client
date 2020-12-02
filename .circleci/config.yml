@@ -1,22 +1,35 @@
 version: 2.1
 
+commands:
+  create_custom_cache_lock:
+    description: "Create custom cache lock for java version."
+    parameters:
+      filename:
+        type: string
+    steps:
+      - run:
+          name: Grab java version and dump to file
+          command: java -version > << parameters.filename >>
+
 default_steps: &default_steps
   steps:
     - checkout
+    - create_custom_cache_lock:
+        filename: java-version-lock.txt
 
     # Download and cache dependencies
     - restore_cache:
         keys:
-          - -v5-dependencies-{{ checksum "pom.xml" }}-{{ arch }}
+          - -v6-dependencies-{{ checksum "pom.xml" }}-{{ checksum "java-version-lock.txt" }}-{{ arch }}
           # fallback to using the latest cache if no exact match is found
-          - -v5-dependencies-
+          - -v6-dependencies-
 
     - run: mvn dependency:go-offline
 
     - save_cache:
         paths:
           - ~/.m2
-        key: -v5-dependencies-{{ checksum "pom.xml" }}-{{ arch }}
+        key: -v6-dependencies-{{ checksum "pom.xml" }}-{{ checksum "java-version-lock.txt" }}-{{ arch }}
     - run: |
         mvn clean install -Dgpg.skip $MVN_EXTRA_OPTS
 

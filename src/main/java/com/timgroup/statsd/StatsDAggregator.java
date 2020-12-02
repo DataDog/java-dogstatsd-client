@@ -23,13 +23,12 @@ public class StatsDAggregator {
             Arrays.asList(Message.Type.COUNT, Message.Type.GAUGE, Message.Type.SET));
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
 
-    // protected final Map<Message, Message> aggregateMetrics = new HashMap<>();
-    protected final Timer scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
-
     protected final int shardGranularity;
     protected final long flushInterval;
 
     private final StatsDProcessor processor;
+
+    protected Timer scheduler = null;
 
     private Telemetry telemetry;
 
@@ -53,6 +52,10 @@ public class StatsDAggregator {
         this.flushInterval = flushInterval;
         this.shardGranularity = shards;
         this.aggregateMetrics = new ArrayList<>(shards);
+
+        if (flushInterval > 0) {
+            this.scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
+        }
 
         for (int i = 0 ; i < this.shardGranularity ; i++) {
             this.aggregateMetrics.add(i, new HashMap<Message, Message>());
