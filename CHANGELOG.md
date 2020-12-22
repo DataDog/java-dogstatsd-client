@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 2.11.0 / Unreleased
+## 2.11.0 / 2020.12.22 
 
 [FEATURE] Aggregation: simple type client-side aggregation. See [#121][]
 [IMPROVEMENT] UDP+UDS: set better defaults for max packet size. See [#125][]
