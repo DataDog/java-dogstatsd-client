@@ -2,12 +2,12 @@
 
 ## 2.11.0 / 2020.12.22 
 
-[FEATURE] Aggregation: simple type client-side aggregation. See [#121][]
-[IMPROVEMENT] UDP+UDS: set better defaults for max packet size. See [#125][]
-[BUGFIX] Aggregator: fix thread leak + dont always start scheduler. See [#129][]
-[BUGFIX] Sampling: on counts to be disabled when aggregation is enabled. See [#127][]
-[BUGFIX] Processor: shutdown the executor on cue, dont leak. See [#126][]
-[DOCS] Aggregation: update with new aggregation instructions. See [#122][]
+* [FEATURE] Aggregation: simple type client-side aggregation. See [#121][]
+* [IMPROVEMENT] UDP+UDS: set better defaults for max packet size. See [#125][]
+* [BUGFIX] Aggregator: fix thread leak + dont always start scheduler. See [#129][]
+* [BUGFIX] Sampling: on counts to be disabled when aggregation is enabled. See [#127][]
+* [BUGFIX] Processor: shutdown the executor on cue, dont leak. See [#126][]
+* [DOCS] Aggregation: update with new aggregation instructions. See [#122][]
 
 ## 2.10.3 / 2020.07.17
 * [BUGFIX] Fix library shutdown: use daemon threads for StatsDProcess + TimerTask. See [#117][] (Thanks [@blevz][])
