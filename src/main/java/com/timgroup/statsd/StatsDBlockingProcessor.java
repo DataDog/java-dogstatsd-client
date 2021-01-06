@@ -62,9 +62,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                         }
 
                         sendBuffer.mark();
-                        if (sendBuffer.position() > 0) {
-                            sendBuffer.put((byte) '\n');
-                        }
 
                         try {
                             writeBuilderToSendBuffer(sendBuffer);

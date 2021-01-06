@@ -1040,7 +1040,7 @@ public class NonBlockingStatsDClientTest {
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.metrics:1|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.events:0|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.service_checks:0|c")));
-            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.bytes_sent:31|c")));
+            assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.bytes_sent:32|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.bytes_dropped:0|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_sent:1|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.packets_dropped:0|c")));
