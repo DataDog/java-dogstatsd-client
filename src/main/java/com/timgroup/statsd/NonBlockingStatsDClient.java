@@ -1126,6 +1126,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
             }
             tagString(this.tags, builder);
+
+            builder.append('\n');
         }
 
         protected abstract void writeValue(StringBuilder builder);
@@ -1681,6 +1683,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 .append("|").append(text);
                 eventMap(event, builder);
                 tagString(eventTags, builder);
+
+                builder.append('\n');
             }
         });
         this.telemetry.incrEventsSent(1);
@@ -1720,6 +1724,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 if (sc.getMessage() != null) {
                     sb.append("|m:").append(sc.getEscapedMessage());
                 }
+
+                sb.append('\n');
             }
         });
         this.telemetry.incrServiceChecksSent(1);
@@ -1789,6 +1795,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 writeValue(builder);
                 builder.append('|').append(type);
                 tagString(this.tags, builder);
+
+                builder.append('\n');
             }
         });
     }

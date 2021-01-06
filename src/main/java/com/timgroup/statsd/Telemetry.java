@@ -64,7 +64,8 @@ public class Telemetry {
                 .append(this.value)
                 .append('|')
                 .append(type)
-                .append(tagsString);  // already has the statsd separator baked-in
+                .append(tagsString)
+                .append('\n');  // already has the statsd separator baked-in
         }
     }
 
