@@ -83,11 +83,11 @@ public class TelemetryTest {
                                        final int timeout, final int bufferSize, final int maxPacketSizeBytes,
                                        String entityID, final int poolSize, final int processorWorkers,
                                        final int senderWorkers, boolean blocking, final boolean enableTelemetry,
-                                       final int telemetryFlushInterval)
+                                       final int telemetryFlushInterval, final boolean enableDevMode)
                 throws StatsDClientException {
                 super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                         bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                        blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
+                        blocking, enableTelemetry, telemetryFlushInterval, enableDevMode, 0, 0);
         }
     };
 
@@ -106,12 +106,12 @@ public class TelemetryTest {
                 return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
                         addressLookup, timeout, socketBufferSize, packetSize, entityID,
                         bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                        telemetryFlushInterval);
+                        telemetryFlushInterval, enableDevMode);
             } else {
                 return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
                         staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
                         entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                        telemetryFlushInterval);
+                        telemetryFlushInterval, enableDevMode);
             }
         }
     }
@@ -390,5 +390,33 @@ public class TelemetryTest {
         assertThat(client.telemetry.metricsSent.get(), equalTo(1));
         assertThat(client.telemetry.packetsSent.get(), equalTo(1));
         assertThat(client.telemetry.bytesSent.get(), equalTo(27));
+    }
+
+    @Test(timeout = 5000L)
+    public void telemetry_DevModeData() throws Exception {
+
+        NonBlockingStatsDClientBuilder builder = new StatsDNonBlockingTelemetryBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .constantTags("test")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // disable telemetry so we can control calls to "flush"
+            .enableDevMode(true);
+        StatsDNonBlockingTelemetry cli =((StatsDNonBlockingTelemetryBuilder)builder).build();
+
+        cli.gauge("gauge", 24);
+
+        // leaving time to the server to flush metrics (equivalent to waitForMessage)
+        while (cli.telemetry.metricsSent.get() == 0
+               || cli.telemetry.packetsSent.get() == 0
+               || cli.telemetry.bytesSent.get() == 0) {
+            try {
+                Thread.sleep(50L);
+            } catch (InterruptedException e) {}
+        }
+
+        assertThat(cli.telemetry.metricsSent.get(), equalTo(1));
+        assertThat(cli.telemetry.packetsSent.get(), equalTo(1));
+        assertThat(cli.telemetry.bytesSent.get(), equalTo(27));
     }
 }

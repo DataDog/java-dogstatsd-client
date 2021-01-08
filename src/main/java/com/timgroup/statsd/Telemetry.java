@@ -11,6 +11,11 @@ public class Telemetry {
     public static int DEFAULT_FLUSH_INTERVAL = 10000; // 10s
 
     protected final AtomicInteger metricsSent = new AtomicInteger(0);
+    protected final AtomicInteger gaugeSent = new AtomicInteger(0);
+    protected final AtomicInteger countSent = new AtomicInteger(0);
+    protected final AtomicInteger histogramSent = new AtomicInteger(0);
+    protected final AtomicInteger distributionSent = new AtomicInteger(0);
+    protected final AtomicInteger setSent = new AtomicInteger(0);
     protected final AtomicInteger eventsSent = new AtomicInteger(0);
     protected final AtomicInteger serviceChecksSent = new AtomicInteger(0);
     protected final AtomicInteger bytesSent = new AtomicInteger(0);
@@ -19,8 +24,16 @@ public class Telemetry {
     protected final AtomicInteger packetsDropped = new AtomicInteger(0);
     protected final AtomicInteger packetsDroppedQueue = new AtomicInteger(0);
     protected final AtomicInteger aggregatedContexts = new AtomicInteger(0);
+    protected final AtomicInteger aggregatedGaugeContexts = new AtomicInteger(0);
+    protected final AtomicInteger aggregatedCountContexts = new AtomicInteger(0);
+    protected final AtomicInteger aggregatedSetContexts = new AtomicInteger(0);
 
     protected final String metricsSentMetric = "datadog.dogstatsd.client.metrics";
+    protected final String gaugeSentMetric = "datadog.dogstatsd.client.metricsGauge";
+    protected final String countSentMetric = "datadog.dogstatsd.client.metricsCount";
+    protected final String histogramSentMetric = "datadog.dogstatsd.client.metricsHistogram";
+    protected final String distributionSentMetric = "datadog.dogstatsd.client.metricsDistribution";
+    protected final String setSentMetric = "datadog.dogstatsd.client.metricsSet";
     protected final String eventsSentMetric = "datadog.dogstatsd.client.events";
     protected final String serviceChecksSentMetric = "datadog.dogstatsd.client.service_checks";
     protected final String bytesSentMetric = "datadog.dogstatsd.client.bytes_sent";
@@ -29,8 +42,12 @@ public class Telemetry {
     protected final String packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped";
     protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
     protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
+    protected final String aggregatedGaugeContextsMetric = "datadog.dogstatsd.client.aggregated_context_gauge";
+    protected final String aggregatedCountContextsMetric = "datadog.dogstatsd.client.aggregated_context_count";
+    protected final String aggregatedSetContextsMetric = "datadog.dogstatsd.client.aggregated_context_set";
 
     protected String tags;
+    protected boolean devMode;
 
     public StatsDProcessor processor;
     protected Timer timer;
@@ -69,11 +86,38 @@ public class Telemetry {
         }
     }
 
-    Telemetry(final String tags, final StatsDProcessor processor) {
+    Telemetry(final String tags, final StatsDProcessor processor, final boolean devMode) {
         // precompute metrics lines with tags
         this.tags = tags;
         this.processor = processor;
+        this.devMode = devMode;
         this.timer = null;
+    }
+
+    public static class Builder {
+        private String tags;
+        private StatsDProcessor processor;
+        private boolean devMode;
+
+        public Builder() {}
+
+        public Builder tags(String tags) {
+            this.tags = tags;
+            return this;
+        }
+
+        public Builder processor(StatsDProcessor processor) {
+            this.processor = processor;
+            return this;
+        }
+
+        public Builder devMode(boolean devMode) {
+            this.devMode = devMode;
+            return this;
+        }
+        public Telemetry build() {
+            return new Telemetry(this.tags, this.processor, this.devMode);
+        }
     }
 
     /**
@@ -114,10 +158,64 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.packetsDroppedMetric, this.packetsDropped.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
+
+        if (devMode) {
+            processor.send(new TelemetryMessage(this.gaugeSentMetric, this.gaugeSent.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.countSentMetric, this.countSent.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.histogramSentMetric, this.histogramSent.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.distributionSentMetric, this.distributionSent.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.setSentMetric, this.setSent.getAndSet(0), tags));
+
+            processor.send(new TelemetryMessage(this.aggregatedGaugeContextsMetric, this.aggregatedGaugeContexts.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.aggregatedCountContextsMetric, this.aggregatedCountContexts.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.aggregatedSetContextsMetric, this.aggregatedSetContexts.getAndSet(0), tags));
+        }
     }
 
     public void incrMetricsSent(final int value) {
         this.metricsSent.addAndGet(value);
+    }
+
+    public void incrMetricsSent(final int value, Message.Type type) {
+        incrMetricsSent(value);
+        switch(type) {
+                case GAUGE:
+                    incrGaugeSent(value);
+                    break;
+                case COUNT:
+                    incrCountSent(value);
+                    break;
+                case HISTOGRAM:
+                    incrHistogramSent(value);
+                    break;
+                case DISTRIBUTION:
+                    incrHistogramSent(value);
+                    break;
+                default:
+                    break;
+        }
+    }
+
+    public void incrGaugeSent(final int value) {
+        this.gaugeSent.addAndGet(value);
+    }
+
+    public void incrCountSent(final int value) {
+        this.countSent.addAndGet(value);
+    }
+
+
+    public void incrHistogramSent(final int value) {
+        this.histogramSent.addAndGet(value);
+    }
+
+
+    public void incrDistributionSent(final int value) {
+        this.distributionSent.addAndGet(value);
+    }
+
+    public void incrSetSent(final int value) {
+        this.setSent.addAndGet(value);
     }
 
     public void incrEventsSent(final int value) {
@@ -173,5 +271,13 @@ public class Telemetry {
      */
     public String getTags() {
         return this.tags;
+    }
+
+    /**
+     * Gets the dev mode setting value.
+     * @return this Telemetry instance dev mode setting.
+     */
+    public boolean getDevMode() {
+        return this.devMode;
     }
 }
