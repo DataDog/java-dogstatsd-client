@@ -328,6 +328,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry = new Telemetry.Builder()
                 .tags(telemetryTags)
                 .processor(telemetryStatsDProcessor)
+                .devMode(enableDevMode)
                 .build();
 
             statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),

@@ -185,11 +185,14 @@ public class Telemetry {
                 case COUNT:
                     incrCountSent(value);
                     break;
+                case SET:
+                    incrSetSent(value);
+                    break;
                 case HISTOGRAM:
                     incrHistogramSent(value);
                     break;
                 case DISTRIBUTION:
-                    incrHistogramSent(value);
+                    incrDistributionSent(value);
                     break;
                 default:
                     break;
@@ -250,6 +253,18 @@ public class Telemetry {
         this.aggregatedContexts.addAndGet(value);
     }
 
+    public void incrAggregatedGaugeContexts(final int value) {
+        this.aggregatedGaugeContexts.addAndGet(value);
+    }
+
+    public void incrAggregatedCountContexts(final int value) {
+        this.aggregatedCountContexts.addAndGet(value);
+    }
+
+    public void incrAggregatedSetContexts(final int value) {
+        this.aggregatedSetContexts.addAndGet(value);
+    }
+
     /**
      * Resets all counter in the telemetry (this is useful for tests purposes).
      */
@@ -263,6 +278,18 @@ public class Telemetry {
         this.packetsDropped.set(0);
         this.packetsDroppedQueue.set(0);
         this.aggregatedContexts.set(0);
+
+        // if (devMode) {
+        this.gaugeSent.set(0);
+        this.countSent.set(0);
+        this.histogramSent.set(0);
+        this.distributionSent.set(0);
+        this.setSent.set(0);
+
+        this.aggregatedGaugeContexts.set(0);
+        this.aggregatedCountContexts.set(0);
+        this.aggregatedSetContexts.set(0);
+        // }
     }
 
     /**

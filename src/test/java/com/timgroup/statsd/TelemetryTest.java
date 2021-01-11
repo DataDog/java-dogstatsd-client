@@ -1,5 +1,7 @@
 package com.timgroup.statsd;
 
+import com.timgroup.statsd.Message;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -125,6 +127,16 @@ public class TelemetryTest {
         .enableTelemetry(false); // disable telemetry so we can control calls to "flush"
     private static StatsDNonBlockingTelemetry client = ((StatsDNonBlockingTelemetryBuilder)builder).build();
 
+    // dev-mode client
+    private static final NonBlockingStatsDClientBuilder devModeBuilder = new StatsDNonBlockingTelemetryBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .constantTags("test")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)  // disable telemetry so we can control calls to "flush"
+            .enableDevMode(true);
+    private static StatsDNonBlockingTelemetry devModeClient = ((StatsDNonBlockingTelemetryBuilder)devModeBuilder).build();
+
     // builderError fails to send any data on the network, producing packets dropped
     private static final NonBlockingStatsDClientBuilder builderError = new StatsDNonBlockingTelemetryBuilder()
         .prefix("my.prefix")
@@ -150,6 +162,7 @@ public class TelemetryTest {
         server = new DummyStatsDServer(STATSD_SERVER_PORT);
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
         client.telemetry.processor = fakeProcessor;
+        devModeClient.telemetry.processor = fakeProcessor;
 
         telemetryTags = computeTelemetryTags();
     }
@@ -170,48 +183,85 @@ public class TelemetryTest {
         server.clear();
         client.telemetry.reset();
         clientError.telemetry.reset();
+        devModeClient.telemetry.reset();
         fakeProcessor.clear();
     }
 
     @Test(timeout = 5000L)
      public void telemetry_incrManuallyIncrData() throws Exception {
-        client.telemetry.incrMetricsSent(1);
-        client.telemetry.incrEventsSent(2);
-        client.telemetry.incrServiceChecksSent(3);
-        client.telemetry.incrBytesSent(4);
-        client.telemetry.incrBytesDropped(5);
-        client.telemetry.incrPacketSent(6);
-        client.telemetry.incrPacketDropped(7);
-        client.telemetry.incrPacketDroppedQueue(8);
-        client.telemetry.incrAggregatedContexts(9);
 
+        devModeClient.telemetry.incrMetricsSent(1);
+        devModeClient.telemetry.incrGaugeSent(1);
+        devModeClient.telemetry.incrCountSent(1);
+        devModeClient.telemetry.incrSetSent(1);
+        devModeClient.telemetry.incrHistogramSent(1);
+        devModeClient.telemetry.incrDistributionSent(1);
+        devModeClient.telemetry.incrMetricsSent(1, Message.Type.GAUGE);  // adds to metricsSent
+        devModeClient.telemetry.incrMetricsSent(1, Message.Type.COUNT);  // adds to metricsSent
+        devModeClient.telemetry.incrMetricsSent(1, Message.Type.SET);  // adds to metricsSent
+        devModeClient.telemetry.incrMetricsSent(1, Message.Type.HISTOGRAM);  // adds to metricsSent
+        devModeClient.telemetry.incrMetricsSent(1, Message.Type.DISTRIBUTION);  // adds to metricsSent
+        devModeClient.telemetry.incrEventsSent(2);
+        devModeClient.telemetry.incrServiceChecksSent(3);
+        devModeClient.telemetry.incrBytesSent(4);
+        devModeClient.telemetry.incrBytesDropped(5);
+        devModeClient.telemetry.incrPacketSent(6);
+        devModeClient.telemetry.incrPacketDropped(7);
+        devModeClient.telemetry.incrPacketDroppedQueue(8);
+        devModeClient.telemetry.incrAggregatedContexts(9);
 
-        assertThat(client.telemetry.metricsSent.get(), equalTo(1));
-        assertThat(client.telemetry.eventsSent.get(), equalTo(2));
-        assertThat(client.telemetry.serviceChecksSent.get(), equalTo(3));
-        assertThat(client.telemetry.bytesSent.get(), equalTo(4));
-        assertThat(client.telemetry.bytesDropped.get(), equalTo(5));
-        assertThat(client.telemetry.packetsSent.get(), equalTo(6));
-        assertThat(client.telemetry.packetsDropped.get(), equalTo(7));
-        assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(8));
-        assertThat(client.telemetry.aggregatedContexts.get(), equalTo(9));
+        assertThat(devModeClient.telemetry.getDevMode(), equalTo(true));
+        assertThat(devModeClient.telemetry.metricsSent.get(), equalTo(6));
+        assertThat(devModeClient.telemetry.gaugeSent.get(), equalTo(2));
+        assertThat(devModeClient.telemetry.countSent.get(), equalTo(2));
+        assertThat(devModeClient.telemetry.setSent.get(), equalTo(2));
+        assertThat(devModeClient.telemetry.histogramSent.get(), equalTo(2));
+        assertThat(devModeClient.telemetry.distributionSent.get(), equalTo(2));
+        assertThat(devModeClient.telemetry.eventsSent.get(), equalTo(2));
+        assertThat(devModeClient.telemetry.serviceChecksSent.get(), equalTo(3));
+        assertThat(devModeClient.telemetry.bytesSent.get(), equalTo(4));
+        assertThat(devModeClient.telemetry.bytesDropped.get(), equalTo(5));
+        assertThat(devModeClient.telemetry.packetsSent.get(), equalTo(6));
+        assertThat(devModeClient.telemetry.packetsDropped.get(), equalTo(7));
+        assertThat(devModeClient.telemetry.packetsDroppedQueue.get(), equalTo(8));
+        assertThat(devModeClient.telemetry.aggregatedContexts.get(), equalTo(9));
 
-        client.telemetry.flush();
+        devModeClient.telemetry.flush();
 
-        assertThat(client.telemetry.metricsSent.get(), equalTo(0));
-        assertThat(client.telemetry.eventsSent.get(), equalTo(0));
-        assertThat(client.telemetry.serviceChecksSent.get(), equalTo(0));
-        assertThat(client.telemetry.bytesSent.get(), equalTo(0));
-        assertThat(client.telemetry.bytesDropped.get(), equalTo(0));
-        assertThat(client.telemetry.packetsSent.get(), equalTo(0));
-        assertThat(client.telemetry.packetsDropped.get(), equalTo(0));
-        assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(0));
-        assertThat(client.telemetry.aggregatedContexts.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.metricsSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.gaugeSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.countSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.setSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.histogramSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.distributionSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.eventsSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.serviceChecksSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.bytesSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.bytesDropped.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.packetsSent.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.packetsDropped.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.packetsDroppedQueue.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.aggregatedContexts.get(), equalTo(0));
 
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.metrics:6|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.metricsGauge:2|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.metricsCount:2|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.metricsSet:2|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.metricsHistogram:2|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.metricsDistribution:2|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.events:2|c|#test," + telemetryTags + "\n"));
@@ -395,28 +445,27 @@ public class TelemetryTest {
     @Test(timeout = 5000L)
     public void telemetry_DevModeData() throws Exception {
 
-        NonBlockingStatsDClientBuilder builder = new StatsDNonBlockingTelemetryBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .constantTags("test")
-            .port(STATSD_SERVER_PORT)
-            .enableTelemetry(false)  // disable telemetry so we can control calls to "flush"
-            .enableDevMode(true);
-        StatsDNonBlockingTelemetry cli =((StatsDNonBlockingTelemetryBuilder)builder).build();
 
-        cli.gauge("gauge", 24);
+        devModeClient.gauge("gauge", 24);
+        devModeClient.count("count", 1);
+        devModeClient.histogram("histo", 1);
+        devModeClient.distribution("distro", 1);
 
         // leaving time to the server to flush metrics (equivalent to waitForMessage)
-        while (cli.telemetry.metricsSent.get() == 0
-               || cli.telemetry.packetsSent.get() == 0
-               || cli.telemetry.bytesSent.get() == 0) {
+        while (devModeClient.telemetry.metricsSent.get() == 0
+               || devModeClient.telemetry.packetsSent.get() == 0
+               || devModeClient.telemetry.bytesSent.get() == 0) {
             try {
                 Thread.sleep(50L);
             } catch (InterruptedException e) {}
         }
 
-        assertThat(cli.telemetry.metricsSent.get(), equalTo(1));
-        assertThat(cli.telemetry.packetsSent.get(), equalTo(1));
-        assertThat(cli.telemetry.bytesSent.get(), equalTo(27));
+        assertThat(devModeClient.telemetry.metricsSent.get(), equalTo(4));
+        assertThat(devModeClient.telemetry.gaugeSent.get(), equalTo(1));
+        assertThat(devModeClient.telemetry.countSent.get(), equalTo(1));
+        assertThat(devModeClient.telemetry.histogramSent.get(), equalTo(1));
+        assertThat(devModeClient.telemetry.distributionSent.get(), equalTo(1));
+        assertThat(devModeClient.telemetry.packetsSent.get(), equalTo(1));
+        assertThat(devModeClient.telemetry.bytesSent.get(), equalTo(106));
     }
 }
