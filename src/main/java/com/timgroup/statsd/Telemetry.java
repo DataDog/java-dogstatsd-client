@@ -331,17 +331,17 @@ public class Telemetry {
         this.packetsDroppedQueue.set(0);
         this.aggregatedContexts.set(0);
 
-        // if (devMode) {
-        this.gaugeSent.set(0);
-        this.countSent.set(0);
-        this.histogramSent.set(0);
-        this.distributionSent.set(0);
-        this.setSent.set(0);
+        if (devMode) {
+            this.gaugeSent.set(0);
+            this.countSent.set(0);
+            this.histogramSent.set(0);
+            this.distributionSent.set(0);
+            this.setSent.set(0);
 
-        this.aggregatedGaugeContexts.set(0);
-        this.aggregatedCountContexts.set(0);
-        this.aggregatedSetContexts.set(0);
-        // }
+            this.aggregatedGaugeContexts.set(0);
+            this.aggregatedCountContexts.set(0);
+            this.aggregatedSetContexts.set(0);
+        }
     }
 
     /**
