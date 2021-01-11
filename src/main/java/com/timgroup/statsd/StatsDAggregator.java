@@ -118,7 +118,7 @@ public class StatsDAggregator {
 
                     if (telemetry.getDevMode()) {
 
-                        switch(message.getType()) {
+                        switch (message.getType()) {
                             case GAUGE:
                                 telemetry.incrAggregatedGaugeContexts(1);
                                 break;

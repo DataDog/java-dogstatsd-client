@@ -114,6 +114,7 @@ public class Telemetry {
             this.devMode = devMode;
             return this;
         }
+
         public Telemetry build() {
             return new Telemetry(this.tags, this.processor, this.devMode);
         }
@@ -159,15 +160,23 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
 
         if (devMode) {
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.gaugeSent.getAndSet(0), getTelemetryTags(tags, Message.Type.GAUGE)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.countSent.getAndSet(0), getTelemetryTags(tags, Message.Type.COUNT)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.setSent.getAndSet(0), getTelemetryTags(tags, Message.Type.SET)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.histogramSent.getAndSet(0), getTelemetryTags(tags, Message.Type.HISTOGRAM)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.distributionSent.getAndSet(0), getTelemetryTags(tags, Message.Type.DISTRIBUTION)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.gaugeSent.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.GAUGE)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.countSent.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.COUNT)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.setSent.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.SET)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.histogramSent.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.HISTOGRAM)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.distributionSent.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.DISTRIBUTION)));
 
-            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedGaugeContexts.getAndSet(0), getTelemetryTags(tags, Message.Type.GAUGE)));
-            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedCountContexts.getAndSet(0), getTelemetryTags(tags, Message.Type.COUNT)));
-            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedSetContexts.getAndSet(0), getTelemetryTags(tags, Message.Type.SET)));
+            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedGaugeContexts.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.GAUGE)));
+            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedCountContexts.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.COUNT)));
+            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedSetContexts.getAndSet(0),
+                        getTelemetryTags(tags, Message.Type.SET)));
         }
     }
 
@@ -178,53 +187,67 @@ public class Telemetry {
 
         devModeBuilder.setLength(0);
         devModeBuilder.append(tags);
-        switch(type) {
-                case GAUGE:
-                    devModeBuilder.append(",metrics_type:gauge");
-                    break;
-                case COUNT:
-                    devModeBuilder.append(",metrics_type:count");
-                    break;
-                case SET:
-                    devModeBuilder.append(",metrics_type:set");
-                    break;
-                case HISTOGRAM:
-                    devModeBuilder.append(",metrics_type:histogram");
-                    break;
-                case DISTRIBUTION:
-                    devModeBuilder.append(",metrics_type:distribution");
-                    break;
-                default:
-                    break;
+        switch (type) {
+            case GAUGE:
+                devModeBuilder.append(",metrics_type:gauge");
+                break;
+            case COUNT:
+                devModeBuilder.append(",metrics_type:count");
+                break;
+            case SET:
+                devModeBuilder.append(",metrics_type:set");
+                break;
+            case HISTOGRAM:
+                devModeBuilder.append(",metrics_type:histogram");
+                break;
+            case DISTRIBUTION:
+                devModeBuilder.append(",metrics_type:distribution");
+                break;
+            default:
+                break;
         }
 
         return devModeBuilder.toString();
     }
 
+    /**
+     * Increase Metrics Sent telemetry metric.
+     *
+     * @param value
+     *     Value to increase metric with
+     */
     public void incrMetricsSent(final int value) {
         this.metricsSent.addAndGet(value);
     }
 
+    /**
+     * Increase Metrics Sent telemetry metric, and specific metric type counter.
+     *
+     * @param value
+     *     Value to increase metric with
+     * @param type
+     *    Message type
+     */
     public void incrMetricsSent(final int value, Message.Type type) {
         incrMetricsSent(value);
-        switch(type) {
-                case GAUGE:
-                    incrGaugeSent(value);
-                    break;
-                case COUNT:
-                    incrCountSent(value);
-                    break;
-                case SET:
-                    incrSetSent(value);
-                    break;
-                case HISTOGRAM:
-                    incrHistogramSent(value);
-                    break;
-                case DISTRIBUTION:
-                    incrDistributionSent(value);
-                    break;
-                default:
-                    break;
+        switch (type) {
+            case GAUGE:
+                incrGaugeSent(value);
+                break;
+            case COUNT:
+                incrCountSent(value);
+                break;
+            case SET:
+                incrSetSent(value);
+                break;
+            case HISTOGRAM:
+                incrHistogramSent(value);
+                break;
+            case DISTRIBUTION:
+                incrDistributionSent(value);
+                break;
+            default:
+                break;
         }
     }
 

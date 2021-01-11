@@ -221,6 +221,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     Boolean to enable client telemetry.
      * @param telemetryFlushInterval
      *     Telemetry flush interval integer, in milliseconds.
+     * @param enableDevMode
+     *     Boolean to enable client telemetry in dev-mode.
      * @param aggregationFlushInterval
      *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
      * @param aggregationShards
