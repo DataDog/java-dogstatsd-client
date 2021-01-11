@@ -29,11 +29,7 @@ public class Telemetry {
     protected final AtomicInteger aggregatedSetContexts = new AtomicInteger(0);
 
     protected final String metricsSentMetric = "datadog.dogstatsd.client.metrics";
-    protected final String gaugeSentMetric = "datadog.dogstatsd.client.metricsGauge";
-    protected final String countSentMetric = "datadog.dogstatsd.client.metricsCount";
-    protected final String histogramSentMetric = "datadog.dogstatsd.client.metricsHistogram";
-    protected final String distributionSentMetric = "datadog.dogstatsd.client.metricsDistribution";
-    protected final String setSentMetric = "datadog.dogstatsd.client.metricsSet";
+    protected final String metricsByTypeSentMetric = "datadog.dogstatsd.client.metrics_by_type";
     protected final String eventsSentMetric = "datadog.dogstatsd.client.events";
     protected final String serviceChecksSentMetric = "datadog.dogstatsd.client.service_checks";
     protected final String bytesSentMetric = "datadog.dogstatsd.client.bytes_sent";
@@ -42,12 +38,15 @@ public class Telemetry {
     protected final String packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped";
     protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
     protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
+    protected final String aggregatedContextsByTypeMetric = "datadog.dogstatsd.client.aggregated_context_by_type";
+
     protected final String aggregatedGaugeContextsMetric = "datadog.dogstatsd.client.aggregated_context_gauge";
     protected final String aggregatedCountContextsMetric = "datadog.dogstatsd.client.aggregated_context_count";
     protected final String aggregatedSetContextsMetric = "datadog.dogstatsd.client.aggregated_context_set";
 
     protected String tags;
     protected boolean devMode;
+    protected StringBuilder devModeBuilder = new StringBuilder();
 
     public StatsDProcessor processor;
     protected Timer timer;
@@ -160,16 +159,46 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
 
         if (devMode) {
-            processor.send(new TelemetryMessage(this.gaugeSentMetric, this.gaugeSent.getAndSet(0), tags));
-            processor.send(new TelemetryMessage(this.countSentMetric, this.countSent.getAndSet(0), tags));
-            processor.send(new TelemetryMessage(this.histogramSentMetric, this.histogramSent.getAndSet(0), tags));
-            processor.send(new TelemetryMessage(this.distributionSentMetric, this.distributionSent.getAndSet(0), tags));
-            processor.send(new TelemetryMessage(this.setSentMetric, this.setSent.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.gaugeSent.getAndSet(0), getTelemetryTags(tags, Message.Type.GAUGE)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.countSent.getAndSet(0), getTelemetryTags(tags, Message.Type.COUNT)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.setSent.getAndSet(0), getTelemetryTags(tags, Message.Type.SET)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.histogramSent.getAndSet(0), getTelemetryTags(tags, Message.Type.HISTOGRAM)));
+            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.distributionSent.getAndSet(0), getTelemetryTags(tags, Message.Type.DISTRIBUTION)));
 
-            processor.send(new TelemetryMessage(this.aggregatedGaugeContextsMetric, this.aggregatedGaugeContexts.getAndSet(0), tags));
-            processor.send(new TelemetryMessage(this.aggregatedCountContextsMetric, this.aggregatedCountContexts.getAndSet(0), tags));
-            processor.send(new TelemetryMessage(this.aggregatedSetContextsMetric, this.aggregatedSetContexts.getAndSet(0), tags));
+            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedGaugeContexts.getAndSet(0), getTelemetryTags(tags, Message.Type.GAUGE)));
+            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedCountContexts.getAndSet(0), getTelemetryTags(tags, Message.Type.COUNT)));
+            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedSetContexts.getAndSet(0), getTelemetryTags(tags, Message.Type.SET)));
         }
+    }
+
+    protected String getTelemetryTags(String tags, Message.Type type) {
+        if (!devMode) {
+            return tags;
+        }
+
+        devModeBuilder.setLength(0);
+        devModeBuilder.append(tags);
+        switch(type) {
+                case GAUGE:
+                    devModeBuilder.append(",metrics_type:gauge");
+                    break;
+                case COUNT:
+                    devModeBuilder.append(",metrics_type:count");
+                    break;
+                case SET:
+                    devModeBuilder.append(",metrics_type:set");
+                    break;
+                case HISTOGRAM:
+                    devModeBuilder.append(",metrics_type:histogram");
+                    break;
+                case DISTRIBUTION:
+                    devModeBuilder.append(",metrics_type:distribution");
+                    break;
+                default:
+                    break;
+        }
+
+        return devModeBuilder.toString();
     }
 
     public void incrMetricsSent(final int value) {

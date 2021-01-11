@@ -255,37 +255,42 @@ public class TelemetryTest {
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metrics:6|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics:6|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metricsGauge:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metricsCount:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metricsSet:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metricsHistogram:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.HISTOGRAM) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metricsDistribution:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.DISTRIBUTION) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.events:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.events:2|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.service_checks:3|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.service_checks:3|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.bytes_sent:4|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.bytes_sent:4|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.bytes_dropped:5|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.bytes_dropped:5|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_sent:6|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.packets_sent:6|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.packets_dropped:7|c|#test," + telemetryTags + "\n"));
@@ -297,13 +302,16 @@ public class TelemetryTest {
                    hasItem("datadog.dogstatsd.client.aggregated_context:9|c|#test," + telemetryTags + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.aggregated_context_gauge:10|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.aggregated_context_by_type:10|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.aggregated_context_count:11|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.aggregated_context_by_type:11|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.aggregated_context_set:12|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.aggregated_context_by_type:12|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
     }
 
     @Test(timeout = 5000L)
@@ -481,6 +489,7 @@ public class TelemetryTest {
         assertThat(devModeClient.telemetry.metricsSent.get(), equalTo(4));
         assertThat(devModeClient.telemetry.gaugeSent.get(), equalTo(1));
         assertThat(devModeClient.telemetry.countSent.get(), equalTo(1));
+        assertThat(devModeClient.telemetry.setSent.get(), equalTo(0));
         assertThat(devModeClient.telemetry.histogramSent.get(), equalTo(1));
         assertThat(devModeClient.telemetry.distributionSent.get(), equalTo(1));
         assertThat(devModeClient.telemetry.packetsSent.get(), equalTo(1));
@@ -501,10 +510,16 @@ public class TelemetryTest {
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings();
 
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics:4|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsGauge:1|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsCount:1|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsHistogram:1|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsDistribution:1|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:0|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.HISTOGRAM) + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.DISTRIBUTION) + "\n"));
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "\n"));
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "\n"));
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_sent:106|c|#test," + telemetryTags + "\n"));
@@ -514,8 +529,11 @@ public class TelemetryTest {
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "\n"));
         // aggregation is disabled
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_gauge:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_count:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_set:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
+                    devModeClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
     }
 }
