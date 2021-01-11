@@ -209,6 +209,9 @@ public class TelemetryTest {
         devModeClient.telemetry.incrPacketDropped(7);
         devModeClient.telemetry.incrPacketDroppedQueue(8);
         devModeClient.telemetry.incrAggregatedContexts(9);
+        devModeClient.telemetry.incrAggregatedGaugeContexts(10);
+        devModeClient.telemetry.incrAggregatedCountContexts(11);
+        devModeClient.telemetry.incrAggregatedSetContexts(12);
 
         assertThat(devModeClient.telemetry.getDevMode(), equalTo(true));
         assertThat(devModeClient.telemetry.metricsSent.get(), equalTo(6));
@@ -225,6 +228,9 @@ public class TelemetryTest {
         assertThat(devModeClient.telemetry.packetsDropped.get(), equalTo(7));
         assertThat(devModeClient.telemetry.packetsDroppedQueue.get(), equalTo(8));
         assertThat(devModeClient.telemetry.aggregatedContexts.get(), equalTo(9));
+        assertThat(devModeClient.telemetry.aggregatedGaugeContexts.get(), equalTo(10));
+        assertThat(devModeClient.telemetry.aggregatedCountContexts.get(), equalTo(11));
+        assertThat(devModeClient.telemetry.aggregatedSetContexts.get(), equalTo(12));
 
         devModeClient.telemetry.flush();
 
@@ -242,6 +248,9 @@ public class TelemetryTest {
         assertThat(devModeClient.telemetry.packetsDropped.get(), equalTo(0));
         assertThat(devModeClient.telemetry.packetsDroppedQueue.get(), equalTo(0));
         assertThat(devModeClient.telemetry.aggregatedContexts.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.aggregatedGaugeContexts.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.aggregatedCountContexts.get(), equalTo(0));
+        assertThat(devModeClient.telemetry.aggregatedSetContexts.get(), equalTo(0));
 
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
@@ -286,6 +295,15 @@ public class TelemetryTest {
 
         assertThat(statsdMessages,
                    hasItem("datadog.dogstatsd.client.aggregated_context:9|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.aggregated_context_gauge:10|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.aggregated_context_count:11|c|#test," + telemetryTags + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.aggregated_context_set:12|c|#test," + telemetryTags + "\n"));
     }
 
     @Test(timeout = 5000L)
@@ -467,5 +485,37 @@ public class TelemetryTest {
         assertThat(devModeClient.telemetry.distributionSent.get(), equalTo(1));
         assertThat(devModeClient.telemetry.packetsSent.get(), equalTo(1));
         assertThat(devModeClient.telemetry.bytesSent.get(), equalTo(106));
+
+        // Start flush timer with a 50ms interval
+        devModeClient.telemetry.start(50L);
+
+        // Wait for the flush to happen
+        while (devModeClient.telemetry.metricsSent.get() != 0) {
+            try {
+                Thread.sleep(30L);
+            } catch (InterruptedException e) {}
+        }
+        devModeClient.telemetry.stop();
+
+        assertThat(devModeClient.telemetry.metricsSent.get(), equalTo(0));
+        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings();
+
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics:4|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsGauge:1|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsCount:1|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsHistogram:1|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metricsDistribution:1|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_sent:106|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "\n"));
+        // aggregation is disabled
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_gauge:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_count:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_set:0|c|#test," + telemetryTags + "\n"));
     }
 }
