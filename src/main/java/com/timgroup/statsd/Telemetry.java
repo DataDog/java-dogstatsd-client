@@ -40,10 +40,6 @@ public class Telemetry {
     protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
     protected final String aggregatedContextsByTypeMetric = "datadog.dogstatsd.client.aggregated_context_by_type";
 
-    protected final String aggregatedGaugeContextsMetric = "datadog.dogstatsd.client.aggregated_context_gauge";
-    protected final String aggregatedCountContextsMetric = "datadog.dogstatsd.client.aggregated_context_count";
-    protected final String aggregatedSetContextsMetric = "datadog.dogstatsd.client.aggregated_context_set";
-
     protected String tags;
     protected boolean devMode;
     protected StringBuilder devModeBuilder = new StringBuilder();
