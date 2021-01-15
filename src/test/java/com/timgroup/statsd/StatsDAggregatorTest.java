@@ -143,6 +143,14 @@ public class StatsDAggregatorTest {
     @BeforeClass
     public static void start() throws Exception {
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
+
+        // set telemetry
+        Telemetry telemetry = new Telemetry.Builder()
+                .processor(fakeProcessor)
+                .devMode(true)
+                .build();
+        fakeProcessor.setTelemetry(telemetry);
+
         // 15s flush period should be enough for all tests to be done - flushes will be manual
         StatsDAggregator aggregator = new StatsDAggregator(fakeProcessor, StatsDAggregator.DEFAULT_SHARDS, 3000L);
         fakeProcessor.aggregator = aggregator;

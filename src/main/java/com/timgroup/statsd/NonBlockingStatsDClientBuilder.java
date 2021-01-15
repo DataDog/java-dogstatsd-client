@@ -27,6 +27,7 @@ public class NonBlockingStatsDClientBuilder {
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
     public boolean blocking = NonBlockingStatsDClient.DEFAULT_BLOCKING;
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
+    public boolean enableDevMode = NonBlockingStatsDClient.DEFAULT_ENABLE_DEVMODE;
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
@@ -140,6 +141,11 @@ public class NonBlockingStatsDClientBuilder {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableDevMode(boolean val) {
+        enableDevMode = val;
+        return this;
+    }
+
     public NonBlockingStatsDClientBuilder enableAggregation(boolean val) {
         enableAggregation = val;
         return this;
@@ -191,7 +197,7 @@ public class NonBlockingStatsDClientBuilder {
         return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
                 lookup, telemetryLookup, timeout, socketBufferSize, packetSize,
                 entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
-                enableTelemetry, telemetryFlushInterval,
+                enableTelemetry, telemetryFlushInterval, enableDevMode,
                 (enableAggregation ? aggregationFlushInterval : 0), aggregationShards);
     }
 

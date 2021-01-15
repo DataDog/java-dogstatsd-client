@@ -94,6 +94,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
+    public static final boolean DEFAULT_ENABLE_DEVMODE = false;
     public static final boolean DEFAULT_ENABLE_AGGREGATION = false;
 
     public static final String CLIENT_TAG = "client:java";
@@ -220,6 +221,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     Boolean to enable client telemetry.
      * @param telemetryFlushInterval
      *     Telemetry flush interval integer, in milliseconds.
+     * @param enableDevMode
+     *     Boolean to enable client telemetry in dev-mode.
      * @param aggregationFlushInterval
      *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
      * @param aggregationShards
@@ -231,8 +234,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
             Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
-            final int senderWorkers, boolean blocking, final boolean enableTelemetry,
-            final int telemetryFlushInterval, final int aggregationFlushInterval, final int aggregationShards)
+            final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
+            final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards)
             throws StatsDClientException {
         if ((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = prefix + ".";
@@ -295,7 +298,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream("version.properties"));
 
-            String telemetrytags = tagString(new String[]{CLIENT_TRANSPORT_TAG + transportType,
+            String telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + transportType,
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
                                                           CLIENT_TAG}, new StringBuilder()).toString();
 
@@ -324,7 +327,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
                         poolSize, 1, false, 0, aggregationShards);
             }
 
-            this.telemetry = new Telemetry(telemetrytags, telemetryStatsDProcessor);
+            this.telemetry = new Telemetry.Builder()
+                .tags(telemetryTags)
+                .processor(telemetryStatsDProcessor)
+                .devMode(enableDevMode)
+                .build();
 
             statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
                     statsDProcessor.getOutboundQueue(), senderWorkers);
@@ -380,7 +387,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
             throw new StatsDClientException("Failed to instantiate StatsD client copy", e);
         }
 
-        telemetry = new Telemetry(client.telemetry.getTags(), statsDProcessor);
+        telemetry = new Telemetry.Builder()
+            .tags(client.telemetry.getTags())
+            .processor(statsDProcessor)
+            .devMode(client.telemetry.getDevMode())
+            .build();
 
         executor.submit(statsDProcessor);
         executor.submit(statsDSender);
@@ -998,7 +1009,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         this(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                 bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
+                blocking, enableTelemetry, telemetryFlushInterval, DEFAULT_ENABLE_DEVMODE, 0, 0);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
@@ -1134,15 +1145,19 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
 
-    private void sendMetric(final Message message) {
-        send(message);
-        this.telemetry.incrMetricsSent(1);
+    private boolean sendMetric(final Message message) {
+        return send(message);
     }
 
-    private void send(final Message message) {
-        if (!statsDProcessor.send(message)) {
+    private boolean send(final Message message) {
+        boolean success = statsDProcessor.send(message);
+        if (success) {
+            this.telemetry.incrMetricsSent(1, message.getType());
+        } else {
             this.telemetry.incrPacketDroppedQueue(1);
         }
+
+        return success;
     }
 
     // send double with sample rate
@@ -1185,6 +1200,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
+
             sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(this.value);
