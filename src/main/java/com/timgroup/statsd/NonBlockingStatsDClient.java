@@ -1553,8 +1553,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
      *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     *
      * @param aspect
      *     the name of the distribution
      * @param value
@@ -1579,8 +1577,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Records a value for the specified named distribution.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
      *
      * @param aspect
      *     the name of the distribution
