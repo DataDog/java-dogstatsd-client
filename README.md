@@ -111,7 +111,7 @@ time of this writing for histograms, distributions, service checks and events du
 The goal of this feature is to reduce the number of messages submitted to the Datadog Agent. Minimizing message volume allows us to reduce load on the dogstatsd server side
 and mitigate packet drops. The feature has been implemented such that impact on CPU and memory should be quite minimal on the client side. Users might be concerned with
 what could be perceived as a loss of resolution by resorting to aggregation on the client, this should not be the case. It's worth noting the dogstatsd server implemented
-in the Datadog Agent already aggregates messages over a certain flush period, therefore so long as the flush interval configured configured on the client side is smaller
+in the Datadog Agent already aggregates messages over a certain flush period, therefore so long as the flush interval configured on the client side is smaller
 than said flush interval on the server side there should no loss in resolution.
 
 ### Configuration 
