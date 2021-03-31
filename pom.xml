@@ -1,23 +1,26 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.datadoghq</groupId>
   <artifactId>java-dogstatsd-client</artifactId>
   <packaging>jar</packaging>
   <name>java-dogstatsd-client</name>
-  <version>2.12.0-SNAPSHOT</version>
+  <version>2.12.0</version>
   <description>A tiny library allowing Java applications to communicate with DataDog statsd instances easily.</description>
   <url>https://github.com/DataDog/java-dogstatsd-client</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.scm.id>github</project.scm.id>
     <java.version>1.6</java.version>
     <!-- Note: using project checkstyle with AOSP style
     find the default google java checkstyle config here -
-	<checkstyle.config.location>google_checks.xml</checkstyle.config.location>
-     -->
-	<checkstyle.config.location>style.xml</checkstyle.config.location>
-	<checkstyle.consoleOutput>true</checkstyle.consoleOutput>
+    <checkstyle.config.location>google_checks.xml</checkstyle.config.location>
+    -->
+    <checkstyle.config.location>style.xml</checkstyle.config.location>
+    <checkstyle.consoleOutput>true</checkstyle.consoleOutput>
     <jdk.module.illegalAccess>deny</jdk.module.illegalAccess>
     <checkstyle.version>3.1.0</checkstyle.version>
   </properties>
@@ -32,9 +35,8 @@
 
   <scm>
     <url>https://github.com/DataDog/java-dogstatsd-client</url>
-    <connection>scm:git:git://github.com/DataDog/java-dogstatsd-client.git</connection>
+    <connection>scm:git:git@github.com:DataDog/java-dogstatsd-client.git</connection>
     <developerConnection>scm:git:git@github.com:Datadog/java-dogstatsd-client.git</developerConnection>
-    <tag>v2.10.0</tag>
   </scm>
 
   <developers>
@@ -54,6 +56,73 @@
       <email>tom.denley@timgroup.com</email>
     </developer>
   </developers>
+
+  <profiles>
+    <!-- Performing a release deployment requires setting of performRelease property -->
+    <profile>
+      <id>deploy-artifacts</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>performRelease</name>
+          <value>true</value>
+        </property>
+      </activation>
+
+      <distributionManagement>
+        <snapshotRepository>
+         <id>nexus</id>
+         <!-- Use the localhost endpoint for testing -->
+         <!-- <url>http://localhost:8081/repository/maven-snapshots/</url> -->
+         <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+          <id>nexus</id>
+          <!-- Use the localhost endpoint for testing -->
+          <!-- <url>http://localhost:8081/repository/maven-releases/</url> -->
+          <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+      </distributionManagement>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.6</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>nexus</serverId>
+              <!-- Use the localhost endpoint for testing -->
+              <!-- <nexusUrl>http://localhost:8081/repository/maven-releases/</nexusUrl> -->
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>false</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <dependencies>
     <dependency>
@@ -86,17 +155,6 @@
       <version>0.36</version>
     </dependency>
   </dependencies>
-
-  <distributionManagement>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-  </distributionManagement>
 
   <build>
     <resources>
@@ -171,42 +229,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-        <version>1.6</version>
-        <executions>
-          <execution>
-            <id>sign-artifacts</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <version>2.5.3</version>
-        <configuration>
-          <autoVersionSubmodules>true</autoVersionSubmodules>
-          <useReleaseProfile>false</useReleaseProfile>
-          <releaseProfiles>release</releaseProfiles>
-          <goals>deploy</goals>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.sonatype.plugins</groupId>
-        <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.6.8</version>
-        <extensions>true</extensions>
-        <configuration>
-          <serverId>ossrh</serverId>
-          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-          <autoReleaseAfterClose>true</autoReleaseAfterClose>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>${checkstyle.version}</version>
         <executions>
@@ -228,23 +250,40 @@
         </executions>
       </plugin>
       <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>3.1.0</version>
-          <configuration>
-              <archive>
-                  <manifest>
-                      <mainClass>org.datadog.jmxfetch.App</mainClass>
-                      <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                  </manifest>
-                  <manifestEntries>
-                      <Implementation-Branch>${scmBranch}</Implementation-Branch>
-                      <Implementation-Build>${buildNumber}</Implementation-Build>
-                  </manifestEntries>
-              </archive>
-              <descriptorRefs>
-                  <descriptorRef>jar-with-dependencies</descriptorRef>
-              </descriptorRefs>
-          </configuration>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>org.datadog.jmxfetch.App</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+            <manifestEntries>
+              <Implementation-Branch>${scmBranch}</Implementation-Branch>
+              <Implementation-Build>${buildNumber}</Implementation-Build>
+            </manifestEntries>
+          </archive>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Skip the maven release default deploy, we use the Nexus staging plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
       </plugin>
     </plugins>
   </build>

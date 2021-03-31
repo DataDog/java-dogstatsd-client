@@ -1,0 +1,82 @@
+stages:
+  - deploy_to_sonatype
+  - create_key
+
+variables:
+  REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
+
+# From the tagged repo, push the release artifact
+deploy_to_sonatype:
+  stage: deploy_to_sonatype
+
+  rules:
+    # All releases are manual
+    - when: manual
+      allow_failure: true
+
+  tags:
+    - "runner:docker"
+    - "size:large"
+
+  image: maven:3.6.3-jdk-8-slim
+
+  script:
+    # Ensure we don't print commands being run to the logs during credential
+    # operations
+    - set +x
+
+    - echo "Installing AWSCLI..."
+    - apt update
+    - apt install -y python3 python3-pip
+    - python3 -m pip install awscli
+
+    - echo "Fetching Sonatype user..."
+    - export SONATYPE_USER=$(aws ssm get-parameter --region us-east-1 --name ci.java-dogstatsd-client.publishing.sonatype_username --with-decryption --query "Parameter.Value" --out text)
+    - echo "Fetching Sonatype password..."
+    - export SONATYPE_PASS=$(aws ssm get-parameter --region us-east-1 --name ci.java-dogstatsd-client.publishing.sonatype_password --with-decryption --query "Parameter.Value" --out text)
+
+    - echo "Fetching signing key password..."
+    - export GPG_PASSPHRASE=$(aws ssm get-parameter --region us-east-1 --name ci.java-dogstatsd-client.signing.gpg_passphrase --with-decryption --query "Parameter.Value" --out text)
+
+    - echo "Fetching signing key..."
+    - gpg_key=$(aws ssm get-parameter --region us-east-1 --name ci.java-dogstatsd-client.signing.gpg_private_key --with-decryption --query "Parameter.Value" --out text)
+    - printf -- "$gpg_key" | gpg --import --batch
+
+    - set -x
+
+    - echo "Building release..."
+    - mvn -DperformRelease=true --settings ./settings.xml clean deploy
+
+  artifacts:
+    expire_in: 6 mos
+    paths:
+      - ./target/*.jar
+      - ./target/*.pom
+      - ./target/*.asc
+      - ./target/*.md5
+      - ./target/*.sha1
+      - ./target/*.sha256
+      - ./target/*.sha512
+
+# This job creates the GPG key used to sign the releases
+create_key:
+  stage: create_key
+  when: manual
+
+  tags:
+    - "runner:docker"
+    - "size:large"
+
+  image: $REGISTRY/ci/agent-key-management-tools/gpg:1
+
+  variables:
+    PROJECT_NAME: "java-dogstatsd-client"
+    EXPORT_TO_KEYSERVER: "false"
+
+  script:
+    - /create.sh
+
+  artifacts:
+    expire_in: 13 mos
+    paths:
+      - ./pubkeys/
