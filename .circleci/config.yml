@@ -16,7 +16,7 @@ default_steps: &default_steps
     - checkout
 
     - run: |
-        mvn clean install -Dgpg.skip $MVN_EXTRA_OPTS
+        mvn clean install $MVN_EXTRA_OPTS
 
 jobs:
   openjdk7:
