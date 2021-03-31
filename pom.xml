@@ -255,7 +255,6 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.datadog.jmxfetch.App</mainClass>
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                         <manifestEntries>
