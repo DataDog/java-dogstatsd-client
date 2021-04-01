@@ -14,22 +14,7 @@ commands:
 default_steps: &default_steps
   steps:
     - checkout
-    - create_custom_cache_lock:
-        filename: java-version-lock.txt
 
-    # Download and cache dependencies
-    - restore_cache:
-        keys:
-          - -v6-dependencies-{{ checksum "pom.xml" }}-{{ checksum "java-version-lock.txt" }}-{{ arch }}
-          # fallback to using the latest cache if no exact match is found
-          - -v6-dependencies-
-
-    - run: mvn dependency:go-offline
-
-    - save_cache:
-        paths:
-          - ~/.m2
-        key: -v6-dependencies-{{ checksum "pom.xml" }}-{{ checksum "java-version-lock.txt" }}-{{ arch }}
     - run: |
         mvn clean install $MVN_EXTRA_OPTS
 
