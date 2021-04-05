@@ -1,6 +1,11 @@
 # CHANGELOG
 
-## 2.11.0 / 2020.12.22 
+## 2.12.0 / 2020.04.05
+
+* [IMPROVEMENT] Deployments to Sonatype are now automated (but manually triggered).
+  No user-facing changes are part of this release.
+
+## 2.11.0 / 2020.12.22
 
 * [FEATURE] Aggregation: simple type client-side aggregation. See [#121][]
 * [IMPROVEMENT] UDP+UDS: set better defaults for max packet size. See [#125][]
