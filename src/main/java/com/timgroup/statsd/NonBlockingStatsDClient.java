@@ -1011,15 +1011,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    protected StatsDProcessor createProcessor(StatsDProcessor processor) throws Exception {
-
-        if (processor instanceof StatsDNonBlockingProcessor) {
-            return new StatsDNonBlockingProcessor((StatsDNonBlockingProcessor) processor);
-        }
-
-        return new StatsDBlockingProcessor((StatsDBlockingProcessor) processor);
-    }
-
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
             final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers)
             throws Exception {

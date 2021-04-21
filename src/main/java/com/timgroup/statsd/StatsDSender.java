@@ -58,24 +58,6 @@ public class StatsDSender implements Runnable {
         this.endSignal = new CountDownLatch(workers);
     }
 
-    StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
-                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers)
-            throws Exception {
-        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS);
-    }
-
-    StatsDSender(final StatsDSender sender) throws Exception {
-        this(sender.addressLookup, sender.clientChannel, sender.handler,
-                sender.pool, sender.buffers, sender.workers);
-        this.setTelemetry(sender.getTelemetry());
-    }
-
-    StatsDSender(final StatsDSender sender, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
-        this(sender.addressLookup, sender.clientChannel, sender.handler,
-                pool, buffers, sender.workers);
-        this.setTelemetry(sender.getTelemetry());
-    }
-
     public void setTelemetry(final Telemetry telemetry) {
         this.telemetry = telemetry;
     }

@@ -94,32 +94,6 @@ public abstract class StatsDProcessor implements Runnable {
         this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
     }
 
-    StatsDProcessor(final StatsDProcessor processor)
-            throws Exception {
-
-        this.handler = processor.handler;
-        this.workers = processor.workers;
-        this.qcapacity = processor.getQcapacity();
-
-        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
-            final ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override
-            public Thread newThread(final Runnable runnable) {
-                final Thread result = delegate.newThread(runnable);
-                result.setName("StatsD-Processor-" + result.getName());
-                result.setDaemon(true);
-                return result;
-            }
-        });
-
-        this.bufferPool = new BufferPool(processor.bufferPool);
-        this.highPrioMessages = new ConcurrentLinkedQueue<>();
-        this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
-        this.endSignal = new CountDownLatch(this.workers);
-        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getShardGranularity(),
-                processor.getAggregator().getFlushInterval());
-    }
-
     protected abstract ProcessingTask createProcessingTask();
 
     protected abstract boolean send(final Message message);

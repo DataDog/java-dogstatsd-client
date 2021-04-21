@@ -122,12 +122,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         return new ProcessingTask();
     }
 
-    StatsDNonBlockingProcessor(final StatsDNonBlockingProcessor processor) throws Exception {
-        super(processor);
-        this.qsize = new AtomicInteger(0);
-        this.messages = new ConcurrentLinkedQueue<>();
-    }
-
     @Override
     protected boolean send(final Message message) {
         if (!shutdown) {

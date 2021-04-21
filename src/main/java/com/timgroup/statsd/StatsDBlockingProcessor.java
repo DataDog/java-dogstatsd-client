@@ -107,13 +107,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
         return new ProcessingTask();
     }
 
-    StatsDBlockingProcessor(final StatsDBlockingProcessor processor)
-            throws Exception {
-
-        super(processor);
-        this.messages = new ArrayBlockingQueue<>(processor.getQcapacity());
-    }
-
     @Override
     protected boolean send(final Message message) {
         try {
