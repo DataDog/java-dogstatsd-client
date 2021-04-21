@@ -13,7 +13,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class StatsDSender implements Runnable {
+public class StatsDSender {
     private final Callable<SocketAddress> addressLookup;
     private final SocketAddress address;
     private final DatagramChannel clientChannel;
@@ -66,84 +66,88 @@ public class StatsDSender implements Runnable {
         return telemetry;
     }
 
-
-    @Override
-    public void run() {
-
+    void startWorkers() {
         for (int i = 0 ; i < workers ; i++) {
             executor.submit(new Runnable() {
                 public void run() {
-                    ByteBuffer buffer = null;
-                    Telemetry telemetry = getTelemetry();  // attribute snapshot to harness CPU cache
-
-                    while (!(buffers.isEmpty() && shutdown)) {
-                        int sizeOfBuffer = 0;
-                        try {
-
-                            if (buffer != null) {
-                                pool.put(buffer);
-                            }
-
-                            buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
-                            if (buffer == null) {
-                                continue;
-                            }
-
-                            sizeOfBuffer = buffer.position();
-
-                            buffer.flip();
-                            final int sentBytes = clientChannel.send(buffer, address);
-
-                            buffer.clear();
-                            if (sizeOfBuffer != sentBytes) {
-                                throw new IOException(
-                                        String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
-                                            buffer.toString(),
-                                            address.toString(),
-                                            sentBytes,
-                                            sizeOfBuffer));
-                            }
-
-                            if (telemetry != null) {
-                                telemetry.incrBytesSent(sizeOfBuffer);
-                                telemetry.incrPacketSent(1);
-                            }
-
-                        } catch (final InterruptedException e) {
-                            if (shutdown) {
-                                endSignal.countDown();
-                                return;
-                            }
-                        } catch (final Exception e) {
-                            if (telemetry != null) {
-                                telemetry.incrBytesDropped(sizeOfBuffer);
-                                telemetry.incrPacketDropped(1);
-                            }
-                            handler.handle(e);
-                        }
+                    try {
+                        sendLoop();
+                    } finally {
+                        endSignal.countDown();
                     }
-                    endSignal.countDown();
                 }
             });
         }
-
-        boolean done = false;
-        while (!done) {
-            try {
-                endSignal.await();
-                done = true;
-            } catch (final InterruptedException e) {
-                // NOTHING
-            }
-        }
     }
 
-    boolean isShutdown() {
-        return shutdown;
+    void sendLoop() {
+        ByteBuffer buffer = null;
+        Telemetry telemetry = getTelemetry();  // attribute snapshot to harness CPU cache
+
+        while (!(buffers.isEmpty() && shutdown)) {
+            int sizeOfBuffer = 0;
+            try {
+
+                if (buffer != null) {
+                    pool.put(buffer);
+                }
+
+                buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                if (buffer == null) {
+                    continue;
+                }
+
+                sizeOfBuffer = buffer.position();
+
+                buffer.flip();
+                final int sentBytes = clientChannel.send(buffer, address);
+
+                buffer.clear();
+                if (sizeOfBuffer != sentBytes) {
+                    throw new IOException(
+                            String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
+                                    buffer.toString(),
+                                    address.toString(),
+                                    sentBytes,
+                                    sizeOfBuffer));
+                }
+
+                if (telemetry != null) {
+                    telemetry.incrBytesSent(sizeOfBuffer);
+                    telemetry.incrPacketSent(1);
+                }
+
+            } catch (final InterruptedException e) {
+                if (shutdown) {
+                    break;
+                }
+            } catch (final Exception e) {
+                if (telemetry != null) {
+                    telemetry.incrBytesDropped(sizeOfBuffer);
+                    telemetry.incrPacketDropped(1);
+                }
+                handler.handle(e);
+            }
+        }
     }
 
     void shutdown() {
         shutdown = true;
         executor.shutdown();
+    }
+
+    boolean awaitUntil(final long deadline) {
+        while (true) {
+            long remaining = deadline - System.currentTimeMillis();
+            try {
+                boolean terminated = endSignal.await(remaining, TimeUnit.MILLISECONDS);
+                if (!terminated) {
+                    executor.shutdownNow();
+                }
+                return terminated;
+            } catch (InterruptedException e) {
+                // check again...
+            }
+        }
     }
 }

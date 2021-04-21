@@ -93,7 +93,7 @@ public class StatsDAggregatorTest {
 
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
             @Override
-            public void run() {
+            protected void processLoop() {
 
                 while (!shutdown) {
                     final Message message = messages.poll();
@@ -154,7 +154,7 @@ public class StatsDAggregatorTest {
         // 15s flush period should be enough for all tests to be done - flushes will be manual
         StatsDAggregator aggregator = new StatsDAggregator(fakeProcessor, StatsDAggregator.DEFAULT_SHARDS, 3000L);
         fakeProcessor.aggregator = aggregator;
-        executor.submit(fakeProcessor);
+        fakeProcessor.startWorkers();
     }
 
     @AfterClass
@@ -234,8 +234,6 @@ public class StatsDAggregatorTest {
 
     @Test(timeout = 5000L)
     public void aggregation_flushing() throws Exception {
-        // start clockwork
-        fakeProcessor.aggregator.start();
 
         for(int i=0 ; i<10 ; i++) {
             fakeProcessor.send(new FakeMessage<>("some.gauge", Message.Type.GAUGE, i));

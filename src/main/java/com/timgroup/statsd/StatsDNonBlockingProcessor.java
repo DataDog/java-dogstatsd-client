@@ -17,7 +17,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
         @Override
-        public void run() {
+        protected void processLoop() {
             ByteBuffer sendBuffer;
             boolean empty = true;
             boolean emptyHighPrio = true;
@@ -28,8 +28,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                 handler.handle(e);
                 return;
             }
-
-            aggregator.start();
 
             while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
 
@@ -92,8 +90,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     }
                 } catch (final InterruptedException e) {
                     if (shutdown) {
-                        endSignal.countDown();
-                        return;
+                        break;
                     }
                 } catch (final Exception e) {
                     handler.handle(e);
@@ -102,8 +99,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
-            aggregator.stop();
-            endSignal.countDown();
         }
     }
 

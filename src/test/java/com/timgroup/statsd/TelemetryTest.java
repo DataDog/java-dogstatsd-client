@@ -39,7 +39,7 @@ public class TelemetryTest {
 
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
             @Override
-            public void run() {}
+            protected void processLoop() {}
         }
 
         @Override
@@ -48,8 +48,7 @@ public class TelemetryTest {
             return true;
         }
 
-        @Override
-        public void run(){}
+        void startWorkers() {}
 
         @Override
         protected ProcessingTask createProcessingTask() {

@@ -18,9 +18,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class StatsDProcessor implements Runnable {
+public abstract class StatsDProcessor {
     protected static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
 
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
@@ -49,7 +50,15 @@ public abstract class StatsDProcessor implements Runnable {
                 .onMalformedInput(CodingErrorAction.REPLACE)
                 .onUnmappableCharacter(CodingErrorAction.REPLACE);
 
-        public abstract void run();
+        public final void run() {
+            try {
+                processLoop();
+            } finally {
+                endSignal.countDown();
+            }
+        }
+
+        protected abstract void processLoop();
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
 
@@ -120,21 +129,10 @@ public abstract class StatsDProcessor implements Runnable {
         return this.qcapacity;
     }
 
-    @Override
-    public void run() {
-
+    void startWorkers() {
+        aggregator.start();
         for (int i = 0 ; i < workers ; i++) {
             executor.submit(createProcessingTask());
-        }
-
-        boolean done = false;
-        while (!done) {
-            try {
-                endSignal.await();
-                done = true;
-            } catch (final InterruptedException e) {
-                // NOTHING
-            }
         }
     }
 
@@ -150,13 +148,24 @@ public abstract class StatsDProcessor implements Runnable {
         return telemetry;
     }
 
-    boolean isShutdown() {
-        return shutdown;
-    }
-
     void shutdown() {
         shutdown = true;
         aggregator.stop();
         executor.shutdown();
+    }
+
+    boolean awaitUntil(final long deadline) {
+        while (true) {
+            long remaining = deadline - System.currentTimeMillis();
+            try {
+                boolean terminated = endSignal.await(remaining, TimeUnit.MILLISECONDS);
+                if (!terminated) {
+                    executor.shutdownNow();
+                }
+                return terminated;
+            } catch (InterruptedException e) {
+                // check again...
+            }
+        }
     }
 }

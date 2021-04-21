@@ -22,9 +22,6 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -157,16 +154,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final DatagramChannel clientChannel;
     private final StatsDClientErrorHandler handler;
     private final String constantTagsRendered;
-
-    private final ExecutorService executor = Executors.newFixedThreadPool(4, new ThreadFactory() {
-        final ThreadFactory delegate = Executors.defaultThreadFactory();
-        @Override public Thread newThread(final Runnable runnable) {
-            final Thread result = delegate.newThread(runnable);
-            result.setName("StatsD-" + result.getName());
-            result.setDaemon(true);
-            return result;
-        }
-    });
 
     // Typically the telemetry and regular processors will be the same,
     // but a separate destination for telemetry is supported.
@@ -352,13 +339,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
 
-        executor.submit(statsDProcessor);
-        executor.submit(statsDSender);
+        statsDProcessor.startWorkers();
+        statsDSender.startWorkers();
 
         if (enableTelemetry) {
             if (telemetryStatsDProcessor != statsDProcessor) {
-                executor.submit(telemetryStatsDProcessor);
-                executor.submit(telemetryStatsDSender);
+                telemetryStatsDProcessor.startWorkers();
+                telemetryStatsDSender.startWorkers();
             }
             this.telemetry.start(telemetryFlushInterval);
         }
@@ -1034,18 +1021,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryStatsDSender.shutdown();
             }
 
-            executor.shutdown();
-            try {
-                executor.awaitTermination(30, TimeUnit.SECONDS);
-                if (!executor.isTerminated()) {
-                    executor.shutdownNow();
-                }
-            } catch (Exception e) {
-                handler.handle(e);
-                if (!executor.isTerminated()) {
-                    executor.shutdownNow();
-                }
-            }
+            long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30);
+
+            statsDProcessor.awaitUntil(deadline);
+            statsDSender.awaitUntil(deadline);
+
         } catch (final Exception e) {
             handler.handle(e);
         } finally {
