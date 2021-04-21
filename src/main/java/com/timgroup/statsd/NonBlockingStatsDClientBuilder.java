@@ -8,7 +8,7 @@ import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 
-public class NonBlockingStatsDClientBuilder {
+public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     /**
      * 1400 chosen as default here so that the number of bytes in a message plus the number of bytes required
@@ -171,6 +171,21 @@ public class NonBlockingStatsDClientBuilder {
      * @return the built NonBlockingStatsDClient.
      */
     public NonBlockingStatsDClient build() throws StatsDClientException {
+        return new NonBlockingStatsDClient(resolve());
+    }
+
+    /**
+     * Creates a copy of this builder with any implicit elements resolved.
+     * @return the resolved copy of the builder.
+     */
+    NonBlockingStatsDClientBuilder resolve() {
+        NonBlockingStatsDClientBuilder resolved;
+
+        try {
+            resolved = (NonBlockingStatsDClientBuilder) clone();
+        } catch (CloneNotSupportedException e) {
+            throw new UnsupportedOperationException("clone");
+        }
 
         int packetSize = maxPacketSizeBytes;
         Callable<SocketAddress> lookup = addressLookup;
@@ -194,11 +209,11 @@ public class NonBlockingStatsDClientBuilder {
             }
         }
 
-        return new NonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                lookup, telemetryLookup, timeout, socketBufferSize, packetSize,
-                entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking,
-                enableTelemetry, telemetryFlushInterval, enableDevMode,
-                (enableAggregation ? aggregationFlushInterval : 0), aggregationShards);
+        resolved.maxPacketSizeBytes = packetSize;
+        resolved.addressLookup = lookup;
+        resolved.telemetryAddressLookup = telemetryLookup;
+
+        return resolved;
     }
 
     /**

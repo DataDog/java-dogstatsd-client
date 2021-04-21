@@ -366,35 +366,22 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
-     * specified host and port.
-     * This is a shallow copy constructor meant to be used internally only.
+     * host and port specified by the given builder.
+     * The builder must be resolved before calling this internal constructor.
      *
-     * @param client
-     *    source object to copy
+     * @param builder
+     *     the resolved configuration builder
+     *
+     * @see NonBlockingStatsDClientBuilder#resolve()
      */
-    private NonBlockingStatsDClient(NonBlockingStatsDClient client)
-            throws StatsDClientException {
-
-        prefix = client.prefix;
-        handler = client.handler;
-        constantTagsRendered = client.constantTagsRendered;
-        clientChannel = client.clientChannel;
-        try {
-            statsDProcessor = createProcessor(client.statsDProcessor);
-            statsDSender = new StatsDSender(
-                    client.statsDSender, statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue());
-        } catch (Exception e) {
-            throw new StatsDClientException("Failed to instantiate StatsD client copy", e);
-        }
-
-        telemetry = new Telemetry.Builder()
-            .tags(client.telemetry.getTags())
-            .processor(statsDProcessor)
-            .devMode(client.telemetry.getDevMode())
-            .build();
-
-        executor.submit(statsDProcessor);
-        executor.submit(statsDSender);
+    NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+        this(builder.prefix, builder.queueSize, builder.constantTags, builder.errorHandler,
+            builder.addressLookup, builder.telemetryAddressLookup, builder.timeout,
+            builder.socketBufferSize, builder.maxPacketSizeBytes, builder.entityID,
+            builder.bufferPoolSize, builder.processorWorkers, builder.senderWorkers,
+            builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
+            builder.enableDevMode, (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
+            builder.aggregationShards);
     }
 
 
@@ -419,7 +406,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public NonBlockingStatsDClient(final String prefix) throws StatsDClientException {
         this(new NonBlockingStatsDClientBuilder()
             .prefix(prefix)
-            .build());
+            .resolve());
     }
 
     /**
@@ -450,7 +437,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .prefix(prefix)
             .hostname(hostname)
             .port(port)
-            .build());
+            .resolve());
     }
 
     /**
@@ -486,7 +473,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .hostname(hostname)
             .port(port)
             .queueSize(queueSize)
-            .build());
+            .resolve());
     }
 
     /**
@@ -521,7 +508,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .hostname(hostname)
             .port(port)
             .constantTags(constantTags)
-            .build());
+            .resolve());
     }
 
     /**
@@ -559,7 +546,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .port(port)
             .constantTags(constantTags)
             .maxPacketSizeBytes(maxPacketSizeBytes)
-            .build());
+            .resolve());
     }
 
     /**
@@ -597,7 +584,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .port(port)
             .queueSize(queueSize)
             .constantTags(constantTags)
-            .build());
+            .resolve());
     }
 
     /**
@@ -637,7 +624,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .port(port)
             .constantTags(constantTags)
             .errorHandler(errorHandler)
-            .build());
+            .resolve());
     }
 
     /**
@@ -679,7 +666,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .queueSize(queueSize)
             .constantTags(constantTags)
             .errorHandler(errorHandler)
-            .build());
+            .resolve());
     }
 
 
@@ -728,7 +715,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .constantTags(constantTags)
             .errorHandler(errorHandler)
             .entityID(entityID)
-            .build());
+            .resolve());
     }
 
 
@@ -775,7 +762,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .constantTags(constantTags)
             .errorHandler(errorHandler)
             .maxPacketSizeBytes(maxPacketSizeBytes)
-            .build());
+            .resolve());
     }
 
     /**
@@ -824,7 +811,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .socketBufferSize(bufferSize)
             .constantTags(constantTags)
             .errorHandler(errorHandler)
-            .build());
+            .resolve());
     }
 
     /**
@@ -861,7 +848,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .constantTags(constantTags)
             .errorHandler(errorHandler)
             .addressLookup(addressLookup)
-            .build());
+            .resolve());
     }
 
     /**
@@ -904,7 +891,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .addressLookup(addressLookup)
             .timeout(timeout)
             .socketBufferSize(bufferSize)
-            .build());
+            .resolve());
     }
 
     /**
@@ -951,7 +938,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .timeout(timeout)
             .socketBufferSize(bufferSize)
             .maxPacketSizeBytes(maxPacketSizeBytes)
-            .build());
+            .resolve());
     }
 
     /**
