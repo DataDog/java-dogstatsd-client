@@ -361,13 +361,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
 
-        statsDProcessor.startWorkers();
-        statsDSender.startWorkers();
+        statsDProcessor.startWorkers("StatsD-Processor-");
+        statsDSender.startWorkers("StatsD-Sender-");
 
         if (enableTelemetry) {
             if (telemetryStatsDProcessor != statsDProcessor) {
-                telemetryStatsDProcessor.startWorkers();
-                telemetryStatsDSender.startWorkers();
+                telemetryStatsDProcessor.startWorkers("StatsD-TelemetryProcessor-");
+                telemetryStatsDSender.startWorkers("StatsD-TelemetrySender-");
             }
             this.telemetry.start(telemetryFlushInterval);
         }

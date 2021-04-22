@@ -154,7 +154,7 @@ public class StatsDAggregatorTest {
         // 15s flush period should be enough for all tests to be done - flushes will be manual
         StatsDAggregator aggregator = new StatsDAggregator(fakeProcessor, StatsDAggregator.DEFAULT_SHARDS, 3000L);
         fakeProcessor.aggregator = aggregator;
-        fakeProcessor.startWorkers();
+        fakeProcessor.startWorkers("StatsD-Test-");
     }
 
     @AfterClass

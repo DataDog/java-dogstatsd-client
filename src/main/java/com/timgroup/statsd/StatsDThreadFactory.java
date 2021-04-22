@@ -3,7 +3,7 @@ package com.timgroup.statsd;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-public final class StatsDThreadFactory implements ThreadFactory {
+final class StatsDThreadFactory implements ThreadFactory {
     private final ThreadFactory delegate = Executors.defaultThreadFactory();
 
     @Override
