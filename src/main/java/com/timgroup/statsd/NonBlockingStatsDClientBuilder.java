@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadFactory;
 
 public class NonBlockingStatsDClientBuilder implements Cloneable {
 
@@ -43,6 +44,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public String[] constantTags;
 
     public StatsDClientErrorHandler errorHandler;
+    public ThreadFactory threadFactory;
 
     public NonBlockingStatsDClientBuilder() { }
 
@@ -163,6 +165,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder aggregationShards(int val) {
         aggregationShards = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder threadFactory(ThreadFactory val) {
+        threadFactory = val;
         return this;
     }
 

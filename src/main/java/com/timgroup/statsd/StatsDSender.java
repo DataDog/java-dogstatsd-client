@@ -35,7 +35,7 @@ public class StatsDSender {
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
                  final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                 final int workers) throws Exception {
+                 final int workers, final ThreadFactory threadFactory) throws Exception {
 
         this.pool = pool;
         this.buffers = buffers;
@@ -46,15 +46,7 @@ public class StatsDSender {
         this.address = addressLookup.call();
         this.clientChannel = clientChannel;
 
-        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
-            final ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override public Thread newThread(final Runnable runnable) {
-                final Thread result = delegate.newThread(runnable);
-                result.setName("StatsD-Sender-" + result.getName());
-                result.setDaemon(true);
-                return result;
-            }
-        });
+        this.executor = Executors.newFixedThreadPool(workers, threadFactory);
         this.endSignal = new CountDownLatch(workers);
     }
 

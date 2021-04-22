@@ -78,23 +78,14 @@ public abstract class StatsDProcessor {
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards)
-            throws Exception {
+            final int aggregatorFlushInterval, final int aggregatorShards,
+            final ThreadFactory threadFactory) throws Exception {
 
         this.handler = handler;
         this.workers = workers;
         this.qcapacity = queueSize;
 
-        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
-            final ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override
-            public Thread newThread(final Runnable runnable) {
-                final Thread result = delegate.newThread(runnable);
-                result.setName("StatsD-Processor-" + result.getName());
-                result.setDaemon(true);
-                return result;
-            }
-        });
+        this.executor = Executors.newFixedThreadPool(workers, threadFactory);
 
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.highPrioMessages = new ConcurrentLinkedQueue<>();

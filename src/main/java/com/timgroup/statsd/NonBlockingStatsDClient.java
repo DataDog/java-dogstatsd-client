@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -217,13 +218,31 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
-            final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
-            Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
+            final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
             final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards)
             throws StatsDClientException {
+
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, telemetryAddressLookup, timeout,
+            bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking,
+            enableTelemetry, telemetryFlushInterval, enableDevMode, aggregationFlushInterval, aggregationShards,
+            null);
+    }
+
+    /**
+     * Internal constructor.
+     */
+    private NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
+            final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
+            final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
+            final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
+            final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards,
+            final ThreadFactory customThreadFactory) throws StatsDClientException {
+
         if ((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = prefix + ".";
         } else {
@@ -278,8 +297,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 transportType = "udp";
             }
 
+            ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
+
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
-                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards);
+                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory);
             telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
@@ -311,7 +332,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false, 0, aggregationShards);
+                        poolSize, 1, false, 0, aggregationShards, threadFactory);
             }
 
             this.telemetry = new Telemetry.Builder()
@@ -321,13 +342,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 .build();
 
             statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
-                    statsDProcessor.getOutboundQueue(), senderWorkers);
+                    statsDProcessor.getOutboundQueue(), senderWorkers, threadFactory);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
                 // TODO: figure out why the hell telemetryClientChannel does not work here!
                 telemetryStatsDSender = createSender(telemetryAddressLookup, handler, telemetryClientChannel,
-                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(), 1);
+                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
+                        1, threadFactory);
 
             }
 
@@ -368,7 +390,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             builder.bufferPoolSize, builder.processorWorkers, builder.senderWorkers,
             builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
             builder.enableDevMode, (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
-            builder.aggregationShards);
+            builder.aggregationShards, builder.threadFactory);
     }
 
 
@@ -988,20 +1010,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards) throws Exception {
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory)
+            throws Exception {
         if (blocking) {
             return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
         }
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
-            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers)
-            throws Exception {
-        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers);
+            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers,
+            final ThreadFactory threadFactory) throws Exception {
+        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers, threadFactory);
     }
 
     /**
