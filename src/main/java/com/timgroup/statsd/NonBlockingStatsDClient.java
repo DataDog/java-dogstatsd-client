@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketOptions;
@@ -15,10 +13,8 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -296,7 +292,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
-            properties.load(getClass().getClassLoader().getResourceAsStream("version.properties"));
+            properties.load(getClass().getClassLoader().getResourceAsStream(
+                "dogstatsd/version.properties"));
 
             String telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + transportType,
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),

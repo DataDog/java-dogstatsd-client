@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -13,8 +11,6 @@ import java.util.concurrent.Callable;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Properties;
-
-import com.timgroup.statsd.Message;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -151,7 +147,8 @@ public class TelemetryTest {
 
     private static String computeTelemetryTags() throws IOException, Exception {
         Properties properties = new Properties();
-        properties.load(TelemetryTest.class.getClassLoader().getResourceAsStream("version.properties"));
+        properties.load(TelemetryTest.class.getClassLoader().getResourceAsStream(
+            "dogstatsd/version.properties"));
         return "client:java," + NonBlockingStatsDClient.CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version") + ",client_transport:udp";
     }
 
