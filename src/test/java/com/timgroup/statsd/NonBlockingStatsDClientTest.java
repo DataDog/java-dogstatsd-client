@@ -783,7 +783,24 @@ public class NonBlockingStatsDClientTest {
         client.recordEvent(event);
         server.waitForMessage();
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1")));
+        assertThat(
+            server.messagesReceived(),
+            hasItem(comparesEqualTo("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1"))
+        );
+    }
+
+    @Test(timeout = 5000L)
+    public void send_unicode_event() throws Exception {
+        final Event event = Event.builder()
+            .withTitle("Delivery - Daily Settlement Summary Report Delivery — Invoice Cloud succeeded")
+            .withText("Delivered — destination.csv").build();
+        assertEquals(event.getText(), "Delivered — destination.csv");
+        client.recordEvent(event);
+        server.waitForMessage();
+        assertThat(
+            server.messagesReceived(),
+            hasItem(comparesEqualTo("_e{89,29}:my.prefix.Delivery - Daily Settlement Summary Report Delivery — Invoice Cloud succeeded|Delivered — destination.csv"))
+        );
     }
 
     @Test(timeout = 5000L)

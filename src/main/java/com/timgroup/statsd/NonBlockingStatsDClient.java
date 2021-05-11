@@ -11,6 +11,7 @@ import java.lang.Double;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -101,6 +102,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final String CLIENT_VERSION_TAG = "client_version:";
     public static final String CLIENT_TRANSPORT_TAG = "client_transport:";
 
+
+    /**
+     * UTF-8 is the expected encoding for data sent to the agent.
+     */
+    public static final Charset UTF_8 = Charset.forName("UTF-8");
 
     private static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
         @Override public void handle(final Exception ex) { /* No-op */ }
@@ -1691,9 +1697,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 final String text = escapeEventString(event.getText());
                 builder.append(Message.Type.EVENT.toString())
                     .append("{")
-                    .append(title.length())
+                    .append(getUtf8Length(title))
                     .append(",")
-                    .append(text.length())
+                    .append(getUtf8Length(text))
                     .append("}:")
                     .append(title)
                 .append("|").append(text);
@@ -1708,6 +1714,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     private static String escapeEventString(final String title) {
         return title.replace("\n", "\\n");
+    }
+
+    private int getUtf8Length(final String text) {
+        return text.getBytes(UTF_8).length;
     }
 
     /**
