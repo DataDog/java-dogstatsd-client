@@ -15,12 +15,11 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class StatsDProcessor implements Runnable {
+public abstract class StatsDProcessor {
     protected static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
 
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
@@ -31,10 +30,10 @@ public abstract class StatsDProcessor implements Runnable {
     protected final BufferPool bufferPool;
     protected final Queue<Message> highPrioMessages; // FIFO queue for high priority messages
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
-    protected final ExecutorService executor;
     protected final CountDownLatch endSignal;
 
-    protected final int workers;
+    protected final ThreadFactory threadFactory;
+    protected final Thread[] workers;
     protected final int qcapacity;
 
     protected StatsDAggregator aggregator;
@@ -49,7 +48,15 @@ public abstract class StatsDProcessor implements Runnable {
                 .onMalformedInput(CodingErrorAction.REPLACE)
                 .onUnmappableCharacter(CodingErrorAction.REPLACE);
 
-        public abstract void run();
+        public final void run() {
+            try {
+                processLoop();
+            } finally {
+                endSignal.countDown();
+            }
+        }
+
+        protected abstract void processLoop();
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
 
@@ -69,55 +76,19 @@ public abstract class StatsDProcessor implements Runnable {
 
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards)
-            throws Exception {
+            final int aggregatorFlushInterval, final int aggregatorShards,
+            final ThreadFactory threadFactory) throws Exception {
 
         this.handler = handler;
-        this.workers = workers;
+        this.threadFactory = threadFactory;
+        this.workers = new Thread[workers];
         this.qcapacity = queueSize;
-
-        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
-            final ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override
-            public Thread newThread(final Runnable runnable) {
-                final Thread result = delegate.newThread(runnable);
-                result.setName("StatsD-Processor-" + result.getName());
-                result.setDaemon(true);
-                return result;
-            }
-        });
 
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
         this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
-    }
-
-    StatsDProcessor(final StatsDProcessor processor)
-            throws Exception {
-
-        this.handler = processor.handler;
-        this.workers = processor.workers;
-        this.qcapacity = processor.getQcapacity();
-
-        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
-            final ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override
-            public Thread newThread(final Runnable runnable) {
-                final Thread result = delegate.newThread(runnable);
-                result.setName("StatsD-Processor-" + result.getName());
-                result.setDaemon(true);
-                return result;
-            }
-        });
-
-        this.bufferPool = new BufferPool(processor.bufferPool);
-        this.highPrioMessages = new ConcurrentLinkedQueue<>();
-        this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(this.bufferPool.getSize());
-        this.endSignal = new CountDownLatch(this.workers);
-        this.aggregator = new StatsDAggregator(this, processor.getAggregator().getShardGranularity(),
-                processor.getAggregator().getFlushInterval());
     }
 
     protected abstract ProcessingTask createProcessingTask();
@@ -146,21 +117,13 @@ public abstract class StatsDProcessor implements Runnable {
         return this.qcapacity;
     }
 
-    @Override
-    public void run() {
-
-        for (int i = 0 ; i < workers ; i++) {
-            executor.submit(createProcessingTask());
-        }
-
-        boolean done = false;
-        while (!done) {
-            try {
-                endSignal.await();
-                done = true;
-            } catch (final InterruptedException e) {
-                // NOTHING
-            }
+    void startWorkers(final String namePrefix) {
+        aggregator.start();
+        // each task is a busy loop taking up one thread, so keep it simple and use an array of threads
+        for (int i = 0 ; i < workers.length ; i++) {
+            workers[i] = threadFactory.newThread(createProcessingTask());
+            workers[i].setName(namePrefix + (i + 1));
+            workers[i].start();
         }
     }
 
@@ -176,13 +139,22 @@ public abstract class StatsDProcessor implements Runnable {
         return telemetry;
     }
 
-    boolean isShutdown() {
-        return shutdown;
-    }
-
     void shutdown() {
         shutdown = true;
         aggregator.stop();
-        executor.shutdown();
+        for (int i = 0 ; i < workers.length ; i++) {
+            workers[i].interrupt();
+        }
+    }
+
+    boolean awaitUntil(final long deadline) {
+        while (true) {
+            long remaining = deadline - System.currentTimeMillis();
+            try {
+                return endSignal.await(remaining, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                // check again...
+            }
+        }
     }
 }

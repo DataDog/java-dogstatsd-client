@@ -6,6 +6,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -17,7 +18,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
         @Override
-        public void run() {
+        protected void processLoop() {
             ByteBuffer sendBuffer;
             boolean empty = true;
             boolean emptyHighPrio = true;
@@ -28,8 +29,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                 handler.handle(e);
                 return;
             }
-
-            aggregator.start();
 
             while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
 
@@ -92,8 +91,7 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                     }
                 } catch (final InterruptedException e) {
                     if (shutdown) {
-                        endSignal.countDown();
-                        return;
+                        break;
                     }
                 } catch (final Exception e) {
                     handler.handle(e);
@@ -102,17 +100,16 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
-            aggregator.stop();
-            endSignal.countDown();
         }
     }
 
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards)
-            throws Exception {
+            final int aggregatorFlushInterval, final int aggregatorShards,
+            final ThreadFactory threadFactory) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
+                aggregatorFlushInterval, aggregatorShards, threadFactory);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
     }
@@ -120,12 +117,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     @Override
     protected ProcessingTask createProcessingTask() {
         return new ProcessingTask();
-    }
-
-    StatsDNonBlockingProcessor(final StatsDNonBlockingProcessor processor) throws Exception {
-        super(processor);
-        this.qsize = new AtomicInteger(0);
-        this.messages = new ConcurrentLinkedQueue<>();
     }
 
     @Override

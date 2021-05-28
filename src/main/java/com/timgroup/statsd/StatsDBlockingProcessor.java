@@ -6,6 +6,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 
@@ -16,7 +17,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
         @Override
-        public void run() {
+        protected void processLoop() {
             ByteBuffer sendBuffer;
             boolean empty = true;
             boolean emptyHighPrio = true;
@@ -27,8 +28,6 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 handler.handle(e);
                 return;
             }
-
-            aggregator.start();
 
             while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
 
@@ -78,8 +77,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                     }
                 } catch (final InterruptedException e) {
                     if (shutdown) {
-                        endSignal.countDown();
-                        return;
+                        break;
                     }
                 } catch (final Exception e) {
                     handler.handle(e);
@@ -88,30 +86,23 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
 
             builder.setLength(0);
             builder.trimToSize();
-            aggregator.stop();
-            endSignal.countDown();
         }
 
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards) throws Exception {
+            final int aggregatorFlushInterval, final int aggregatorShards,
+            final ThreadFactory threadFactory) throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers, aggregatorFlushInterval, aggregatorShards);
+        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
+                aggregatorFlushInterval, aggregatorShards, threadFactory);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 
     @Override
     protected ProcessingTask createProcessingTask() {
         return new ProcessingTask();
-    }
-
-    StatsDBlockingProcessor(final StatsDBlockingProcessor processor)
-            throws Exception {
-
-        super(processor);
-        this.messages = new ArrayBlockingQueue<>(processor.getQcapacity());
     }
 
     @Override

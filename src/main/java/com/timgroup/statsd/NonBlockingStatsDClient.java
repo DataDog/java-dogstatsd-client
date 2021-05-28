@@ -19,8 +19,6 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -160,16 +158,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final StatsDClientErrorHandler handler;
     private final String constantTagsRendered;
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(4, new ThreadFactory() {
-        final ThreadFactory delegate = Executors.defaultThreadFactory();
-        @Override public Thread newThread(final Runnable runnable) {
-            final Thread result = delegate.newThread(runnable);
-            result.setName("StatsD-" + result.getName());
-            result.setDaemon(true);
-            return result;
-        }
-    });
-
     // Typically the telemetry and regular processors will be the same,
     // but a separate destination for telemetry is supported.
     protected final StatsDProcessor statsDProcessor;
@@ -232,13 +220,31 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    public NonBlockingStatsDClient(final String prefix, final int queueSize, String[] constantTags,
-            final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
-            Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
+    public NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
+            final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
             final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards)
             throws StatsDClientException {
+
+        this(prefix, queueSize, constantTags, errorHandler, addressLookup, telemetryAddressLookup, timeout,
+            bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking,
+            enableTelemetry, telemetryFlushInterval, enableDevMode, aggregationFlushInterval, aggregationShards,
+            null);
+    }
+
+    /**
+     * Internal constructor.
+     */
+    private NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
+            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
+            final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
+            final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
+            final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
+            final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards,
+            final ThreadFactory customThreadFactory) throws StatsDClientException {
+
         if ((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = prefix + ".";
         } else {
@@ -293,8 +299,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 transportType = "udp";
             }
 
+            ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
+
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
-                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards);
+                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory);
             telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
@@ -327,7 +335,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false, 0, aggregationShards);
+                        poolSize, 1, false, 0, aggregationShards, threadFactory);
             }
 
             this.telemetry = new Telemetry.Builder()
@@ -337,13 +345,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 .build();
 
             statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
-                    statsDProcessor.getOutboundQueue(), senderWorkers);
+                    statsDProcessor.getOutboundQueue(), senderWorkers, threadFactory);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
                 // TODO: figure out why the hell telemetryClientChannel does not work here!
                 telemetryStatsDSender = createSender(telemetryAddressLookup, handler, telemetryClientChannel,
-                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(), 1);
+                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
+                        1, threadFactory);
 
             }
 
@@ -355,13 +364,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
             throw new StatsDClientException("Failed to start StatsD client", e);
         }
 
-        executor.submit(statsDProcessor);
-        executor.submit(statsDSender);
+        statsDProcessor.startWorkers("StatsD-Processor-");
+        statsDSender.startWorkers("StatsD-Sender-");
 
         if (enableTelemetry) {
             if (telemetryStatsDProcessor != statsDProcessor) {
-                executor.submit(telemetryStatsDProcessor);
-                executor.submit(telemetryStatsDSender);
+                telemetryStatsDProcessor.startWorkers("StatsD-TelemetryProcessor-");
+                telemetryStatsDSender.startWorkers("StatsD-TelemetrySender-");
             }
             this.telemetry.start(telemetryFlushInterval);
         }
@@ -369,35 +378,22 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
-     * specified host and port.
-     * This is a shallow copy constructor meant to be used internally only.
+     * host and port specified by the given builder.
+     * The builder must be resolved before calling this internal constructor.
      *
-     * @param client
-     *    source object to copy
+     * @param builder
+     *     the resolved configuration builder
+     *
+     * @see NonBlockingStatsDClientBuilder#resolve()
      */
-    private NonBlockingStatsDClient(NonBlockingStatsDClient client)
-            throws StatsDClientException {
-
-        prefix = client.prefix;
-        handler = client.handler;
-        constantTagsRendered = client.constantTagsRendered;
-        clientChannel = client.clientChannel;
-        try {
-            statsDProcessor = createProcessor(client.statsDProcessor);
-            statsDSender = new StatsDSender(
-                    client.statsDSender, statsDProcessor.getBufferPool(), statsDProcessor.getOutboundQueue());
-        } catch (Exception e) {
-            throw new StatsDClientException("Failed to instantiate StatsD client copy", e);
-        }
-
-        telemetry = new Telemetry.Builder()
-            .tags(client.telemetry.getTags())
-            .processor(statsDProcessor)
-            .devMode(client.telemetry.getDevMode())
-            .build();
-
-        executor.submit(statsDProcessor);
-        executor.submit(statsDSender);
+    NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+        this(builder.prefix, builder.queueSize, builder.constantTags, builder.errorHandler,
+            builder.addressLookup, builder.telemetryAddressLookup, builder.timeout,
+            builder.socketBufferSize, builder.maxPacketSizeBytes, builder.entityID,
+            builder.bufferPoolSize, builder.processorWorkers, builder.senderWorkers,
+            builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
+            builder.enableDevMode, (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
+            builder.aggregationShards, builder.threadFactory);
     }
 
 
@@ -422,7 +418,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public NonBlockingStatsDClient(final String prefix) throws StatsDClientException {
         this(new NonBlockingStatsDClientBuilder()
             .prefix(prefix)
-            .build());
+            .resolve());
     }
 
     /**
@@ -453,7 +449,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .prefix(prefix)
             .hostname(hostname)
             .port(port)
-            .build());
+            .resolve());
     }
 
     /**
@@ -489,7 +485,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .hostname(hostname)
             .port(port)
             .queueSize(queueSize)
-            .build());
+            .resolve());
     }
 
     /**
@@ -524,7 +520,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .hostname(hostname)
             .port(port)
             .constantTags(constantTags)
-            .build());
+            .resolve());
     }
 
     /**
@@ -562,7 +558,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .port(port)
             .constantTags(constantTags)
             .maxPacketSizeBytes(maxPacketSizeBytes)
-            .build());
+            .resolve());
     }
 
     /**
@@ -600,7 +596,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .port(port)
             .queueSize(queueSize)
             .constantTags(constantTags)
-            .build());
+            .resolve());
     }
 
     /**
@@ -640,7 +636,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .port(port)
             .constantTags(constantTags)
             .errorHandler(errorHandler)
-            .build());
+            .resolve());
     }
 
     /**
@@ -682,7 +678,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .queueSize(queueSize)
             .constantTags(constantTags)
             .errorHandler(errorHandler)
-            .build());
+            .resolve());
     }
 
 
@@ -731,7 +727,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .constantTags(constantTags)
             .errorHandler(errorHandler)
             .entityID(entityID)
-            .build());
+            .resolve());
     }
 
 
@@ -778,7 +774,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .constantTags(constantTags)
             .errorHandler(errorHandler)
             .maxPacketSizeBytes(maxPacketSizeBytes)
-            .build());
+            .resolve());
     }
 
     /**
@@ -827,7 +823,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .socketBufferSize(bufferSize)
             .constantTags(constantTags)
             .errorHandler(errorHandler)
-            .build());
+            .resolve());
     }
 
     /**
@@ -864,7 +860,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .constantTags(constantTags)
             .errorHandler(errorHandler)
             .addressLookup(addressLookup)
-            .build());
+            .resolve());
     }
 
     /**
@@ -907,7 +903,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .addressLookup(addressLookup)
             .timeout(timeout)
             .socketBufferSize(bufferSize)
-            .build());
+            .resolve());
     }
 
     /**
@@ -954,7 +950,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             .timeout(timeout)
             .socketBufferSize(bufferSize)
             .maxPacketSizeBytes(maxPacketSizeBytes)
-            .build());
+            .resolve());
     }
 
     /**
@@ -1017,29 +1013,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards) throws Exception {
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory)
+            throws Exception {
         if (blocking) {
             return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
         }
-    }
-
-    protected StatsDProcessor createProcessor(StatsDProcessor processor) throws Exception {
-
-        if (processor instanceof StatsDNonBlockingProcessor) {
-            return new StatsDNonBlockingProcessor((StatsDNonBlockingProcessor) processor);
-        }
-
-        return new StatsDBlockingProcessor((StatsDBlockingProcessor) processor);
     }
 
     protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
-            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers)
-            throws Exception {
-        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers);
+            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers,
+            final ThreadFactory threadFactory) throws Exception {
+        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers, threadFactory);
     }
 
     /**
@@ -1059,18 +1047,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryStatsDSender.shutdown();
             }
 
-            executor.shutdown();
-            try {
-                executor.awaitTermination(30, TimeUnit.SECONDS);
-                if (!executor.isTerminated()) {
-                    executor.shutdownNow();
-                }
-            } catch (Exception e) {
-                handler.handle(e);
-                if (!executor.isTerminated()) {
-                    executor.shutdownNow();
-                }
-            }
+            long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30);
+
+            statsDProcessor.awaitUntil(deadline);
+            statsDSender.awaitUntil(deadline);
+
         } catch (final Exception e) {
             handler.handle(e);
         } finally {

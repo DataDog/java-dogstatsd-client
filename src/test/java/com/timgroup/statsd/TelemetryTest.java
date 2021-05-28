@@ -29,13 +29,13 @@ public class TelemetryTest {
         public final List<Message> messages = new ArrayList<>();
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0);
+            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory());
         }
 
 
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
             @Override
-            public void run() {}
+            protected void processLoop() {}
         }
 
         @Override
@@ -44,8 +44,7 @@ public class TelemetryTest {
             return true;
         }
 
-        @Override
-        public void run(){}
+        void startWorkers() {}
 
         @Override
         protected ProcessingTask createProcessingTask() {

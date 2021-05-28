@@ -7,13 +7,11 @@ import java.nio.channels.DatagramChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class StatsDSender implements Runnable {
+public class StatsDSender {
     private final Callable<SocketAddress> addressLookup;
     private final SocketAddress address;
     private final DatagramChannel clientChannel;
@@ -23,9 +21,8 @@ public class StatsDSender implements Runnable {
     private final BlockingQueue<ByteBuffer> buffers;
     private static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
 
-    private final ExecutorService executor;
-    private static final int DEFAULT_WORKERS = 1;
-    private final int workers;
+    protected final ThreadFactory threadFactory;
+    protected final Thread[] workers;
 
     private final CountDownLatch endSignal;
     private volatile boolean shutdown;
@@ -35,45 +32,19 @@ public class StatsDSender implements Runnable {
 
     StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
                  final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                 final int workers) throws Exception {
+                 final int workers, final ThreadFactory threadFactory) throws Exception {
 
         this.pool = pool;
         this.buffers = buffers;
         this.handler = handler;
-        this.workers = workers;
+        this.threadFactory = threadFactory;
+        this.workers = new Thread[workers];
 
         this.addressLookup = addressLookup;
         this.address = addressLookup.call();
         this.clientChannel = clientChannel;
 
-        this.executor = Executors.newFixedThreadPool(workers, new ThreadFactory() {
-            final ThreadFactory delegate = Executors.defaultThreadFactory();
-            @Override public Thread newThread(final Runnable runnable) {
-                final Thread result = delegate.newThread(runnable);
-                result.setName("StatsD-Sender-" + result.getName());
-                result.setDaemon(true);
-                return result;
-            }
-        });
         this.endSignal = new CountDownLatch(workers);
-    }
-
-    StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
-                 final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers)
-            throws Exception {
-        this(addressLookup, clientChannel, handler, pool, buffers, DEFAULT_WORKERS);
-    }
-
-    StatsDSender(final StatsDSender sender) throws Exception {
-        this(sender.addressLookup, sender.clientChannel, sender.handler,
-                sender.pool, sender.buffers, sender.workers);
-        this.setTelemetry(sender.getTelemetry());
-    }
-
-    StatsDSender(final StatsDSender sender, BufferPool pool, BlockingQueue<ByteBuffer> buffers) throws Exception {
-        this(sender.addressLookup, sender.clientChannel, sender.handler,
-                pool, buffers, sender.workers);
-        this.setTelemetry(sender.getTelemetry());
     }
 
     public void setTelemetry(final Telemetry telemetry) {
@@ -84,84 +55,89 @@ public class StatsDSender implements Runnable {
         return telemetry;
     }
 
-
-    @Override
-    public void run() {
-
-        for (int i = 0 ; i < workers ; i++) {
-            executor.submit(new Runnable() {
+    void startWorkers(final String namePrefix) {
+        // each task is a busy loop taking up one thread, so keep it simple and use an array of threads
+        for (int i = 0 ; i < workers.length ; i++) {
+            workers[i] = threadFactory.newThread(new Runnable() {
                 public void run() {
-                    ByteBuffer buffer = null;
-                    Telemetry telemetry = getTelemetry();  // attribute snapshot to harness CPU cache
-
-                    while (!(buffers.isEmpty() && shutdown)) {
-                        int sizeOfBuffer = 0;
-                        try {
-
-                            if (buffer != null) {
-                                pool.put(buffer);
-                            }
-
-                            buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
-                            if (buffer == null) {
-                                continue;
-                            }
-
-                            sizeOfBuffer = buffer.position();
-
-                            buffer.flip();
-                            final int sentBytes = clientChannel.send(buffer, address);
-
-                            buffer.clear();
-                            if (sizeOfBuffer != sentBytes) {
-                                throw new IOException(
-                                        String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
-                                            buffer.toString(),
-                                            address.toString(),
-                                            sentBytes,
-                                            sizeOfBuffer));
-                            }
-
-                            if (telemetry != null) {
-                                telemetry.incrBytesSent(sizeOfBuffer);
-                                telemetry.incrPacketSent(1);
-                            }
-
-                        } catch (final InterruptedException e) {
-                            if (shutdown) {
-                                endSignal.countDown();
-                                return;
-                            }
-                        } catch (final Exception e) {
-                            if (telemetry != null) {
-                                telemetry.incrBytesDropped(sizeOfBuffer);
-                                telemetry.incrPacketDropped(1);
-                            }
-                            handler.handle(e);
-                        }
+                    try {
+                        sendLoop();
+                    } finally {
+                        endSignal.countDown();
                     }
-                    endSignal.countDown();
                 }
             });
+            workers[i].setName(namePrefix + (i + 1));
+            workers[i].start();
         }
+    }
 
-        boolean done = false;
-        while (!done) {
+    void sendLoop() {
+        ByteBuffer buffer = null;
+        Telemetry telemetry = getTelemetry();  // attribute snapshot to harness CPU cache
+
+        while (!(buffers.isEmpty() && shutdown)) {
+            int sizeOfBuffer = 0;
             try {
-                endSignal.await();
-                done = true;
+
+                if (buffer != null) {
+                    pool.put(buffer);
+                }
+
+                buffer = buffers.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
+                if (buffer == null) {
+                    continue;
+                }
+
+                sizeOfBuffer = buffer.position();
+
+                buffer.flip();
+                final int sentBytes = clientChannel.send(buffer, address);
+
+                buffer.clear();
+                if (sizeOfBuffer != sentBytes) {
+                    throw new IOException(
+                            String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
+                                    buffer.toString(),
+                                    address.toString(),
+                                    sentBytes,
+                                    sizeOfBuffer));
+                }
+
+                if (telemetry != null) {
+                    telemetry.incrBytesSent(sizeOfBuffer);
+                    telemetry.incrPacketSent(1);
+                }
+
             } catch (final InterruptedException e) {
-                // NOTHING
+                if (shutdown) {
+                    break;
+                }
+            } catch (final Exception e) {
+                if (telemetry != null) {
+                    telemetry.incrBytesDropped(sizeOfBuffer);
+                    telemetry.incrPacketDropped(1);
+                }
+                handler.handle(e);
             }
         }
     }
 
-    boolean isShutdown() {
-        return shutdown;
-    }
-
     void shutdown() {
         shutdown = true;
-        executor.shutdown();
+        for (int i = 0 ; i < workers.length ; i++) {
+            workers[i].interrupt();
+        }
+    }
+
+    boolean awaitUntil(final long deadline) {
+        while (true) {
+            long remaining = deadline - System.currentTimeMillis();
+            try {
+                return endSignal.await(remaining, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                // check again...
+            }
+        }
     }
 }
