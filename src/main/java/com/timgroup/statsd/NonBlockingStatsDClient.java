@@ -1144,8 +1144,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return success;
     }
 
-    // send double with sample rate
-    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
+    // send double
+    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags, final boolean isDelta) {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -1160,19 +1160,27 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
+                    if (isDelta && this.value.doubleValue() >= 0) {
+                        builder.append("+");
+                    }
                     builder.append(format(NUMBER_FORMATTER, this.value));
                 }
             });
         }
     }
 
-    // send double without sample rate
-    private void send(String aspect, final double value, Message.Type type, String[] tags) {
-        send(aspect, value, type, Double.NaN, tags);
+    // send double with sample rate
+    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
+        send(aspect, value, type, sampleRate, tags);
     }
 
-    // send long with sample rate
-    private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
+    // send double without sample rate
+    private void send(String aspect, final double value, Message.Type type, String[] tags) {
+        send(aspect, value, type, Double.NaN, tags, false);
+    }
+
+    //send long
+    private void send(final String aspect, final long value, final Message.Type type, double sampleRate, final String[] tags, final boolean isDelta) {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -1187,15 +1195,23 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
+                    if (isDelta && this.value.longValue() >= 0) {
+                        builder.append("+");
+                    }
                     builder.append(this.value);
                 }
             });
         }
     }
 
+    // send long with sample rate
+    private void send(final String aspect, final long value, final Message.Type type, double sampleRate, final String[] tags) {
+        send(aspect, value, type, sampleRate, tags, false);
+    }
+
     // send long without sample rate
     private void send(String aspect, final long value, Message.Type type, String[] tags) {
-        send(aspect, value, type, Double.NaN, tags);
+        send(aspect, value, type, Double.NaN, tags, false);
     }
 
     /**
@@ -1374,6 +1390,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordGaugeValue(final String aspect, final long value, final double sampleRate, final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, tags);
+    }
+
+    @Override
+    public void recordGaugeDelta(String aspect, double delta, String... tags) {
+        send(aspect, delta, Message.Type.GAUGE, Double.NaN, tags, true);
+    }
+
+    @Override
+    public void recordGaugeDelta(String aspect, long delta, final String... tags) {
+        send(aspect, delta, Message.Type.GAUGE, Double.NaN, tags, true);
     }
 
     /**

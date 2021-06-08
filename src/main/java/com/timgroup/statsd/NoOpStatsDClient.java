@@ -44,6 +44,10 @@ public final class NoOpStatsDClient implements StatsDClient {
 
     @Override public void recordGaugeValue(String aspect, long value, double sampleRate, String... tags) { }
 
+    @Override public void recordGaugeDelta(String aspect, long delta, String... tags) { }
+
+    @Override public void recordGaugeDelta(String aspect, double delta, String... tags) { }
+
     @Override public void gauge(String aspect, double value, String... tags) { }
 
     @Override public void gauge(String aspect, double value, double sampleRate, String... tags) { }

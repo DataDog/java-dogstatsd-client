@@ -257,6 +257,46 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void sends_positive_gauge_delta_to_statsd_with_tags() throws Exception {
+
+
+        client.recordGaugeDelta("mygauge", 423, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:+423|g|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_negative_gauge_delta_to_statsd_with_tags() throws Exception {
+
+
+        client.recordGaugeDelta("mygauge", -123, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:-123|g|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_gauge_delta_to_statsd_with_tags() throws Exception {
+
+
+        client.recordGaugeDelta("mygauge", 0.423, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:+0.423|g|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_negative_double_gauge_delta_to_statsd_with_tags() throws Exception {
+
+
+        client.recordGaugeDelta("mygauge", -0.123, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:-0.123|g|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
     public void sends_histogram_to_statsd() throws Exception {
 
         client.recordHistogramValue("myhistogram", 423);

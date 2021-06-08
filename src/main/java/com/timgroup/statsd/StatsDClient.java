@@ -274,6 +274,25 @@ public interface StatsDClient extends Closeable {
     void recordGaugeValue(String aspect, long value, double sampleRate, String... tags);
 
     /**
+     * Records a change in the value of the specified named gauge.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param delta
+     *     the +/- delta to apply to the gauge
+     */
+    void recordGaugeDelta(String aspect, long delta, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordGaugeDelta(String, long, String[])} but for double deltas.
+     */
+    void recordGaugeDelta(String aspect, double delta, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
      *
      * @param aspect
