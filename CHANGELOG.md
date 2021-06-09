@@ -1,6 +1,17 @@
 # CHANGELOG
 
-## 2.12.0 / 2020.04.05
+## 2.13.0 / 2021.06.09
+
+* [FEATURE] Telemetry: adding developer mode: additional metrics. See [#131][]
+* [IMPROVEMENT] Cleanup internal thread model. See [#144][]
+* [IMPROVEMENT] All dogstatsd messages are EOL terminated. See [#130][]
+* [IMPROVEMENT] Refactor version.properties to dedicated directory. See [#147][] (Thanks [@cameronhotchkies][])
+* [IMPROVEMENT] Dev: make environment variable variables public. See [#132][] (Thanks [@dbyron0][])
+* [BUGFIX] Properly compute unicode event strings length. See [#149][]
+* [DOCUMENTATION] Updated javadoc and README. See [#139][] and [#136][]. (Thanks [@snopoke][] and [@gherceg][])
+
+
+## 2.12.0 / 2021.04.05
 
 * [IMPROVEMENT] Deployments to Sonatype are now automated (but manually triggered).
   No user-facing changes are part of this release.
@@ -132,8 +143,20 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#126]: https://github.com/DataDog/java-dogstatsd-client/issues/126
 [#127]: https://github.com/DataDog/java-dogstatsd-client/issues/127
 [#129]: https://github.com/DataDog/java-dogstatsd-client/issues/129
+[#130]: https://github.com/DataDog/java-dogstatsd-client/issues/130
+[#131]: https://github.com/DataDog/java-dogstatsd-client/issues/131
+[#132]: https://github.com/DataDog/java-dogstatsd-client/issues/132
+[#136]: https://github.com/DataDog/java-dogstatsd-client/issues/136
+[#139]: https://github.com/DataDog/java-dogstatsd-client/issues/139
+[#144]: https://github.com/DataDog/java-dogstatsd-client/issues/144
+[#147]: https://github.com/DataDog/java-dogstatsd-client/issues/147
+[#149]: https://github.com/DataDog/java-dogstatsd-client/issues/149
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
+[@cameronhotchkies]: https://github.com/cameronhotchkies
 [@cithal]: https://github.com/cithal
+[@dbyron0]: https://github.com/dbyron0
+[@gherceg]: https://github.com/gherceg
 [@hanny24]: https://github.com/hanny24
 [@njhill]: https://github.com/njhill
+[@snopoke]: https://github.com/snopoke
