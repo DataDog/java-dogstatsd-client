@@ -512,8 +512,6 @@ public interface StatsDClient extends Closeable {
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
      *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     *
      * @param aspect
      *     the name of the distribution
      * @param value
@@ -529,8 +527,6 @@ public interface StatsDClient extends Closeable {
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
      *
      * @param aspect
      *     the name of the distribution
@@ -550,8 +546,6 @@ public interface StatsDClient extends Closeable {
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
      *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
-     *
      * @param aspect
      *     the name of the distribution
      * @param value
@@ -567,8 +561,6 @@ public interface StatsDClient extends Closeable {
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
-     *
-     * <p>This is a beta feature and must be enabled specifically for your organization.</p>
      *
      * @param aspect
      *     the name of the distribution
