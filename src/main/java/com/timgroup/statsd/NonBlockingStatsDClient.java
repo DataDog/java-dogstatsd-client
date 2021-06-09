@@ -54,9 +54,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class NonBlockingStatsDClient implements StatsDClient {
 
-    static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
-    static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
-    static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
+    public static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
+    public static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
+    public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
 
     enum Literal {
