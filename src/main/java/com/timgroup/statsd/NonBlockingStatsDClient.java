@@ -284,16 +284,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         try {
             final SocketAddress address = addressLookup.call();
             if (isUnixSocketAddress(address)) {
-                clientChannel = UnixDatagramChannel.open();
-                // Set send timeout, to handle the case where the transmission buffer is full
-                // If no timeout is set, the send becomes blocking
-                if (timeout > 0) {
-                    clientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
-                }
-                if (bufferSize > 0) {
-                    clientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-                }
-                transportType = "uds";
+              clientChannel = getUnixDatagramChannel(timeout, bufferSize);
+              transportType = "uds";
             } else {
                 clientChannel = DatagramChannel.open();
                 transportType = "udp";
@@ -318,15 +310,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 final SocketAddress telemetryAddress = telemetryAddressLookup.call();
                 if (isUnixSocketAddress(telemetryAddress)) {
-                    telemetryClientChannel = UnixDatagramChannel.open();
-                    // Set send timeout, to handle the case where the transmission buffer is full
-                    // If no timeout is set, the send becomes blocking
-                    if (timeout > 0) {
-                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
-                    }
-                    if (bufferSize > 0) {
-                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-                    }
+                    telemetryClientChannel = getUnixDatagramChannel(timeout, bufferSize);
                 } else if (transportType == "uds") {
                     // UDP clientChannel can submit to multiple addresses, we only need
                     // a new channel if transport type is UDS for main traffic.
@@ -375,6 +359,19 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry.start(telemetryFlushInterval);
         }
     }
+
+  private DatagramChannel getUnixDatagramChannel(final int timeout, final int bufferSize) throws IOException {
+    DatagramChannel channel = UnixDatagramChannel.open();
+    // Set send timeout, to handle the case where the transmission buffer is full
+    // If no timeout is set, the send becomes blocking
+    if (timeout > 0) {
+      channel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+    }
+    if (bufferSize > 0) {
+      channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+    }
+    return channel;
+  }
 
     /**
      * Test if address is an UnixSocketAddres.
