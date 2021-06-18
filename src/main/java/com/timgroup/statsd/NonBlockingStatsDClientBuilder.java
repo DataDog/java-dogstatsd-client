@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixSocketAddress;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -240,7 +238,20 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() throws UnknownHostException {
                 if (port == 0) { // Hostname is a file path to the socket
-                    return new UnixSocketAddress(hostname);
+                    try {
+                        // Use of reflection to avoid hard dependency on UnixSocketAddress
+                        // Replace original code : "return new UnixSocketAddress(hostname);"
+                        // Reflection code :
+                        // Load class jnr.unixsocket.UnixSocketAddress
+                        Class<?> clazz = Class.forName("jnr.unixsocket.UnixSocketAddress");
+                        // Get the constructor
+                        java.lang.reflect.Constructor<?> ctor = clazz.getConstructor(String.class);
+                        // Call
+                        Object object = ctor.newInstance(new Object[]{hostname});
+                        return (SocketAddress) object;
+                    } catch (final Exception e) {
+                        throw new StatsDClientException("Failed to create UnixSocketAddress", e);
+                    }
                 } else {
                     return new InetSocketAddress(InetAddress.getByName(hostname), port);
                 }
