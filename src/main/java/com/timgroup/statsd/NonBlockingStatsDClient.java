@@ -283,7 +283,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         String transportType = "";
         try {
             final SocketAddress address = addressLookup.call();
-            if (address instanceof UnixSocketAddress) {
+            if (isUnixSocketAddress(address)) {
                 clientChannel = UnixDatagramChannel.open();
                 // Set send timeout, to handle the case where the transmission buffer is full
                 // If no timeout is set, the send becomes blocking
@@ -317,7 +317,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             if (addressLookup != telemetryAddressLookup) {
 
                 final SocketAddress telemetryAddress = telemetryAddressLookup.call();
-                if (telemetryAddress instanceof UnixSocketAddress) {
+                if (isUnixSocketAddress(telemetryAddress)) {
                     telemetryClientChannel = UnixDatagramChannel.open();
                     // Set send timeout, to handle the case where the transmission buffer is full
                     // If no timeout is set, the send becomes blocking
@@ -375,6 +375,17 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry.start(telemetryFlushInterval);
         }
     }
+
+    /**
+     * Test if address is an UnixSocketAddres.
+     *
+     * @param address
+     *     the address to test
+     *
+     */
+  private static boolean isUnixSocketAddress(final SocketAddress address) {
+    return address instanceof UnixSocketAddress;
+  }
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
