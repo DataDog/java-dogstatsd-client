@@ -281,8 +281,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         try {
             final SocketAddress address = addressLookup.call();
             if (isUnixSocketAddress(address)) {
-              clientChannel = getUnixDatagramChannel(timeout, bufferSize);
-              transportType = "uds";
+                clientChannel = getUnixDatagramChannel(timeout, bufferSize);
+                transportType = "uds";
             } else {
                 clientChannel = DatagramChannel.open();
                 transportType = "udp";
@@ -357,47 +357,47 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
     
-  /**
-   * Get a UnixDatagramChannelby using reflection to avoid hard dependency on jnr.unixsocket.*
-   */
-  private DatagramChannel getUnixDatagramChannel(final int timeout, final int bufferSize) throws Exception {
-    // Original code : DatagramChannel channel = UnixDatagramChannel.open();
-    // Reflection code:
-    // Load class jnr.unixsocket.UnixDatagramChannel
-    Class<?> unixDatagramCHannelClass = Class.forName("jnr.unixsocket.UnixDatagramChannel");
-    // Get the open method
-    java.lang.reflect.Method openMethod = unixDatagramCHannelClass.getMethod("open", (Class<?>[] ) null);
-    // Call open() method on UnixDatagramChannel
-    DatagramChannel channel = (DatagramChannel) openMethod.invoke(null, (Object[]) null);
-    
-    // Set send timeout, to handle the case where the transmission buffer is full
-    // If no timeout is set, the send becomes blocking
-    if (timeout > 0) {
-        // Orignal code : channel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+    /**
+     * Get a UnixDatagramChannelby using reflection to avoid hard dependency on jnr.unixsocket.*
+     */
+    private DatagramChannel getUnixDatagramChannel(final int timeout, final int bufferSize) throws Exception {
+        // Original code : DatagramChannel channel = UnixDatagramChannel.open();
         // Reflection code:
-        // Load UnixSocketOptions class
-        Class<?> unixSocketOptionsClass = Class.forName("jnr.unixsocket.UnixSocketOptions");
-        // Get field SO_SNDTIMEO
-        java.lang.reflect.Field so_sndtimeo_field = unixSocketOptionsClass.getField("SO_SNDTIMEO");
-        // Get value of field SO_SNDTIMEO
-        SocketOption so_sndtimeo_value = (SocketOption) so_sndtimeo_field.get(null);
-        // Set option
-        channel.setOption(so_sndtimeo_value, timeout);
+        // Load class jnr.unixsocket.UnixDatagramChannel
+        Class<?> unixDatagramCHannelClass = Class.forName("jnr.unixsocket.UnixDatagramChannel");
+        // Get the open method
+        java.lang.reflect.Method openMethod = unixDatagramCHannelClass.getMethod("open", (Class<?>[] ) null);
+        // Call open() method on UnixDatagramChannel
+        DatagramChannel channel = (DatagramChannel) openMethod.invoke(null, (Object[]) null);
+
+        // Set send timeout, to handle the case where the transmission buffer is full
+        // If no timeout is set, the send becomes blocking
+        if (timeout > 0) {
+            // Orignal code : channel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+            // Reflection code:
+            // Load UnixSocketOptions class
+            Class<?> unixSocketOptionsClass = Class.forName("jnr.unixsocket.UnixSocketOptions");
+            // Get field SO_SNDTIMEO
+            java.lang.reflect.Field sosndtimeoField = unixSocketOptionsClass.getField("SO_SNDTIMEO");
+            // Get value of field SO_SNDTIMEO
+            SocketOption sosndtimeoValue = (SocketOption) sosndtimeoField.get(null);
+            // Set option
+            channel.setOption(sosndtimeoValue, timeout);
+        }
+        if (bufferSize > 0) {
+            // Orignal code : channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+            // Reflection code:
+            // Load UnixSocketOptions class
+            Class<?> unixSocketOptionsClass = Class.forName("jnr.unixsocket.UnixSocketOptions");
+            // Get field SO_SNDBUF
+            java.lang.reflect.Field sosndbufField = unixSocketOptionsClass.getField("SO_SNDBUF");
+            // Get value of field SO_SNDBUF
+            SocketOption sosndbufValue = (SocketOption) sosndbufField.get(null);
+            // Set option
+            channel.setOption(sosndbufValue, bufferSize);
+        }
+        return channel;
     }
-    if (bufferSize > 0) {
-        // Orignal code : channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-        // Reflection code:
-        // Load UnixSocketOptions class
-        Class<?> unixSocketOptionsClass = Class.forName("jnr.unixsocket.UnixSocketOptions");
-        // Get field SO_SNDBUF
-        java.lang.reflect.Field so_sndbuf_field = unixSocketOptionsClass.getField("SO_SNDBUF");
-        // Get value of field SO_SNDBUF
-        SocketOption so_sndbuf_value = (SocketOption) so_sndbuf_field.get(null);
-        // Set option
-        channel.setOption(so_sndbuf_value, bufferSize);
-    }
-    return channel;
-  }
 
     /**
      * Test if address is an UnixSocketAddres.
@@ -406,10 +406,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     the address to test
      *
      */
-  private static boolean isUnixSocketAddress(final SocketAddress address) {
-    // Using reflection to avoid hard dependency on UnixSocketAddress
-    return address.getClass().getName().equals("jnr.unixsocket.UnixSocketAddress");
-  }
+    private static boolean isUnixSocketAddress(final SocketAddress address) {
+        // Using reflection to avoid hard dependency on UnixSocketAddress
+        return address.getClass().getName().equals("jnr.unixsocket.UnixSocketAddress");
+    }
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
