@@ -16,7 +16,6 @@ deploy_to_sonatype:
 
   tags:
     - "runner:docker"
-    - "size:large"
 
   image: maven:3.6.3-jdk-8-slim
 
@@ -65,7 +64,6 @@ create_key:
 
   tags:
     - "runner:docker"
-    - "size:large"
 
   image: $REGISTRY/ci/agent-key-management-tools/gpg:1
 
