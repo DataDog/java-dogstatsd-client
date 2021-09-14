@@ -41,8 +41,7 @@ public class Telemetry {
     protected final String aggregatedContextsByTypeMetric = "datadog.dogstatsd.client.aggregated_context_by_type";
 
     protected String tags;
-    protected boolean devMode;
-    protected StringBuilder devModeBuilder = new StringBuilder();
+    protected StringBuilder tagBuilder = new StringBuilder();
 
     public StatsDProcessor processor;
     protected Timer timer;
@@ -81,18 +80,16 @@ public class Telemetry {
         }
     }
 
-    Telemetry(final String tags, final StatsDProcessor processor, final boolean devMode) {
+    Telemetry(final String tags, final StatsDProcessor processor) {
         // precompute metrics lines with tags
         this.tags = tags;
         this.processor = processor;
-        this.devMode = devMode;
         this.timer = null;
     }
 
     public static class Builder {
         private String tags;
         private StatsDProcessor processor;
-        private boolean devMode;
 
         public Builder() {}
 
@@ -106,13 +103,8 @@ public class Telemetry {
             return this;
         }
 
-        public Builder devMode(boolean devMode) {
-            this.devMode = devMode;
-            return this;
-        }
-
         public Telemetry build() {
-            return new Telemetry(this.tags, this.processor, this.devMode);
+            return new Telemetry(this.tags, this.processor);
         }
     }
 
@@ -155,55 +147,51 @@ public class Telemetry {
         processor.send(new TelemetryMessage(this.packetsDroppedQueueMetric, this.packetsDroppedQueue.getAndSet(0), tags));
         processor.send(new TelemetryMessage(this.aggregatedContextsMetric, this.aggregatedContexts.getAndSet(0), tags));
 
-        if (devMode) {
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.gaugeSent.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.GAUGE)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.countSent.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.COUNT)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.setSent.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.SET)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.histogramSent.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.HISTOGRAM)));
-            processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.distributionSent.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.DISTRIBUTION)));
+        // developer metrics
+        processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.gaugeSent.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.GAUGE)));
+        processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.countSent.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.COUNT)));
+        processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.setSent.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.SET)));
+        processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.histogramSent.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.HISTOGRAM)));
+        processor.send(new TelemetryMessage(this.metricsByTypeSentMetric, this.distributionSent.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.DISTRIBUTION)));
 
-            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedGaugeContexts.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.GAUGE)));
-            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedCountContexts.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.COUNT)));
-            processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedSetContexts.getAndSet(0),
-                        getTelemetryTags(tags, Message.Type.SET)));
-        }
+        processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedGaugeContexts.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.GAUGE)));
+        processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedCountContexts.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.COUNT)));
+        processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedSetContexts.getAndSet(0),
+                    getTelemetryTags(tags, Message.Type.SET)));
     }
 
     protected String getTelemetryTags(String tags, Message.Type type) {
-        if (!devMode) {
-            return tags;
-        }
 
-        devModeBuilder.setLength(0);
-        devModeBuilder.append(tags);
+        tagBuilder.setLength(0);
+        tagBuilder.append(tags);
         switch (type) {
             case GAUGE:
-                devModeBuilder.append(",metrics_type:gauge");
+                tagBuilder.append(",metrics_type:gauge");
                 break;
             case COUNT:
-                devModeBuilder.append(",metrics_type:count");
+                tagBuilder.append(",metrics_type:count");
                 break;
             case SET:
-                devModeBuilder.append(",metrics_type:set");
+                tagBuilder.append(",metrics_type:set");
                 break;
             case HISTOGRAM:
-                devModeBuilder.append(",metrics_type:histogram");
+                tagBuilder.append(",metrics_type:histogram");
                 break;
             case DISTRIBUTION:
-                devModeBuilder.append(",metrics_type:distribution");
+                tagBuilder.append(",metrics_type:distribution");
                 break;
             default:
                 break;
         }
 
-        return devModeBuilder.toString();
+        return tagBuilder.toString();
     }
 
     /**
@@ -327,17 +315,15 @@ public class Telemetry {
         this.packetsDroppedQueue.set(0);
         this.aggregatedContexts.set(0);
 
-        if (devMode) {
-            this.gaugeSent.set(0);
-            this.countSent.set(0);
-            this.histogramSent.set(0);
-            this.distributionSent.set(0);
-            this.setSent.set(0);
+        this.gaugeSent.set(0);
+        this.countSent.set(0);
+        this.histogramSent.set(0);
+        this.distributionSent.set(0);
+        this.setSent.set(0);
 
-            this.aggregatedGaugeContexts.set(0);
-            this.aggregatedCountContexts.set(0);
-            this.aggregatedSetContexts.set(0);
-        }
+        this.aggregatedGaugeContexts.set(0);
+        this.aggregatedCountContexts.set(0);
+        this.aggregatedSetContexts.set(0);
     }
 
     /**
@@ -346,13 +332,5 @@ public class Telemetry {
      */
     public String getTags() {
         return this.tags;
-    }
-
-    /**
-     * Gets the dev mode setting value.
-     * @return this Telemetry instance dev mode setting.
-     */
-    public boolean getDevMode() {
-        return this.devMode;
     }
 }

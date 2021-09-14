@@ -116,21 +116,19 @@ public class StatsDAggregator {
                 if (telemetry != null) {
                     telemetry.incrAggregatedContexts(1);
 
-                    if (telemetry.getDevMode()) {
-
-                        switch (message.getType()) {
-                            case GAUGE:
-                                telemetry.incrAggregatedGaugeContexts(1);
-                                break;
-                            case COUNT:
-                                telemetry.incrAggregatedCountContexts(1);
-                                break;
-                            case SET:
-                                telemetry.incrAggregatedSetContexts(1);
-                                break;
-                            default:
-                                break;
-                        }
+                    // developer metrics
+                    switch (message.getType()) {
+                        case GAUGE:
+                            telemetry.incrAggregatedGaugeContexts(1);
+                            break;
+                        case COUNT:
+                            telemetry.incrAggregatedCountContexts(1);
+                            break;
+                        case SET:
+                            telemetry.incrAggregatedSetContexts(1);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }

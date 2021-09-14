@@ -28,7 +28,6 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
     public boolean blocking = NonBlockingStatsDClient.DEFAULT_BLOCKING;
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
-    public boolean enableDevMode = NonBlockingStatsDClient.DEFAULT_ENABLE_DEVMODE;
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
@@ -140,11 +139,6 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder enableTelemetry(boolean val) {
         enableTelemetry = val;
-        return this;
-    }
-
-    public NonBlockingStatsDClientBuilder enableDevMode(boolean val) {
-        enableDevMode = val;
         return this;
     }
 
