@@ -29,12 +29,8 @@ import static org.junit.Assert.assertTrue;
 public class NonBlockingStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
-    private static final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
-        .prefix("my.prefix")
-        .hostname("localhost")
-        .port(STATSD_SERVER_PORT)
-        .enableTelemetry(false)
-        .build();
+    private static NonBlockingStatsDClient client;
+    private static NonBlockingStatsDClient clientUnaggregated;
     private static DummyStatsDServer server;
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
@@ -45,12 +41,26 @@ public class NonBlockingStatsDClientTest {
     @BeforeClass
     public static void start() throws IOException {
         server = new DummyStatsDServer(STATSD_SERVER_PORT);
+        client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)
+            .build();
+        clientUnaggregated = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)
+            .enableAggregation(false)
+            .build();
     }
 
     @AfterClass
     public static void stop() {
         try {
             client.stop();
+            clientUnaggregated.stop();
             server.close();
         } catch (java.io.IOException ignored) {
         }
@@ -78,7 +88,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_counter_value_with_sample_rate_to_statsd() throws Exception {
 
-        client.count("mycount", 24, 1);
+        clientUnaggregated.count("mycount", 24, 1);
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24|c|@1.000000")));
@@ -114,7 +124,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_counter_value_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-        client.count("mycount", 24, 1, "foo:bar", "baz");
+        clientUnaggregated.count("mycount", 24, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24|c|@1.000000|#baz,foo:bar")));
@@ -142,7 +152,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_counter_increment_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-        client.incrementCounter("myinc", 1, "foo:bar", "baz");
+        clientUnaggregated.incrementCounter("myinc", 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.myinc:1|c|@1.000000|#baz,foo:bar")));
@@ -169,8 +179,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_counter_decrement_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-
-        client.decrementCounter("mydec", 1, "foo:bar", "baz");
+        clientUnaggregated.decrementCounter("mydec", 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydec:-1|c|@1.000000|#baz,foo:bar")));
@@ -189,8 +198,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_with_sample_rate_to_statsd() throws Exception {
 
-
-        client.recordGaugeValue("mygauge", 423, 1);
+        clientUnaggregated.recordGaugeValue("mygauge", 423, 1);
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423|g|@1.000000")));
@@ -239,8 +247,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-
-        client.recordGaugeValue("mygauge", 423, 1, "foo:bar", "baz");
+        clientUnaggregated.recordGaugeValue("mygauge", 423, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423|g|@1.000000|#baz,foo:bar")));
@@ -288,8 +295,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-
-        client.recordHistogramValue("myhistogram", 423, 1, "foo:bar", "baz");
+        clientUnaggregated.recordHistogramValue("myhistogram", 423, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.myhistogram:423|h|@1.000000|#baz,foo:bar")));
@@ -308,8 +314,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_double_histogram_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-
-        client.recordHistogramValue("myhistogram", 0.423, 1, "foo:bar", "baz");
+        clientUnaggregated.recordHistogramValue("myhistogram", 0.423, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.myhistogram:0.423|h|@1.000000|#baz,foo:bar")));
@@ -347,8 +352,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-
-        client.recordDistributionValue("mydistribution", 423, 1, "foo:bar", "baz");
+        clientUnaggregated.recordDistributionValue("mydistribution", 423, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423|d|@1.000000|#baz,foo:bar")));
@@ -367,8 +371,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_double_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-
-        client.recordDistributionValue("mydistribution", 0.423, 1, "foo:bar", "baz");
+        clientUnaggregated.recordDistributionValue("mydistribution", 0.423, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:0.423|d|@1.000000|#baz,foo:bar")));
@@ -423,7 +426,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_timer_with_sample_rate_to_statsd_with_tags() throws Exception {
 
-        client.recordExecutionTime("mytime", 123, 1, "foo:bar", "baz");
+        clientUnaggregated.recordExecutionTime("mytime", 123, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mytime:123|ms|@1.000000|#baz,foo:bar")));
@@ -487,6 +490,7 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
+            .enableAggregation(false)
             .build();
         try {
             client.gauge("value", 423, 1, "baz");
@@ -659,7 +663,7 @@ public class NonBlockingStatsDClientTest {
         }
     }
 
-    @Test(timeout = 5000L)
+    @Test(timeout = 15000L)
     public void checkEnvVars() {
         final Random r = new Random();
         for (final NonBlockingStatsDClient.Literal literal : NonBlockingStatsDClient.Literal.values()) {
@@ -674,6 +678,7 @@ public class NonBlockingStatsDClientTest {
             server.clear();
             client.gauge("value", 42);
             server.waitForMessage("checkEnvVars.value");
+            log.info("passed for '" + literal + "'; env cleaned.");
             assertThat(server.messagesReceived(), hasItem(comparesEqualTo("checkEnvVars.value:42|g|#" +
                     literal.tag() + ":" + randomString)));
             assertThat(server.messagesReceived(), hasItem(comparesEqualTo("checkEnvVars.value:42|g|#" +

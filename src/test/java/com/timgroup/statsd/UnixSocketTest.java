@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 public class UnixSocketTest implements StatsDClientErrorHandler {
     private static File tmpFolder;
     private static NonBlockingStatsDClient client;
+    private static NonBlockingStatsDClient clientAggregate;
     private static DummyStatsDServer server;
     private static File socketFile;
     private volatile Exception lastException = new Exception();
@@ -53,13 +54,25 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
             .socketBufferSize(1024 * 1024)
+            .enableAggregation(false)
             .errorHandler(this)
             .build();
-        }
+
+        clientAggregate = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
+            .hostname(socketFile.toString())
+            .port(0)
+            .queueSize(1)
+            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .socketBufferSize(1024 * 1024)
+            .enableAggregation(false)
+            .errorHandler(this)
+            .build();
+    }
 
     @After
     public void stop() throws Exception {
         client.stop();
+        clientAggregate.stop();
         server.close();
     }
 
