@@ -88,7 +88,7 @@ public final class NonBlockingStatsDClientPerfTest {
     @Test(timeout=30000)
     public void perfAggregatedTest() throws Exception {
 
-        int expectedSize = 2;
+        int expectedSize = 2 + 21;
         long start = System.currentTimeMillis();
         boolean done = false;
 
