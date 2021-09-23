@@ -81,9 +81,6 @@ public class Event {
             if ((event.title == null) || event.title.isEmpty()) {
                 throw new IllegalStateException("event title must be set");
             }
-            if ((event.text == null) || event.text.isEmpty()) {
-                throw new IllegalStateException("event text must be set");
-            }
             return event;
         }
 
