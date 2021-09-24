@@ -107,6 +107,7 @@ public final class NonBlockingStatsDClientMaxPerfTest {
             .queueSize(qSize)
             .senderWorkers(senderWorkers)
             .processorWorkers(processorWorkers)
+            .enableAggregation(false)
             .build();
         this.server = new DummyLowMemStatsDServer(port);
 

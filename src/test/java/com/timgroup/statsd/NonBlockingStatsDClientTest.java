@@ -17,6 +17,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
+import java.text.NumberFormat;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
@@ -1269,6 +1270,39 @@ public class NonBlockingStatsDClientTest {
         } finally {
             testClient.stop();
         }
+    }
+
+    @Test
+    public void testMessageHashcode() throws Exception {
+
+        StatsDTestMessage previous = new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[0]) {
+            @Override protected void writeValue(StringBuilder builder) {
+                builder.append(this.value);
+            };
+        };
+        StatsDTestMessage previousTagged =
+            new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[] {"foo", "bar"}) {
+
+            @Override protected void writeValue(StringBuilder builder) {
+                builder.append(this.value);
+            };
+        };
+
+        StatsDTestMessage next = new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[0]) {
+            @Override protected void writeValue(StringBuilder builder) {
+                builder.append(this.value);
+            };
+        };
+        StatsDTestMessage nextTagged =
+            new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[] {"foo", "bar"}) {
+
+            @Override protected void writeValue(StringBuilder builder) {
+                builder.append(this.value);
+            };
+        };
+
+        assertEquals(previous.hashCode(), next.hashCode());
+        assertEquals(previousTagged.hashCode(), nextTagged.hashCode());
     }
 
     @Test(timeout = 5000L)

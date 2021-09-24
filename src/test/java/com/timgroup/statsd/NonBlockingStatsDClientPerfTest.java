@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 import java.util.Random;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -24,6 +25,7 @@ public final class NonBlockingStatsDClientPerfTest {
         .hostname("localhost")
         .port(STATSD_SERVER_PORT)
         .blocking(true)  // non-blocking processors will drop messages if the queue fills up
+        .enableTelemetry(false)
         .enableAggregation(false)
         .build();
 
@@ -31,9 +33,10 @@ public final class NonBlockingStatsDClientPerfTest {
         .hostname("localhost")
         .port(STATSD_SERVER_PORT)
         .blocking(true)  // non-blocking processors will drop messages if the queue fills up
+        .enableTelemetry(false)
         .build();
 
-    private final ExecutorService executor = Executors.newFixedThreadPool(10);
+    private ExecutorService executor;
     private static DummyStatsDServer server;
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientPerfTest");
@@ -45,12 +48,21 @@ public final class NonBlockingStatsDClientPerfTest {
 
     @AfterClass
     public static void stop() throws Exception {
+
         client.stop();
+        clientAggr.stop();
         server.close();
+    }
+
+    @Before
+    public void setup() throws Exception {
+        executor = Executors.newFixedThreadPool(10);
     }
 
     @After
     public void clear() throws Exception {
+        executor.shutdown();
+        executor.awaitTermination(20, TimeUnit.SECONDS);
         server.clear();
     }
 
@@ -67,20 +79,11 @@ public final class NonBlockingStatsDClientPerfTest {
 
         }
 
-        executor.shutdown();
-        executor.awaitTermination(20, TimeUnit.SECONDS);
-
-        int messages;
-        while((messages = server.messagesReceived().size()) < testSize) {
-
-            log.info("Messages at server: " + messages);
+        while(server.messagesReceived().size() < testSize) {
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ex) {}
         }
-
-        log.info("Messages at server: " + messages);
-        log.info("Packets at server: " + server.packetsReceived());
 
         assertEquals(testSize, server.messagesReceived().size());
     }
@@ -88,37 +91,28 @@ public final class NonBlockingStatsDClientPerfTest {
     @Test(timeout=30000)
     public void perfAggregatedTest() throws Exception {
 
-        int expectedSize = 2 + 21;
-        long start = System.currentTimeMillis();
+        int expectedSize = 1;
+        long elapsed = 0, start = System.currentTimeMillis();
         boolean done = false;
 
         while(!done) {
-            executor.submit(new Runnable() {
-                public void run() {
-                    clientAggr.count("mycount", 1);
-                }
-            });
+            clientAggr.count("myaggrcount", 1);
 
-            long elapsed = System.currentTimeMillis() - start;
-            if  (elapsed > clientAggr.statsDProcessor.getAggregator().getFlushInterval()) {
+            elapsed = System.currentTimeMillis() - start;
+            if  (elapsed > clientAggr.statsDProcessor.getAggregator().getFlushInterval() - 1) {
                 done = true;
             }
+            Thread.sleep(50);
         }
 
-        executor.shutdown();
-        executor.awaitTermination(20, TimeUnit.SECONDS);
 
         int messages;
         while((messages = server.messagesReceived().size()) < expectedSize) {
 
-            log.info("Messages at server: " + messages);
             try {
-                Thread.sleep(50);
+                Thread.sleep(500);
             } catch (InterruptedException ex) {}
         }
-
-        log.info("Messages at server: " + messages);
-        log.info("Packets at server: " + server.packetsReceived());
 
         assertEquals(expectedSize, server.messagesReceived().size());
     }
