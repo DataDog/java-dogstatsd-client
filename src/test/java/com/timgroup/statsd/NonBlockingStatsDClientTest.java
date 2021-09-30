@@ -1059,7 +1059,7 @@ public class NonBlockingStatsDClientTest {
 
             // 8 messages in telemetry batch
             final List<String> messages = telemetryServer.messagesReceived();
-            assertEquals(9, messages.size());
+            assertEquals(17, messages.size());
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.metrics:1|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.events:0|c")));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.service_checks:0|c")));
@@ -1231,7 +1231,7 @@ public class NonBlockingStatsDClientTest {
 
             List<String> messages = server.messagesReceived();
 
-            assertThat(messages.size(), comparesEqualTo(3+9));
+            assertThat(messages.size(), comparesEqualTo(3+17));
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.aggregated_context:27|c")));
 
         } finally {
@@ -1339,7 +1339,7 @@ public class NonBlockingStatsDClientTest {
                 final int senderWorkers, boolean blocking) throws StatsDClientException {
 
             super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,bufferSize,
-                    maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0, false, 0, 0);
+                    maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0, 0, 0);
             lock = new CountDownLatch(1);
         }
 

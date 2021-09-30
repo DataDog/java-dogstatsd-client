@@ -89,8 +89,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
-    public static final boolean DEFAULT_ENABLE_DEVMODE = false;
-    public static final boolean DEFAULT_ENABLE_AGGREGATION = true;
+  
+    public static final boolean DEFAULT_ENABLE_AGGREGATION = false;
 
     public static final String CLIENT_TAG = "client:java";
     public static final String CLIENT_VERSION_TAG = "client_version:";
@@ -211,8 +211,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     Boolean to enable client telemetry.
      * @param telemetryFlushInterval
      *     Telemetry flush interval integer, in milliseconds.
-     * @param enableDevMode
-     *     Boolean to enable client telemetry in dev-mode.
      * @param aggregationFlushInterval
      *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
      * @param aggregationShards
@@ -225,12 +223,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
-            final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards)
+            final int aggregationFlushInterval, final int aggregationShards)
             throws StatsDClientException {
 
         this(prefix, queueSize, constantTags, errorHandler, addressLookup, telemetryAddressLookup, timeout,
             bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking,
-            enableTelemetry, telemetryFlushInterval, enableDevMode, aggregationFlushInterval, aggregationShards,
+            enableTelemetry, telemetryFlushInterval, aggregationFlushInterval, aggregationShards,
             null);
     }
 
@@ -242,8 +240,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
-            final boolean enableDevMode, final int aggregationFlushInterval, final int aggregationShards,
-            final ThreadFactory customThreadFactory) throws StatsDClientException {
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory customThreadFactory)
+            throws StatsDClientException {
 
         if ((prefix != null) && (!prefix.isEmpty())) {
             this.prefix = prefix + ".";
@@ -341,7 +339,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry = new Telemetry.Builder()
                 .tags(telemetryTags)
                 .processor(telemetryStatsDProcessor)
-                .devMode(enableDevMode)
                 .build();
 
             statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
@@ -392,7 +389,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             builder.socketBufferSize, builder.maxPacketSizeBytes, builder.entityID,
             builder.bufferPoolSize, builder.processorWorkers, builder.senderWorkers,
             builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
-            builder.enableDevMode, (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
+            (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
             builder.aggregationShards, builder.threadFactory);
     }
 
@@ -1008,7 +1005,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         this(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
                 bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                blocking, enableTelemetry, telemetryFlushInterval, DEFAULT_ENABLE_DEVMODE, 0, 0);
+                blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,

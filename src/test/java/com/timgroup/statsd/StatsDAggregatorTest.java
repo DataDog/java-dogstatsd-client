@@ -147,7 +147,6 @@ public class StatsDAggregatorTest {
         // set telemetry
         Telemetry telemetry = new Telemetry.Builder()
                 .processor(fakeProcessor)
-                .devMode(true)
                 .build();
         fakeProcessor.setTelemetry(telemetry);
 
