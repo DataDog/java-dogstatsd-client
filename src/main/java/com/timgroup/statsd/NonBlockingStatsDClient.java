@@ -89,6 +89,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
+  
     public static final boolean DEFAULT_ENABLE_AGGREGATION = false;
 
     public static final String CLIENT_TAG = "client:java";
@@ -109,13 +110,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * The NumberFormat instances are not threadsafe and thus defined as ThreadLocal
      * for safety.
      */
-    private static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<NumberFormat>() {
+    protected static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<NumberFormat>() {
         @Override
         protected NumberFormat initialValue() {
             return newFormatter(false);
         }
     };
-    private static final ThreadLocal<NumberFormat> SAMPLE_RATE_FORMATTER = new ThreadLocal<NumberFormat>() {
+    protected static final ThreadLocal<NumberFormat> SAMPLE_RATE_FORMATTER = new ThreadLocal<NumberFormat>() {
         @Override
         protected NumberFormat initialValue() {
             return newFormatter(true);
@@ -148,7 +149,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return numberFormatter;
     }
 
-    private static String format(ThreadLocal<NumberFormat> formatter, Number value) {
+    protected static String format(ThreadLocal<NumberFormat> formatter, Number value) {
         return formatter.get().format(value);
     }
 
