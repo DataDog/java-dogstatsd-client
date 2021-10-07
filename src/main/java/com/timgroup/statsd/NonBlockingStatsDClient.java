@@ -1798,7 +1798,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         });
     }
 
-    private boolean isInvalidSample(double sampleRate) {
+    protected boolean isInvalidSample(double sampleRate) {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 

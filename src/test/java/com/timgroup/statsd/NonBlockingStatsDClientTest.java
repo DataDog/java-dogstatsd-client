@@ -1376,4 +1376,45 @@ public class NonBlockingStatsDClientTest {
             }
         }
     }
+
+    private static class NonsamplingClient extends NonBlockingStatsDClient {
+	NonsamplingClient(NonBlockingStatsDClientBuilder builder) {
+	    super(builder);
+	}
+	@Override
+	protected boolean isInvalidSample(double sampleRate) {
+	    return false;
+	}
+    }
+
+    private static class NonsamplingClientBuilder extends NonBlockingStatsDClientBuilder {
+	@Override
+	public NonsamplingClient build() throws StatsDClientException {
+	    return new NonsamplingClient(resolve());
+	}
+    }
+
+    @Test(timeout = 5000L)
+    public void nonsampling_client_test() throws Exception {
+        final int port = 17256;
+        final DummyStatsDServer server = new DummyStatsDServer(port);
+
+	final NonBlockingStatsDClientBuilder builder = new NonsamplingClientBuilder()
+	    .prefix("")
+            .hostname("localhost")
+	    .port(port);
+
+	final NonsamplingClient client = ((NonsamplingClientBuilder)builder).build();
+
+        try {
+            client.gauge("test.gauge", 42.0, 0.0);
+	    server.waitForMessage();
+	    List<String> messages = server.messagesReceived();
+            assertEquals(1, messages.size());
+            assertEquals(messages.get(0), "test.gauge:42|g|@0.000000");
+        } finally {
+            client.stop();
+            server.close();
+        }
+    }
 }
