@@ -82,9 +82,24 @@ public class TelemetryTest {
                                        final int senderWorkers, boolean blocking, final boolean enableTelemetry,
                                        final int telemetryFlushInterval)
                 throws StatsDClientException {
-                super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,
-                        bufferSize, maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers,
-                        blocking, enableTelemetry, telemetryFlushInterval, 0, 0);
+
+            super(new NonBlockingStatsDClientBuilder()
+                .prefix(prefix)
+                .queueSize(queueSize)
+                .constantTags(constantTags)
+                .errorHandler(errorHandler)
+                .addressLookup(addressLookup)
+                .timeout(timeout)
+                .socketBufferSize(bufferSize)
+                .maxPacketSizeBytes(maxPacketSizeBytes)
+                .entityID(entityID)
+                .bufferPoolSize(poolSize)
+                .processorWorkers(processorWorkers)
+                .senderWorkers(senderWorkers)
+                .blocking(blocking)
+                .enableTelemetry(enableTelemetry)
+                .telemetryFlushInterval(telemetryFlushInterval)
+                .resolve());
         }
     };
 
