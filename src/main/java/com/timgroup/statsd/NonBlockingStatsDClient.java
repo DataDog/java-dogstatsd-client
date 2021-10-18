@@ -89,7 +89,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
-  
+
     public static final boolean DEFAULT_ENABLE_AGGREGATION = false;
 
     public static final String CLIENT_TAG = "client:java";
@@ -1673,7 +1673,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
                     .append(getUtf8Length(text))
                     .append("}:")
                     .append(title)
-                .append("|").append(text);
+                    .append("|");
+
+                if (text != null) {
+                    builder.append(text);
+                }
+
                 eventMap(event, builder);
                 tagString(eventTags, builder);
 
@@ -1684,10 +1689,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     private static String escapeEventString(final String title) {
+        if (title == null) {
+            return null;
+        }
         return title.replace("\n", "\\n");
     }
 
     private int getUtf8Length(final String text) {
+        if (text == null) {
+            return 0;
+        }
         return text.getBytes(UTF_8).length;
     }
 

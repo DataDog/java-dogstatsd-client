@@ -910,6 +910,18 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void sends_no_body_event() throws Exception {
+        final Event event = Event.builder()
+                .withTitle("title")
+                .withDate(1234567000)
+                .build();
+        client.recordEvent(event);
+        server.waitForMessage();
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("_e{15,0}:my.prefix.title||d:1234567")));
+    }
+
+    @Test(timeout = 5000L)
     public void sends_service_check() throws Exception {
         final String inputMessage = "\u266c \u2020\u00f8U \n\u2020\u00f8U \u00a5\u00bau|m: T0\u00b5 \u266a"; // "♬ †øU \n†øU ¥ºu|m: T0µ ♪"
         final String outputMessage = "\u266c \u2020\u00f8U \\n\u2020\u00f8U \u00a5\u00bau|m\\: T0\u00b5 \u266a"; // note the escaped colon
