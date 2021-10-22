@@ -436,7 +436,13 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_mixed_tags_deprecated() throws Exception {
 
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags("instance:foo", "app:bar")
+            .build();
         try {
             client.gauge("value", 423, "baz");
             server.waitForMessage("my.prefix");
@@ -470,7 +476,13 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_mixed_tags_with_sample_rate_deprecated() throws Exception {
 
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags("instance:foo", "app:bar")
+            .build();
         try {
             client.gauge("value", 423, 1, "baz");
             server.waitForMessage("my.prefix.value:423");
@@ -506,7 +518,13 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_constant_tags_only_deprecated() throws Exception {
 
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, "instance:foo", "app:bar");
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags("instance:foo", "app:bar")
+            .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
@@ -541,7 +559,12 @@ public class NonBlockingStatsDClientTest {
     public void sends_gauge_entityID_from_env_deprecated() throws Exception {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
@@ -577,7 +600,13 @@ public class NonBlockingStatsDClientTest {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final String constantTags = "arbitraryTag:arbitraryValue";
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, constantTags);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags(constantTags)
+            .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
@@ -613,7 +642,17 @@ public class NonBlockingStatsDClientTest {
     public void sends_gauge_entityID_from_args_deprecated() throws Exception {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT, Integer.MAX_VALUE, null, null, entity_value+"-arg");
+
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .constantTags(null)
+            .errorHandler(null)
+            .entityID(entity_value+"-arg")
+            .build();
+
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
@@ -695,7 +734,12 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_empty_prefix_deprecated() throws Exception {
 
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
+
         try {
             client.gauge("top.level.value", 423);
             server.waitForMessage("top.level");
@@ -727,7 +771,12 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_null_prefix_deprecated() throws Exception {
 
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient(null, "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix(null)
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
+
         try {
             client.gauge("top.level.value", 423);
             server.waitForMessage("top.level");
@@ -859,7 +908,11 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_event_empty_prefix_deprecated() throws Exception {
 
-        final NonBlockingStatsDClient client = new NonBlockingStatsDClient("", "localhost", STATSD_SERVER_PORT);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .build();
         final Event event = Event.builder()
                 .withTitle("title1")
                 .withText("text1")
@@ -978,7 +1031,12 @@ public class NonBlockingStatsDClientTest {
 
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
 
-        try (final NonBlockingStatsDClient testClient = new NonBlockingStatsDClient("my.prefix", "localhost", STATSD_SERVER_PORT,  null, errorHandler)) {
+        try (final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+            .prefix("")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .errorHandler(errorHandler)
+            .build()) {
 
             final byte[] messageBytes = new byte[1600];
             final ServiceCheck tooLongServiceCheck = ServiceCheck.builder()
@@ -1350,8 +1408,21 @@ public class NonBlockingStatsDClientTest {
                 final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
                 final int senderWorkers, boolean blocking) throws StatsDClientException {
 
-            super(prefix, queueSize, constantTags, errorHandler, addressLookup, addressLookup, timeout,bufferSize,
-                    maxPacketSizeBytes, entityID, poolSize, processorWorkers, senderWorkers, blocking, false, 0, 0, 0);
+            super(new NonBlockingStatsDClientBuilder()
+                .prefix(prefix)
+                .queueSize(queueSize)
+                .constantTags(constantTags)
+                .errorHandler(errorHandler)
+                .addressLookup(addressLookup)
+                .timeout(timeout)
+                .entityID(entityID)
+                .bufferPoolSize(poolSize)
+                .blocking(blocking)
+                .senderWorkers(senderWorkers)
+                .processorWorkers(processorWorkers)
+                .maxPacketSizeBytes(maxPacketSizeBytes)
+                .resolve());
+
             lock = new CountDownLatch(1);
         }
 
