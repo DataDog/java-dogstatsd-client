@@ -54,7 +54,41 @@ public class DogStatsdClient {
 }
 ```
 
-or
+alternatively:
+
+```java
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
+import com.timgroup.statsd.NonBlockingStatsDClient;
+import com.timgroup.statsd.StatsDClient;
+
+public class DogStatsdClient {
+
+    public static void main(String[] args) throws Exception {
+
+        // resolve() returns a copy of NonBlockingStatsDClient with
+        // any implicit elements resolved, and may also be passed to
+        // NonBlockingStatsDClient to as a sole constructor argument.
+
+        StatsDClient client = new NonBlockingStatsDClient(
+            new NonBlockingStatsDClientBuilder()
+                .prefix("statsd")
+                .hostname("localhost")
+                .port(8125)
+                .resolve());
+
+        // use your client...
+    }
+}
+```
+
+### v2.x
+
+Client version `v3.x` is now preferred over the older client `v2.x` release line. We do suggest you upgrade to the newer `v3.x` at
+your earliest convenience.
+
+The builder pattern described above was introduced with `v2.10.0` in the `v2.x` series. Earlier releases require you use the
+deprecated overloaded constructors.
+
 
 **DEPRECATED**
 ```java
@@ -71,11 +105,36 @@ public class DogStatsdClient {
 }
 ```
 
-See the full list of available [DogStatsD Client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/#client-instantiation-parameters).
+See the full list of available [DogStatsD Client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=hostagent#client-instantiation-parameters).
+
+### Migrating from 2.x to 3.x
+
+Though there are very few breaking changes in `3.x`, some code changes might be required for some user to migrate to the latest version. If you are migrating from the `v2.x` series to `v3.x` and were using the deprecated constructors, please use the following table to ease your migration to utilizing the builder pattern.
+
+| v2.x constructor parameter | v2.10.0+ builder method |
+|----------------------------|-------------------------|
+|  final Callable<SocketAddress> addressLookup                         | NonBlockingStatsDClientBuilder addressLookup(Callable<SocketAddress> val)                         |
+|  final boolean blocking                          | NonBlockingStatsDClientBuilder blocking(boolean val)                         |
+|  final int bufferSize                          | NonBlockingStatsDClientBuilder socketBufferSize(int val)                         |
+|  final String... constantTags                          | NonBlockingStatsDClientBuilder queueSize(String... val)                         |
+|  final boolean enableTelemetry                          | NonBlockingStatsDClientBuilder enableTelemetry(boolean val)                         |
+|  final String entityID                          | NonBlockingStatsDClientBuilder entityID(String val)                         |
+|  final StatsDClientErrorHandler errorHandler                          | NonBlockingStatsDClientBuilder errorHandler(StatsDClientErrorHandler val)                         |
+|  final String hostname                          | NonBlockingStatsDClientBuilder hostname(String val)                         |
+|  final int maxPacketSizeBytes                          | NonBlockingStatsDClientBuilder maxPacketSizeBytes(String... val)                         |
+|  final int processorWorkers                          | NonBlockingStatsDClientBuilder processorWorkers(int val)                         |
+|  final int poolSize                          | NonBlockingStatsDClientBuilder bufferPoolSize(int val)                         |
+|  final int port                          | NonBlockingStatsDClientBuilder port(int val)                         |
+|  final String prefix                          | NonBlockingStatsDClientBuilder prefix(String val)                         |
+|  final int queueSize                          | NonBlockingStatsDClientBuilder queueSize(int val)                         |
+|  final int senderWorkers                          | NonBlockingStatsDClientBuilder senderWorkers(int val)                         |
+|  final Callable<SocketAddress> telemetryAddressLookup                         | NonBlockingStatsDClientBuilder telemetryAddressLookup(Callable<SocketAddress> val)                         |
+|  final int telemetryFlushInterval                          | NonBlockingStatsDClientBuilder telemetryFlushInterval(int val)                         |
+|  final int timeout                          | NonBlockingStatsDClientBuilder timeout(int val)                         |
 
 ### Transport and Maximum Packet Size
 
-As mentioned above the client currently supports two forms of transport: UDP and Unix Domain Socketsi (UDS).  
+As mentioned above the client currently supports two forms of transport: UDP and Unix Domain Socketsi (UDS).
 
 The preferred setup for local transport is UDS, while remote setups will require the use of UDP. For both setups we have tried to set convenient maximum default packet sizes that should help with performance by packing multiple statsd metrics into each network packet all while playing nicely with the respective environments. For this reason we have set the following defaults for the max packet size:
 - UDS: 8192 bytes - recommended default.
@@ -105,8 +164,8 @@ env:
 
 ## Aggregation
 
-As of version 2.11.0, client-side aggregation has been introduced in the java client side for basic types (gauges, counts, sets). Aggregation remains unavailable at the
-time of this writing for histograms, distributions, service checks and events due to message relevance and statistical significance of these types. The feature is optional.
+As of version `v2.11.0`, client-side aggregation has been introduced in the java client side for basic types (gauges, counts, sets). Aggregation remains unavailable at the
+time of this writing for histograms, distributions, service checks and events due to message relevance and statistical significance of these types. The feature is enabled by default as of `v3.0.0`, and remains available but disabled by default for prior versions.
 
 The goal of this feature is to reduce the number of messages submitted to the Datadog Agent. Minimizing message volume allows us to reduce load on the dogstatsd server side
 and mitigate packet drops. The feature has been implemented such that impact on CPU and memory should be quite minimal on the client side. Users might be concerned with
@@ -114,11 +173,11 @@ what could be perceived as a loss of resolution by resorting to aggregation on t
 in the Datadog Agent already aggregates messages over a certain flush period, therefore so long as the flush interval configured on the client side is smaller
 than said flush interval on the server side there should no loss in resolution.
 
-### Configuration 
+### Configuration
 
 Enabling aggregation is simple, you just need to set the appropriate options with the client builder.
 
-You can just enable aggregation by calling the `enableAggregation(bool)` method on the builder. 
+You can just enable aggregation by calling the `enableAggregation(bool)` method on the builder.
 
 There are two clent-side aggregation knobs available:
 - `aggregationShards(int)`: determines the number of shards in the aggregator, this
@@ -132,7 +191,7 @@ StatsDClient client = new NonBlockingStatsDClientBuilder()
     .port(8125)
     .enableAggregation(true)
     .aggregationFlushInterval(3000)  // optional: in milliseconds
-    .aggregationShards(8)  // optional: defaults to 4 
+    .aggregationShards(8)  // optional: defaults to 4
     .build();
 ```
 
