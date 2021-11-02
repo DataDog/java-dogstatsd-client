@@ -16,7 +16,7 @@ Please refer to the [readme][readme configuration] for tips on how to migrate to
 
 
 * [DEPRECATE] Removing deprecated constructors. See [#158][]
-* [FEATURE] Client aggregation enabled by default. See [#158][]
+* [FEATURE] Client aggregation enabled by default. See [#164][]
 * [FEATURE] Allow clients to override metric sampling. See [#162][]
 * [FEATURE] Client internal metrics included in telemetry by default. See [#157][]
 * [BUGFIX] Set client side aggregation flush interval to 2s. See [#154][]
@@ -183,6 +183,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#158]: https://github.com/DataDog/java-dogstatsd-client/issues/158
 [#160]: https://github.com/DataDog/java-dogstatsd-client/issues/160
 [#162]: https://github.com/DataDog/java-dogstatsd-client/issues/162
+[#164]: https://github.com/DataDog/java-dogstatsd-client/issues/164
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
 [@cameronhotchkies]: https://github.com/cameronhotchkies
