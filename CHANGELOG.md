@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 3.0.0 / Unreleased
+## 3.0.0 / 2021.11.02
 
 This release marks a new major release, and includes some *breaking changes*.
 Most notably:
