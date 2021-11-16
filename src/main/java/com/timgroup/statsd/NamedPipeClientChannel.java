@@ -12,7 +12,7 @@ public class NamedPipeClientChannel implements ClientChannel {
     private final FileChannel fileChannel;
 
     public NamedPipeClientChannel(NamedPipeSocketAddress address) throws FileNotFoundException {
-        randomAccessFile = new RandomAccessFile(address.getPipe(), "w");
+        randomAccessFile = new RandomAccessFile(address.getPipe(), "rw");
         fileChannel = randomAccessFile.getChannel();
     }
 
