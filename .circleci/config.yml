@@ -50,7 +50,12 @@ jobs:
     <<: *default_steps
   windows-openjdk12:
     executor: win/default
-    <<: *default_steps
+    steps:
+      - checkout
+      - run: |
+          choco install maven
+      - run: |
+          mvn clean install
 
 workflows:
   version: 2
