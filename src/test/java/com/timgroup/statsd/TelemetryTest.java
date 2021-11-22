@@ -169,7 +169,7 @@ public class TelemetryTest {
 
     @BeforeClass
     public static void start() throws IOException, Exception {
-        server = new DummyStatsDServer(STATSD_SERVER_PORT);
+        server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
         client.telemetry.processor = fakeProcessor;
         telemetryClient.telemetry.processor = fakeProcessor;

@@ -43,7 +43,7 @@ public final class NonBlockingStatsDClientPerfTest {
 
     @BeforeClass
     public static void start() throws IOException {
-        server = new DummyStatsDServer(STATSD_SERVER_PORT);
+        server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
     }
 
     @AfterClass

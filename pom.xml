@@ -150,6 +150,12 @@
             <version>1.18.0</version>
         </dependency>
         <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <scope>test</scope>
+            <version>5.10.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jnr-unixsocket</artifactId>
             <version>0.36</version>

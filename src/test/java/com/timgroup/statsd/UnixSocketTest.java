@@ -47,7 +47,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         socketFile = new File(tmpFolder, "socket.sock");
         socketFile.deleteOnExit();
 
-        server = new DummyStatsDServer(socketFile.toString());
+        server = new UnixSocketDummyStatsDServer(socketFile.toString());
         client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
             .hostname(socketFile.toString())
             .port(0)
@@ -120,7 +120,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
         // Re-open the server, next send should work OK
         lastException = new Exception();
-        DummyStatsDServer server2 = new DummyStatsDServer(socketFile.toString());
+        DummyStatsDServer server2 = new UnixSocketDummyStatsDServer(socketFile.toString());
 
         client.gauge("mycount", 30);
         server2.waitForMessage();

@@ -1,6 +1,7 @@
 
 package com.timgroup.statsd;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.Buffer;
@@ -17,24 +18,11 @@ import jnr.unixsocket.UnixSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 
-class DummyStatsDServer {
+abstract class DummyStatsDServer implements Closeable {
     private final List<String> messagesReceived = new ArrayList<String>();
     private AtomicInteger packetsReceived = new AtomicInteger(0);
 
-    protected final DatagramChannel server;
     protected volatile Boolean freeze = false;
-
-    public DummyStatsDServer(int port) throws IOException {
-        server = DatagramChannel.open();
-        server.bind(new InetSocketAddress(port));
-        this.listen();
-    }
-
-    public DummyStatsDServer(String socketPath) throws IOException {
-        server = UnixDatagramChannel.open();
-        server.bind(new UnixSocketAddress(socketPath));
-        this.listen();
-    }
 
     protected void listen() {
         Thread thread = new Thread(new Runnable() {
@@ -42,7 +30,7 @@ class DummyStatsDServer {
             public void run() {
                 final ByteBuffer packet = ByteBuffer.allocate(1500);
 
-                while(server.isOpen()) {
+                while(isOpen()) {
                     if (freeze) {
                         try {
                             Thread.sleep(10);
@@ -52,14 +40,12 @@ class DummyStatsDServer {
                         try {
                             ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
                                                        // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
-                            server.receive(packet);
+                            receive(packet);
                             packetsReceived.addAndGet(1);
 
                             packet.flip();
                             for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
-                                synchronized(messagesReceived) {
-                                    messagesReceived.add(msg.trim());
-                                }
+                                addMessage(msg);
                             }
                         } catch (IOException e) {
                         }
@@ -105,7 +91,7 @@ class DummyStatsDServer {
         }
     }
 
-    public int packetsReceived() {
+    public int getPacketsReceived() {
         return packetsReceived.get();
     }
 
@@ -117,17 +103,19 @@ class DummyStatsDServer {
         freeze = false;
     }
 
-    public void close() throws IOException {
-        try {
-            server.close();
-        } catch (Exception e) {
-            //ignore
-        }
-    }
-
     public void clear() {
         packetsReceived.set(0);
         messagesReceived.clear();
+    }
+
+    protected abstract boolean isOpen();
+
+    protected abstract void receive(ByteBuffer packet) throws IOException;
+
+    protected void addMessage(String msg) {
+        synchronized(messagesReceived) {
+            messagesReceived.add(msg.trim());
+        }
     }
 
 }
