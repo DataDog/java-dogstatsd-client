@@ -10,6 +10,7 @@ import java.nio.channels.DatagramChannel;
 public class DatagramClientChannel implements ClientChannel {
     private final DatagramChannel delegate;
     private final String transport;
+    private final SocketAddress address;
 
     /**
      * Creates a new DatagramClientChannel that wraps the delegate.
@@ -23,7 +24,7 @@ public class DatagramClientChannel implements ClientChannel {
         } else {
             transport = "udp";
         }
-        delegate.connect(address);
+        this.address = address;
     }
 
     @Override
@@ -33,7 +34,7 @@ public class DatagramClientChannel implements ClientChannel {
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        return delegate.write(src);
+        return delegate.send(src, address);
     }
 
     @Override
