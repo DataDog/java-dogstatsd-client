@@ -114,7 +114,10 @@ abstract class DummyStatsDServer implements Closeable {
 
     protected void addMessage(String msg) {
         synchronized(messagesReceived) {
-            messagesReceived.add(msg.trim());
+            String trimmed = msg.trim();
+            if (!trimmed.isEmpty()) {
+                messagesReceived.add(msg.trim());
+            }
         }
     }
 
