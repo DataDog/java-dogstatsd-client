@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.4.1
+
 commands:
   create_custom_cache_lock:
     description: "Create custom cache lock for java version."
@@ -45,6 +48,9 @@ jobs:
     docker:
       - image: circleci/openjdk:14.0.2-buster
     <<: *default_steps
+  windows-openjdk12:
+    executor: win/default
+    <<: *default_steps
 
 workflows:
   version: 2
@@ -55,3 +61,4 @@ workflows:
       - openjdk9
       - openjdk11
       - openjdk13
+      - windows-openjdk12
