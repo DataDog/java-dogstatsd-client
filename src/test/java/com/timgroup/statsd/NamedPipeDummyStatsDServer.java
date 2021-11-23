@@ -2,6 +2,7 @@ package com.timgroup.statsd;
 
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.WinBase;
+import com.sun.jna.platform.win32.WinError;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.ptr.IntByReference;
 import java.io.IOException;
@@ -12,7 +13,6 @@ import java.util.logging.Logger;
 // And https://docs.microsoft.com/en-us/windows/win32/ipc/multithreaded-pipe-server
 public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
     private static final Logger log = Logger.getLogger("NamedPipeDummyStatsDServer");
-
     private final HANDLE hNamedPipe;
     private volatile boolean clientConnected = false;
     private volatile boolean isOpen = true;
@@ -46,13 +46,15 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
             throw new IOException("Server closed");
         }
         if (!clientConnected) {
-            log.info("Not connected waiting for connect");
             boolean connected = Kernel32.INSTANCE.ConnectNamedPipe(hNamedPipe, null);
+            // ERROR_PIPE_CONNECTED means the client connected before the server
+            // The connection is established
+            int lastError = Kernel32.INSTANCE.GetLastError();
+            connected = connected || lastError == WinError.ERROR_PIPE_CONNECTED;
             if (connected) {
-                log.info("Connected");
                 clientConnected = true;
             } else {
-                log.info("failed to connect");
+                log.info("Failed to connect. Last error: " + lastError);
                 close();
                 return;
             }
@@ -72,7 +74,6 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
 
     @Override
     public void close() throws IOException {
-        log.info("Closing");
         isOpen = false;
         Kernel32.INSTANCE.CloseHandle(hNamedPipe);
     }

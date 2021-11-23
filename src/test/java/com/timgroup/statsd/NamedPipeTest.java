@@ -33,7 +33,6 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
 
     @Before
     public void start() {
-        log.info("starting test");
         String pipeName = "testPipe-" + random.nextInt(10000);
 
         server = new NamedPipeDummyStatsDServer(pipeName);
