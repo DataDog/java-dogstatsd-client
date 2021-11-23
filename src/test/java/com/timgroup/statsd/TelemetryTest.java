@@ -7,8 +7,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.concurrent.Callable;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -16,8 +14,6 @@ import java.util.Properties;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 
 public class TelemetryTest {

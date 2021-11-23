@@ -2,17 +2,17 @@ package com.timgroup.statsd;
 
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.WinBase;
-import com.sun.jna.platform.win32.WinDef;
-import com.sun.jna.platform.win32.WinDef.DWORDByReference;
-import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.ptr.IntByReference;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.logging.Logger;
 
 // Template from https://github.com/java-native-access/jna/blob/master/contrib/platform/test/com/sun/jna/platform/win32/Kernel32NamedPipeTest.java
 // And https://docs.microsoft.com/en-us/windows/win32/ipc/multithreaded-pipe-server
 public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
+    private static final Logger log = Logger.getLogger("NamedPipeDummyStatsDServer");
+
     private final HANDLE hNamedPipe;
     private volatile boolean clientConnected = false;
     private volatile boolean isOpen = true;
@@ -42,11 +42,17 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
 
     @Override
     protected void receive(ByteBuffer packet) throws IOException {
+        if (!isOpen) {
+            throw new IOException("Server closed");
+        }
         if (!clientConnected) {
+            log.info("Not connected waiting for connect");
             boolean connected = Kernel32.INSTANCE.ConnectNamedPipe(hNamedPipe, null);
             if (connected) {
+                log.info("Connected");
                 clientConnected = true;
             } else {
+                log.info("failed to connect");
                 close();
                 return;
             }
@@ -59,11 +65,14 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
                 packet.remaining(), // size of buffer
                 bytesRead, // number of bytes read
                 null);        // not overlapped I/O
+
+        log.info("Read bytes. Result: " + success + ". Bytes read: " + bytesRead.getValue());
         packet.position(bytesRead.getValue());
     }
 
     @Override
     public void close() throws IOException {
+        log.info("Closing");
         isOpen = false;
         Kernel32.INSTANCE.CloseHandle(hNamedPipe);
     }

@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -13,12 +14,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class NamedPipeTest implements StatsDClientErrorHandler {
+    private static final Logger log = Logger.getLogger("NamedPipeTest");
+
     private static final Random random = new Random();
     private NonBlockingStatsDClient client;
     private DummyStatsDServer server;
     private volatile Exception lastException = new Exception();
 
     public synchronized void handle(Exception exception) {
+        log.info("Got exception: " + exception.getMessage());
         lastException = exception;
     }
 
@@ -29,15 +33,13 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
 
     @Before
     public void start() {
+        log.info("starting test");
         String pipeName = "testPipe-" + random.nextInt(10000);
 
         server = new NamedPipeDummyStatsDServer(pipeName);
         client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
             .namedPipe(pipeName)
-            .port(0)
             .queueSize(1)
-            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
-            .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
             .build();
