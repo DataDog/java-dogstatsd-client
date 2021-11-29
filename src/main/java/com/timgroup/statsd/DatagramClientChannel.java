@@ -10,7 +10,7 @@ public class DatagramClientChannel implements ClientChannel {
     private final SocketAddress address;
 
     /**
-     * Creates a new DatagramClientChannel using the default DatagramChannel
+     * Creates a new DatagramClientChannel using the default DatagramChannel.
      * @param address Address to connect the channel to
      */
     public DatagramClientChannel(SocketAddress address) throws IOException {

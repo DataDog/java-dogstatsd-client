@@ -11,6 +11,9 @@ public class NamedPipeClientChannel implements ClientChannel {
     private final FileChannel fileChannel;
     private final String pipe;
 
+    /**
+     * Creates a new NamedPipeClientChannel with the given address.
+     */
     public NamedPipeClientChannel(NamedPipeSocketAddress address) throws FileNotFoundException {
         pipe = address.getPipe();
         randomAccessFile = new RandomAccessFile(pipe, "rw");

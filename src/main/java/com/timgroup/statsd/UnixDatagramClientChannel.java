@@ -1,13 +1,14 @@
 package com.timgroup.statsd;
 
-import java.io.IOException;
-import java.net.SocketAddress;
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketOptions;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+
 public class UnixDatagramClientChannel extends DatagramClientChannel {
     /**
-     * Creates a new UnixDatagramClientChannel
+     * Creates a new UnixDatagramClientChannel.
      *
      * @param address Address to connect the channel to
      * @param timeout Send timeout
