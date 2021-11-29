@@ -450,16 +450,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         if (address instanceof NamedPipeSocketAddress) {
             return new NamedPipeClientChannel((NamedPipeSocketAddress) address);
         } else if (address instanceof UnixSocketAddress) {
-            UnixDatagramChannel unixDatagramChannel = UnixDatagramChannel.open();
-            // Set send timeout, to handle the case where the transmission buffer is full
-            // If no timeout is set, the send becomes blocking
-            if (timeout > 0) {
-                unixDatagramChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
-            }
-            if (bufferSize > 0) {
-                unixDatagramChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-            }
-            return new DatagramClientChannel(unixDatagramChannel, address);
+            return new UnixDatagramClientChannel(address, timeout, bufferSize);
         } else {
             return new DatagramClientChannel(DatagramChannel.open(), address);
         }

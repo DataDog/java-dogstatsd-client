@@ -1,29 +1,28 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixDatagramChannel;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
 public class DatagramClientChannel implements ClientChannel {
-    private final DatagramChannel delegate;
-    private final String transport;
+    protected final DatagramChannel delegate;
     private final SocketAddress address;
+
+    /**
+     * Creates a new DatagramClientChannel using the default DatagramChannel
+     * @param address Address to connect the channel to
+     */
+    public DatagramClientChannel(SocketAddress address) throws IOException {
+        this(DatagramChannel.open(), address);
+    }
 
     /**
      * Creates a new DatagramClientChannel that wraps the delegate.
      * @param address Address to connect the channel to
      */
-    public DatagramClientChannel(DatagramChannel delegate, SocketAddress address) throws IOException {
+    public DatagramClientChannel(DatagramChannel delegate, SocketAddress address) {
         this.delegate = delegate;
-
-        if (delegate instanceof UnixDatagramChannel) {
-            transport = "uds";
-        } else {
-            transport = "udp";
-        }
         this.address = address;
     }
 
@@ -44,6 +43,6 @@ public class DatagramClientChannel implements ClientChannel {
 
     @Override
     public String getTransportType() {
-        return transport;
+        return "udp";
     }
 }
