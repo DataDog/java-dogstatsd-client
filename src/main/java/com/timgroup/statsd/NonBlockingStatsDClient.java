@@ -54,6 +54,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     public static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
     public static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
+    public static final String DD_NAMED_PIPE_ENV_VAR = "DD_DOGSTATSD_PIPE_NAME";
     public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
 

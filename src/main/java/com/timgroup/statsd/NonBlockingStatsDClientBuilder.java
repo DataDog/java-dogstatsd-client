@@ -196,13 +196,15 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
         int packetSize = maxPacketSizeBytes;
         Callable<SocketAddress> lookup = addressLookup;
-        Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
 
         if (lookup == null) {
-            if (namedPipe == null) {
+            String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
+            String resolvedNamedPipe = namedPipe == null ? namedPipeFromEnv : namedPipe;
+            
+            if (resolvedNamedPipe == null) {
                 lookup = staticStatsDAddressResolution(hostname, port);
             } else {
-                lookup = staticNamedPipeResolution(namedPipe);
+                lookup = staticNamedPipeResolution(resolvedNamedPipe);
             }
         }
 
@@ -211,7 +213,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
                 NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
         }
 
-
+        Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
         if (telemetryLookup == null) {
             if (telemetryHostname == null) {
                 telemetryLookup = lookup;
