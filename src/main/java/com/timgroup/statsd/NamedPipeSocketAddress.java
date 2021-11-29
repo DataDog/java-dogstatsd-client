@@ -17,7 +17,7 @@ public class NamedPipeSocketAddress extends SocketAddress {
     /**
      * A normalized version of the pipe name that includes the `\\.\pipe\` prefix
      */
-    public static String normalizePipeName(String pipeName) {
+    static String normalizePipeName(String pipeName) {
         if (pipeName.startsWith(NAMED_PIPE_PREFIX)) {
             return pipeName;
         } else {

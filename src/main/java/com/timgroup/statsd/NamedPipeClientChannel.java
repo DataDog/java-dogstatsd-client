@@ -9,9 +9,11 @@ import java.nio.channels.FileChannel;
 public class NamedPipeClientChannel implements ClientChannel {
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
+    private final String pipe;
 
     public NamedPipeClientChannel(NamedPipeSocketAddress address) throws FileNotFoundException {
-        randomAccessFile = new RandomAccessFile(address.getPipe(), "rw");
+        pipe = address.getPipe();
+        randomAccessFile = new RandomAccessFile(pipe, "rw");
         fileChannel = randomAccessFile.getChannel();
     }
 
@@ -34,5 +36,10 @@ public class NamedPipeClientChannel implements ClientChannel {
     @Override
     public String getTransportType() {
         return "namedpipe";
+    }
+
+    @Override
+    public String toString() {
+        return pipe;
     }
 }

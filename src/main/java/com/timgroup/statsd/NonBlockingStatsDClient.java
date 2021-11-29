@@ -1,6 +1,5 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 
 import java.io.IOException;
@@ -396,7 +395,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
             }
 
-            if (telemetryClientChannel != null) {
+            if (telemetryClientChannel != null && telemetryClientChannel != clientChannel) {
                 try {
                     telemetryClientChannel.close();
                 } catch (final IOException e) {

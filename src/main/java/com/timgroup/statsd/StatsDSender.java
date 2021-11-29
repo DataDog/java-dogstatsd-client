@@ -94,8 +94,9 @@ public class StatsDSender {
                 buffer.clear();
                 if (sizeOfBuffer != sentBytes) {
                     throw new IOException(
-                            String.format("Could not send stat %s entirely. Only sent %d out of %d bytes",
-                                    buffer.toString(),
+                            String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
+                                    buffer,
+                                    clientChannel,
                                     sentBytes,
                                     sizeOfBuffer));
                 }

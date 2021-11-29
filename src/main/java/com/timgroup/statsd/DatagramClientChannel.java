@@ -45,4 +45,9 @@ public class DatagramClientChannel implements ClientChannel {
     public String getTransportType() {
         return "udp";
     }
+
+    @Override
+    public String toString() {
+        return "[" + getTransportType() + "] " + address;
+    }
 }
