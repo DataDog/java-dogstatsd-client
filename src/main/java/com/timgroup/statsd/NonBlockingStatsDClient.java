@@ -2,7 +2,6 @@ package com.timgroup.statsd;
 
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
-import jnr.unixsocket.UnixSocketOptions;
 
 import java.io.IOException;
 import java.net.SocketAddress;
