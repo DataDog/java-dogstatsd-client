@@ -97,6 +97,7 @@ public class TelemetryTest {
                 .processorWorkers(processorWorkers)
                 .senderWorkers(senderWorkers)
                 .blocking(blocking)
+                .enableAggregation(false)
                 .enableTelemetry(enableTelemetry)
                 .telemetryFlushInterval(telemetryFlushInterval)
                 .resolve());

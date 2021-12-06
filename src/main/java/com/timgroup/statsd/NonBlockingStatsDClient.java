@@ -90,7 +90,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
 
-    public static final boolean DEFAULT_ENABLE_AGGREGATION = false;
+    public static final boolean DEFAULT_ENABLE_AGGREGATION = true;
 
     public static final String CLIENT_TAG = "client:java";
     public static final String CLIENT_VERSION_TAG = "client_version:";
