@@ -134,7 +134,7 @@ Though there are very few breaking changes in `3.x`, some code changes might be 
 
 ### Transport and Maximum Packet Size
 
-As mentioned above the client currently supports two forms of transport: UDP and Unix Domain Socketsi (UDS).
+As mentioned above the client currently supports two forms of transport: UDP and Unix Domain Sockets (UDS).
 
 The preferred setup for local transport is UDS, while remote setups will require the use of UDP. For both setups we have tried to set convenient maximum default packet sizes that should help with performance by packing multiple statsd metrics into each network packet all while playing nicely with the respective environments. For this reason we have set the following defaults for the max packet size:
 - UDS: 8192 bytes - recommended default.
