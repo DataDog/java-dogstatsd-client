@@ -85,6 +85,7 @@ public class TelemetryTest {
             .hostname("localhost")
             .constantTags("test")
             .port(STATSD_SERVER_PORT)
+            .enableAggregation(false)
             .enableTelemetry(false);  // disable telemetry so we can control calls to "flush"
     private static NonBlockingStatsDClient telemetryClient = telemetryBuilder.build();
 
