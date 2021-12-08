@@ -12,6 +12,7 @@ public class DatagramClientChannel implements ClientChannel {
     /**
      * Creates a new DatagramClientChannel using the default DatagramChannel.
      * @param address Address to connect the channel to
+     * @throws IOException if an I/O error occurs
      */
     public DatagramClientChannel(SocketAddress address) throws IOException {
         this(DatagramChannel.open(), address);
@@ -19,6 +20,7 @@ public class DatagramClientChannel implements ClientChannel {
 
     /**
      * Creates a new DatagramClientChannel that wraps the delegate.
+     * @param delegate Implementation this instance wraps
      * @param address Address to connect the channel to
      */
     public DatagramClientChannel(DatagramChannel delegate, SocketAddress address) {

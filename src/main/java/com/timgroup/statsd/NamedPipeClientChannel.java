@@ -13,6 +13,9 @@ public class NamedPipeClientChannel implements ClientChannel {
 
     /**
      * Creates a new NamedPipeClientChannel with the given address.
+     *
+     * @param address Location of named pipe
+     * @throws FileNotFoundException if pipe does not exist
      */
     public NamedPipeClientChannel(NamedPipeSocketAddress address) throws FileNotFoundException {
         pipe = address.getPipe();

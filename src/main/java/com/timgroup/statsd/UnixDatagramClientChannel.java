@@ -13,6 +13,7 @@ public class UnixDatagramClientChannel extends DatagramClientChannel {
      * @param address Address to connect the channel to
      * @param timeout Send timeout
      * @param bufferSize Buffer size
+     * @throws IOException if socket options cannot be set
      */
     public UnixDatagramClientChannel(SocketAddress address, int timeout, int bufferSize) throws IOException {
         super(UnixDatagramChannel.open(), address);
