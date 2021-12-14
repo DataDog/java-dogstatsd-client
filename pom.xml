@@ -97,6 +97,7 @@
                             <!-- <nexusUrl>http://localhost:8081/repository/maven-releases/</nexusUrl> -->
                             <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                             <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                            <stagingProgressTimeoutMinutes>20</stagingProgressTimeoutMinutes>
                         </configuration>
                     </plugin>
                     <plugin>
