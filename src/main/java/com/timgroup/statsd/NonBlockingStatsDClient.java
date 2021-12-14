@@ -366,7 +366,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *
      * @see NonBlockingStatsDClientBuilder#resolve()
      */
-    NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+    public NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
         this(builder.prefix, builder.queueSize, builder.constantTags, builder.errorHandler,
             builder.addressLookup, builder.telemetryAddressLookup, builder.timeout,
             builder.socketBufferSize, builder.maxPacketSizeBytes, builder.entityID,
