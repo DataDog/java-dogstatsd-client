@@ -179,7 +179,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
      * Creates a copy of this builder with any implicit elements resolved.
      * @return the resolved copy of the builder.
      */
-    NonBlockingStatsDClientBuilder resolve() {
+    protected NonBlockingStatsDClientBuilder resolve() {
         NonBlockingStatsDClientBuilder resolved;
 
         try {
