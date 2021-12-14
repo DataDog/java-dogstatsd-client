@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.0.1 / 2021.12.14
+
+* [BUGFIX] Fix visibility for overrideable methods (#170)
+
 ## 3.0.0 / 2021.11.02
 
 This release marks a new major release, and includes some *breaking changes*.
