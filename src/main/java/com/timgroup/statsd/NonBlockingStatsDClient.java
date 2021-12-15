@@ -5,7 +5,6 @@ import jnr.unixsocket.UnixSocketAddress;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -452,7 +451,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         } else if (address instanceof UnixSocketAddress) {
             return new UnixDatagramClientChannel(address, timeout, bufferSize);
         } else {
-            return new DatagramClientChannel(DatagramChannel.open(), address);
+            return new DatagramClientChannel(address);
         }
     }
 
