@@ -92,25 +92,16 @@ public final class NonBlockingStatsDClientPerfTest {
     public void perfAggregatedTest() throws Exception {
 
         int expectedSize = 1;
-        long elapsed = 0, start = System.currentTimeMillis();
-        boolean done = false;
+        long start = System.currentTimeMillis();
 
-        while(!done) {
+        while(System.currentTimeMillis() - start < clientAggr.statsDProcessor.getAggregator().getFlushInterval() - 1) {
             clientAggr.count("myaggrcount", 1);
-
-            elapsed = System.currentTimeMillis() - start;
-            if  (elapsed > clientAggr.statsDProcessor.getAggregator().getFlushInterval() - 1) {
-                done = true;
-            }
             Thread.sleep(50);
         }
 
-
-        int messages;
-        while((messages = server.messagesReceived().size()) < expectedSize) {
-
+        while(server.messagesReceived().size() < expectedSize) {
             try {
-                Thread.sleep(500);
+                Thread.sleep(50);
             } catch (InterruptedException ex) {}
         }
 
