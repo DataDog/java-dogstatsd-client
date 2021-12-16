@@ -1,15 +1,13 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
-import jnr.unixsocket.UnixSocketOptions;
 
 import java.io.IOException;
-import java.lang.Double;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
@@ -22,7 +20,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
 
 /**
  * A simple StatsD client implementation facilitating metrics recording.
@@ -56,6 +53,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     public static final String DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT";
     public static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
+    public static final String DD_NAMED_PIPE_ENV_VAR = "DD_DOGSTATSD_PIPE_NAME";
     public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
 
@@ -100,7 +98,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * UTF-8 is the expected encoding for data sent to the agent.
      */
-    public static final Charset UTF_8 = Charset.forName("UTF-8");
+    public static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     private static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
         @Override public void handle(final Exception ex) { /* No-op */ }
@@ -154,7 +152,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     private final String prefix;
-    private final DatagramChannel clientChannel;
+    private final ClientChannel clientChannel;
+    private final ClientChannel telemetryClientChannel;
     private final StatsDClientErrorHandler handler;
     private final String constantTagsRendered;
 
@@ -261,58 +260,27 @@ public class NonBlockingStatsDClient implements StatsDClient {
             costantPreTags = null;
         }
 
-        String transportType = "";
         try {
-            final SocketAddress address = addressLookup.call();
-            if (address instanceof UnixSocketAddress) {
-                clientChannel = UnixDatagramChannel.open();
-                // Set send timeout, to handle the case where the transmission buffer is full
-                // If no timeout is set, the send becomes blocking
-                if (timeout > 0) {
-                    clientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
-                }
-                if (bufferSize > 0) {
-                    clientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-                }
-                transportType = "uds";
-            } else {
-                clientChannel = DatagramChannel.open();
-                transportType = "udp";
-            }
+            clientChannel = createByteChannel(addressLookup, timeout, bufferSize);
 
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
                     processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory);
-            telemetryStatsDProcessor = statsDProcessor;
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream(
                 "dogstatsd/version.properties"));
 
-            String telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + transportType,
+            String telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + clientChannel.getTransportType(),
                                                           CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
                                                           CLIENT_TAG}, new StringBuilder()).toString();
 
-            DatagramChannel telemetryClientChannel = clientChannel;
-            if (addressLookup != telemetryAddressLookup) {
-
-                final SocketAddress telemetryAddress = telemetryAddressLookup.call();
-                if (telemetryAddress instanceof UnixSocketAddress) {
-                    telemetryClientChannel = UnixDatagramChannel.open();
-                    // Set send timeout, to handle the case where the transmission buffer is full
-                    // If no timeout is set, the send becomes blocking
-                    if (timeout > 0) {
-                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
-                    }
-                    if (bufferSize > 0) {
-                        telemetryClientChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-                    }
-                } else if (transportType == "uds") {
-                    // UDP clientChannel can submit to multiple addresses, we only need
-                    // a new channel if transport type is UDS for main traffic.
-                    telemetryClientChannel = DatagramChannel.open();
-                }
+            if (addressLookup == telemetryAddressLookup) {
+                telemetryClientChannel = clientChannel;
+                telemetryStatsDProcessor = statsDProcessor;
+            } else {
+                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, bufferSize);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
@@ -324,16 +292,15 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 .processor(telemetryStatsDProcessor)
                 .build();
 
-            statsDSender = createSender(addressLookup, handler, clientChannel, statsDProcessor.getBufferPool(),
+            statsDSender = createSender(handler, clientChannel, statsDProcessor.getBufferPool(),
                     statsDProcessor.getOutboundQueue(), senderWorkers, threadFactory);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
                 // TODO: figure out why the hell telemetryClientChannel does not work here!
-                telemetryStatsDSender = createSender(telemetryAddressLookup, handler, telemetryClientChannel,
+                telemetryStatsDSender = createSender(handler, telemetryClientChannel,
                         telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
                         1, threadFactory);
-
             }
 
             // set telemetry
@@ -389,10 +356,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    protected StatsDSender createSender(final Callable<SocketAddress> addressLookup, final StatsDClientErrorHandler handler,
-            final DatagramChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers,
+    protected StatsDSender createSender(final StatsDClientErrorHandler handler,
+            final WritableByteChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers,
             final ThreadFactory threadFactory) throws Exception {
-        return new StatsDSender(addressLookup, clientChannel, handler, pool, buffers, senderWorkers, threadFactory);
+        return new StatsDSender(clientChannel, handler, pool, buffers, senderWorkers, threadFactory);
     }
 
     /**
@@ -423,6 +390,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
             if (clientChannel != null) {
                 try {
                     clientChannel.close();
+                } catch (final IOException e) {
+                    handler.handle(e);
+                }
+            }
+
+            if (telemetryClientChannel != null && telemetryClientChannel != clientChannel) {
+                try {
+                    telemetryClientChannel.close();
                 } catch (final IOException e) {
                     handler.handle(e);
                 }
@@ -467,6 +442,17 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     StringBuilder tagString(final String[] tags, StringBuilder builder) {
         return tagString(tags, constantTagsRendered, builder);
+    }
+
+    ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int bufferSize) throws Exception {
+        final SocketAddress address = addressLookup.call();
+        if (address instanceof NamedPipeSocketAddress) {
+            return new NamedPipeClientChannel((NamedPipeSocketAddress) address);
+        } else if (address instanceof UnixSocketAddress) {
+            return new UnixDatagramClientChannel(address, timeout, bufferSize);
+        } else {
+            return new DatagramClientChannel(address);
+        }
     }
 
     abstract class StatsDMessage<T extends Number> extends NumericMessage<T> {

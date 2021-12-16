@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -12,9 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatsDSender {
-    private final Callable<SocketAddress> addressLookup;
-    private final SocketAddress address;
-    private final DatagramChannel clientChannel;
+    private final WritableByteChannel clientChannel;
     private final StatsDClientErrorHandler handler;
 
     private final BufferPool pool;
@@ -30,9 +29,9 @@ public class StatsDSender {
     private volatile Telemetry telemetry;
 
 
-    StatsDSender(final Callable<SocketAddress> addressLookup, final DatagramChannel clientChannel,
+    StatsDSender(final WritableByteChannel clientChannel,
                  final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
-                 final int workers, final ThreadFactory threadFactory) throws Exception {
+                 final int workers, final ThreadFactory threadFactory) {
 
         this.pool = pool;
         this.buffers = buffers;
@@ -40,8 +39,6 @@ public class StatsDSender {
         this.threadFactory = threadFactory;
         this.workers = new Thread[workers];
 
-        this.addressLookup = addressLookup;
-        this.address = addressLookup.call();
         this.clientChannel = clientChannel;
 
         this.endSignal = new CountDownLatch(workers);
@@ -92,14 +89,14 @@ public class StatsDSender {
                 sizeOfBuffer = buffer.position();
 
                 buffer.flip();
-                final int sentBytes = clientChannel.send(buffer, address);
+                final int sentBytes = clientChannel.write(buffer);
 
                 buffer.clear();
                 if (sizeOfBuffer != sentBytes) {
                     throw new IOException(
                             String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
-                                    buffer.toString(),
-                                    address.toString(),
+                                    buffer,
+                                    clientChannel,
                                     sentBytes,
                                     sizeOfBuffer));
                 }

@@ -41,7 +41,7 @@ public class NonBlockingStatsDClientTest {
 
     @BeforeClass
     public static void start() throws IOException {
-        server = new DummyStatsDServer(STATSD_SERVER_PORT);
+        server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
         client = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
             .hostname("localhost")
@@ -1108,7 +1108,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L)
     public void sends_telemetry_elsewhere() throws Exception {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
-        final DummyStatsDServer telemetryServer = new DummyStatsDServer(STATSD_SERVER_PORT+10);
+        final DummyStatsDServer telemetryServer = new UDPDummyStatsDServer(STATSD_SERVER_PORT+10);
         final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
             .hostname("localhost")
@@ -1379,7 +1379,7 @@ public class NonBlockingStatsDClientTest {
     public void shutdown_test() throws Exception {
         final int port = 17256;
         final int qSize = 256;
-        final DummyStatsDServer server = new DummyStatsDServer(port);
+        final DummyStatsDServer server = new UDPDummyStatsDServer(port);
 
         final NonBlockingStatsDClientBuilder builder = new SlowStatsDNonBlockingStatsDClientBuilder().prefix("")
             .hostname("localhost")
@@ -1480,7 +1480,7 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void nonsampling_client_test() throws Exception {
         final int port = 17256;
-        final DummyStatsDServer server = new DummyStatsDServer(port);
+        final DummyStatsDServer server = new UDPDummyStatsDServer(port);
 
 	final NonBlockingStatsDClientBuilder builder = new NonsamplingClientBuilder()
 	    .prefix("")

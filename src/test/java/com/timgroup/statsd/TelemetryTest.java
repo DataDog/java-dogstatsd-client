@@ -2,12 +2,11 @@ package com.timgroup.statsd;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.concurrent.Callable;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -15,8 +14,6 @@ import java.util.Properties;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 
 public class TelemetryTest {
@@ -73,88 +70,24 @@ public class TelemetryTest {
         }
     }
 
-    // StatsDNonBlockingTelemetry exposes the telemetry tor the outside
-    private static class StatsDNonBlockingTelemetry extends NonBlockingStatsDClient {
-        public StatsDNonBlockingTelemetry(final String prefix, final int queueSize, String[] constantTags,
-                                       final StatsDClientErrorHandler errorHandler, Callable<SocketAddress> addressLookup,
-                                       final int timeout, final int bufferSize, final int maxPacketSizeBytes,
-                                       String entityID, final int poolSize, final int processorWorkers,
-                                       final int senderWorkers, boolean blocking, final boolean enableTelemetry,
-                                       final int telemetryFlushInterval)
-                throws StatsDClientException {
-
-            super(new NonBlockingStatsDClientBuilder()
-                .prefix(prefix)
-                .queueSize(queueSize)
-                .constantTags(constantTags)
-                .errorHandler(errorHandler)
-                .addressLookup(addressLookup)
-                .timeout(timeout)
-                .socketBufferSize(bufferSize)
-                .maxPacketSizeBytes(maxPacketSizeBytes)
-                .entityID(entityID)
-                .bufferPoolSize(poolSize)
-                .processorWorkers(processorWorkers)
-                .senderWorkers(senderWorkers)
-                .blocking(blocking)
-                .enableAggregation(false)
-                .enableTelemetry(enableTelemetry)
-                .telemetryFlushInterval(telemetryFlushInterval)
-                .resolve());
-        }
-    };
-
-    private static class StatsDNonBlockingTelemetryBuilder extends NonBlockingStatsDClientBuilder {
-
-        @Override
-        public StatsDNonBlockingTelemetry build() throws StatsDClientException {
-
-            int packetSize = maxPacketSizeBytes;
-            if (packetSize == 0) {
-                packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
-                    NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
-            }
-
-            if (addressLookup != null) {
-                return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, packetSize, entityID,
-                        bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                        telemetryFlushInterval);
-            } else {
-                return new StatsDNonBlockingTelemetry(prefix, queueSize, constantTags, errorHandler,
-                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
-                        entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking, enableTelemetry,
-                        telemetryFlushInterval);
-            }
-        }
-    }
-
     private static final int STATSD_SERVER_PORT = 17254;
-    private static final NonBlockingStatsDClientBuilder builder = new StatsDNonBlockingTelemetryBuilder()
+    private static final NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder()
         .prefix("my.prefix")
         .hostname("localhost")
         .constantTags("test")
         .port(STATSD_SERVER_PORT)
         .enableTelemetry(false); // disable telemetry so we can control calls to "flush"
-    private static StatsDNonBlockingTelemetry client = ((StatsDNonBlockingTelemetryBuilder)builder).build();
+    private static NonBlockingStatsDClient client = builder.build();
 
     // telemetry client
-    private static final NonBlockingStatsDClientBuilder telemetryBuilder = new StatsDNonBlockingTelemetryBuilder()
+    private static final NonBlockingStatsDClientBuilder telemetryBuilder = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
             .hostname("localhost")
             .constantTags("test")
             .port(STATSD_SERVER_PORT)
+            .enableAggregation(false)
             .enableTelemetry(false);  // disable telemetry so we can control calls to "flush"
-    private static StatsDNonBlockingTelemetry telemetryClient = ((StatsDNonBlockingTelemetryBuilder)telemetryBuilder).build();
-
-    // builderError fails to send any data on the network, producing packets dropped
-    private static final NonBlockingStatsDClientBuilder builderError = new StatsDNonBlockingTelemetryBuilder()
-        .prefix("my.prefix")
-        .hostname("localhost")
-        .constantTags("test")
-        .port(0)
-        .enableTelemetry(false); // disable telemetry so we can control calls to "flush"
-    private static StatsDNonBlockingTelemetry clientError = ((StatsDNonBlockingTelemetryBuilder)builderError).build();
+    private static NonBlockingStatsDClient telemetryClient = telemetryBuilder.build();
 
     private static DummyStatsDServer server;
     private static FakeProcessor fakeProcessor;
@@ -170,7 +103,7 @@ public class TelemetryTest {
 
     @BeforeClass
     public static void start() throws IOException, Exception {
-        server = new DummyStatsDServer(STATSD_SERVER_PORT);
+        server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
         client.telemetry.processor = fakeProcessor;
         telemetryClient.telemetry.processor = fakeProcessor;
@@ -182,7 +115,6 @@ public class TelemetryTest {
     public static void stop() throws Exception {
         try {
             client.stop();
-            clientError.stop();
             server.close();
         } catch (java.io.IOException e) {
             return;
@@ -193,7 +125,6 @@ public class TelemetryTest {
     public void clear() {
         server.clear();
         client.telemetry.reset();
-        clientError.telemetry.reset();
         telemetryClient.telemetry.reset();
         fakeProcessor.clear();
     }
@@ -438,7 +369,18 @@ public class TelemetryTest {
 
     @Test(timeout = 5000L)
     public void telemetry_droppedData() throws Exception {
-        clientError.telemetry.reset();
+        boolean isLinux = System.getProperty("os.name").toLowerCase().contains("linux");
+        boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
+        Assume.assumeTrue(isLinux || isMac);
+
+        // fails to send any data on the network, producing packets dropped
+        NonBlockingStatsDClient clientError = new NonBlockingStatsDClientBuilder()
+                .prefix("my.prefix")
+                .hostname("localhost")
+                .constantTags("test")
+                .port(0)
+                .enableTelemetry(false) // disable telemetry so we can control calls to "flush"
+                .build();
 
         assertThat(clientError.statsDProcessor.bufferPool.getBufferSize(), equalTo(8192));
 
@@ -452,6 +394,8 @@ public class TelemetryTest {
                 Thread.sleep(50L);
             } catch (InterruptedException e) {}
         }
+
+        clientError.stop();
 
         assertThat(clientError.telemetry.metricsSent.get(), equalTo(1));
         assertThat(clientError.telemetry.packetsDropped.get(), equalTo(1));

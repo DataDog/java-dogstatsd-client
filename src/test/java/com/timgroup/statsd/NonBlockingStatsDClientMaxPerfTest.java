@@ -156,6 +156,6 @@ public final class NonBlockingStatsDClientMaxPerfTest {
         executor.awaitTermination(1, TimeUnit.SECONDS);
 
         assertNotEquals(0, server.getMessageCount());
-        log.info("Messages at server: " + server.getMessageCount() + " packets: " + server.getPacketCount());
+        log.info("Messages at server: " + server.getMessageCount() + " packets: " + server.getPacketsReceived());
     }
 }

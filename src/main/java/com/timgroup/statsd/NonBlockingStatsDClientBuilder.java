@@ -38,6 +38,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public String hostname;
     public String telemetryHostname;
+    public String namedPipe;
     public String prefix;
     public String entityID;
     public String[] constantTags;
@@ -117,6 +118,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder namedPipe(String val) {
+        namedPipe = val;
+        return this;
+    }
+
     public NonBlockingStatsDClientBuilder prefix(String val) {
         prefix = val;
         return this;
@@ -190,10 +196,16 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
         int packetSize = maxPacketSizeBytes;
         Callable<SocketAddress> lookup = addressLookup;
-        Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
 
         if (lookup == null) {
-            lookup = staticStatsDAddressResolution(hostname, port);
+            String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
+            String resolvedNamedPipe = namedPipe == null ? namedPipeFromEnv : namedPipe;
+            
+            if (resolvedNamedPipe == null) {
+                lookup = staticStatsDAddressResolution(hostname, port);
+            } else {
+                lookup = staticNamedPipeResolution(resolvedNamedPipe);
+            }
         }
 
         if (packetSize == 0) {
@@ -201,7 +213,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
                 NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
         }
 
-
+        Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
         if (telemetryLookup == null) {
             if (telemetryHostname == null) {
                 telemetryLookup = lookup;
@@ -272,6 +284,15 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to lookup StatsD host", e);
         }
+    }
+
+    protected static Callable<SocketAddress> staticNamedPipeResolution(String namedPipe) {
+        final NamedPipeSocketAddress socketAddress = new NamedPipeSocketAddress(namedPipe);
+        return new Callable<SocketAddress>() {
+            @Override public SocketAddress call() {
+                return socketAddress;
+            }
+        };
     }
 
     /**
