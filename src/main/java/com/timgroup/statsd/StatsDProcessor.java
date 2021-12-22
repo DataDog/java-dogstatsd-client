@@ -41,6 +41,9 @@ public abstract class StatsDProcessor {
 
     protected volatile boolean shutdown;
 
+    // Implementors should override either:
+    // - haveMessages(), getMessage() to use the default processing loop
+    // - or, processLoop() to override it entirely.
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
         protected CharBuffer buffer = CharBuffer.wrap(builder);
@@ -56,7 +59,77 @@ public abstract class StatsDProcessor {
             }
         }
 
-        protected abstract void processLoop();
+        protected void processLoop() {
+            ByteBuffer sendBuffer;
+
+            try {
+                sendBuffer = bufferPool.borrow();
+            } catch (final InterruptedException e) {
+                handler.handle(e);
+                return;
+            }
+
+            while (!highPrioMessages.isEmpty() || haveMessages() || !shutdown) {
+                try {
+                    Message message = highPrioMessages.poll();
+                    if (message == null) {
+                        message = getMessage();
+                    }
+                    if (message == null) {
+                        continue;
+                    }
+
+                    if (aggregator.aggregateMessage(message)) {
+                        continue;
+                    }
+
+                    builder.setLength(0);
+                    message.writeTo(builder);
+                    int lowerBoundSize = builder.length();
+
+                    if (sendBuffer.capacity() < lowerBoundSize) {
+                        throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
+                    }
+
+                    if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
+                        outboundQueue.put(sendBuffer);
+                        sendBuffer = bufferPool.borrow();
+                    }
+
+                    sendBuffer.mark();
+
+                    try {
+                        writeBuilderToSendBuffer(sendBuffer);
+                    } catch (BufferOverflowException boe) {
+                        outboundQueue.put(sendBuffer);
+                        sendBuffer = bufferPool.borrow();
+                        writeBuilderToSendBuffer(sendBuffer);
+                    }
+
+                    if (!haveMessages()) {
+                        outboundQueue.put(sendBuffer);
+                        sendBuffer = bufferPool.borrow();
+                    }
+                } catch (final InterruptedException e) {
+                    if (shutdown) {
+                        break;
+                    }
+                } catch (final Exception e) {
+                    handler.handle(e);
+                }
+            }
+
+            builder.setLength(0);
+            builder.trimToSize();
+        }
+
+        protected boolean haveMessages() {
+            return false;
+        }
+
+        protected Message getMessage() throws InterruptedException {
+            return null;
+        }
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
 
