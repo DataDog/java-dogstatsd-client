@@ -243,15 +243,19 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
      * @return a function to perform the lookup
      */
     public static Callable<SocketAddress> volatileAddressResolution(final String hostname, final int port) {
-        return new Callable<SocketAddress>() {
-            @Override public SocketAddress call() throws UnknownHostException {
-                if (port == 0) { // Hostname is a file path to the socket
+        if (port == 0) {
+            return new Callable<SocketAddress>() {
+                @Override public SocketAddress call() throws UnknownHostException {
                     return new UnixSocketAddress(hostname);
-                } else {
+                }
+            };
+        } else {
+            return new Callable<SocketAddress>() {
+                @Override public SocketAddress call() throws UnknownHostException {
                     return new InetSocketAddress(InetAddress.getByName(hostname), port);
                 }
-            }
-        };
+            };
+        }
     }
 
     /**
