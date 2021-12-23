@@ -79,7 +79,7 @@ abstract class DummyStatsDServer implements Closeable {
 
     public List<String> messagesReceived() {
         synchronized(messagesReceived) {
-            return new ArrayList<String>(messagesReceived);
+            return new ArrayList<>(messagesReceived);
         }
     }
 
