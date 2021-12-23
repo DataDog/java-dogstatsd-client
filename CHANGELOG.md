@@ -1,8 +1,18 @@
 # CHANGELOG
 
+## 4.0.0 / 2021.12.23
+
+This release is a correction for v3.0.0, which was released without client-side
+aggregation enabled by default.
+
+There are no incompatible API changes in this release.
+
+* [BUGFIX] Re-enable aggregation by default See [#171][]
+* [FEATURE] Windows named pipe support See [#169][]
+
 ## 3.0.1 / 2021.12.14
 
-* [BUGFIX] Fix visibility for overrideable methods (#170)
+* [BUGFIX] Fix visibility for overrideable methods. See [#170][]
 
 ## 3.0.0 / 2021.11.02
 
@@ -188,6 +198,9 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#160]: https://github.com/DataDog/java-dogstatsd-client/issues/160
 [#162]: https://github.com/DataDog/java-dogstatsd-client/issues/162
 [#164]: https://github.com/DataDog/java-dogstatsd-client/issues/164
+[#169]: https://github.com/DataDog/java-dogstatsd-client/issues/169
+[#170]: https://github.com/DataDog/java-dogstatsd-client/issues/170
+[#171]: https://github.com/DataDog/java-dogstatsd-client/issues/171
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
 [@cameronhotchkies]: https://github.com/cameronhotchkies
