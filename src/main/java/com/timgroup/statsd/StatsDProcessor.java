@@ -31,6 +31,7 @@ public abstract class StatsDProcessor {
     protected final Queue<Message> highPrioMessages; // FIFO queue for high priority messages
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
     protected final CountDownLatch endSignal;
+    final CountDownLatch closeSignal;
 
     protected final ThreadFactory threadFactory;
     protected final Thread[] workers;
@@ -40,10 +41,8 @@ public abstract class StatsDProcessor {
     protected volatile Telemetry telemetry;
 
     protected volatile boolean shutdown;
+    volatile boolean shutdownAgg;
 
-    // Implementors should override either:
-    // - haveMessages(), getMessage() to use the default processing loop
-    // - or, processLoop() to override it entirely.
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
         protected CharBuffer buffer = CharBuffer.wrap(builder);
@@ -69,13 +68,27 @@ public abstract class StatsDProcessor {
                 return;
             }
 
-            while (!highPrioMessages.isEmpty() || haveMessages() || !shutdown) {
+            boolean clientClosed = false;
+            while (!Thread.interrupted()) {
                 try {
+                    // Read flags before polling for messages. We can continue shutdown only when
+                    // shutdown flag is true *before* we get empty result from the queue. Shadow
+                    // the names, so we can't check the non-local copy by accident.
+                    boolean shutdown = StatsDProcessor.this.shutdown;
+                    boolean shutdownAgg = StatsDProcessor.this.shutdownAgg;
+
                     Message message = highPrioMessages.poll();
-                    if (message == null) {
+                    if (message == null && shutdownAgg) {
+                        break;
+                    }
+                    if (message == null && !clientClosed) {
                         message = getMessage();
                     }
                     if (message == null) {
+                        if (shutdown && !clientClosed) {
+                            closeSignal.countDown();
+                            clientClosed = true;
+                        }
                         continue;
                     }
 
@@ -111,9 +124,7 @@ public abstract class StatsDProcessor {
                         sendBuffer = bufferPool.borrow();
                     }
                 } catch (final InterruptedException e) {
-                    if (shutdown) {
-                        break;
-                    }
+                    break;
                 } catch (final Exception e) {
                     handler.handle(e);
                 }
@@ -123,13 +134,9 @@ public abstract class StatsDProcessor {
             builder.trimToSize();
         }
 
-        protected boolean haveMessages() {
-            return false;
-        }
+        abstract boolean haveMessages();
 
-        protected Message getMessage() throws InterruptedException {
-            return null;
-        }
+        abstract Message getMessage() throws InterruptedException;
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
 
@@ -161,6 +168,7 @@ public abstract class StatsDProcessor {
         this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
         this.endSignal = new CountDownLatch(workers);
+        this.closeSignal = new CountDownLatch(workers);
         this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
     }
 
@@ -169,13 +177,8 @@ public abstract class StatsDProcessor {
     protected abstract boolean send(final Message message);
 
     protected boolean sendHighPrio(final Message message) {
-        if (!shutdown) {
-            // TODO: unbounded for now...
-            highPrioMessages.offer(message);
-            return true;
-        }
-
-        return false;
+        highPrioMessages.offer(message);
+        return true;
     }
 
     public BufferPool getBufferPool() {
@@ -212,21 +215,28 @@ public abstract class StatsDProcessor {
         return telemetry;
     }
 
-    void shutdown() {
+    void shutdown(boolean blocking) throws InterruptedException {
         shutdown = true;
         aggregator.stop();
-        for (int i = 0 ; i < workers.length ; i++) {
-            workers[i].interrupt();
-        }
-    }
 
-    boolean awaitUntil(final long deadline) {
-        while (true) {
-            long remaining = deadline - System.currentTimeMillis();
-            try {
-                return endSignal.await(remaining, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                // check again...
+        if (blocking) {
+            // Wait for messages to pass through the queues and the aggregator. Shutdown logic for
+            // each queue follows the same pattern:
+            //
+            // if queue returns no messages after a shutdown flag is set, assume no new messages
+            // will arrive and count down the latch.
+            //
+            // This may drop messages if send is called concurrently with shutdown (even in
+            // blocking mode); but we will (attempt to) deliver everything that was sent before
+            // this point.
+            closeSignal.await();
+            aggregator.flush();
+            shutdownAgg = true;
+            endSignal.await();
+        } else {
+            // Stop all workers immediately.
+            for (int i = 0 ; i < workers.length ; i++) {
+                workers[i].interrupt();
             }
         }
     }

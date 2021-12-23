@@ -120,20 +120,13 @@ public class StatsDSender {
         }
     }
 
-    void shutdown() {
+    void shutdown(boolean blocking) throws InterruptedException {
         shutdown = true;
-        for (int i = 0 ; i < workers.length ; i++) {
-            workers[i].interrupt();
-        }
-    }
-
-    boolean awaitUntil(final long deadline) {
-        while (true) {
-            long remaining = deadline - System.currentTimeMillis();
-            try {
-                return endSignal.await(remaining, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                // check again...
+        if (blocking) {
+            endSignal.await();
+        } else {
+            for (int i = 0 ; i < workers.length ; i++) {
+                workers[i].interrupt();
             }
         }
     }
