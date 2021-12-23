@@ -76,7 +76,7 @@ Please refer to the [readme][readme configuration] for tips on how to migrate to
 * [FEATURE] Architecture revamp + non-blocking queue, improved performance. See [#94][]
 * [FEATURE] Enable buffer pool, concurrent sending threads. See [#95][]
 * [FEATURE] Adding dogstatsd telemetry to client. See [#97][]
-* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION; DD_TAGS env vars support. See [#107][], [#108][], [#111][]
+* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION env vars support. See [#107][], [#108][], [#111][]
 * [FEATURE] Allow different remote destination for telemetry. See [#109][]
 * [IMPROVEMENT] Improved abstractions + better object construction. See [#96][]
 * [IMPROVEMENT] Reduce number of allocations. Thanks [@njhill][]. See [#105][]
