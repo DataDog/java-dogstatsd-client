@@ -118,8 +118,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     };
 
-    static {
-    }
 
     private static NumberFormat newFormatter(boolean sampler) {
         // Always create the formatter for the US locale in order to avoid this bug:
@@ -1066,7 +1064,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "") {
             @Override public void writeTo(StringBuilder sb) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
-                sb.append(Message.Type.SERVICE_CHECK.toString())
+                sb.append(Type.SERVICE_CHECK)
                     .append("|")
                     .append(sc.getName())
                     .append("|")
