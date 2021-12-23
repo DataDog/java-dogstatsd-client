@@ -11,10 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
@@ -237,27 +234,25 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         {
-            List<String> costantPreTags = new ArrayList<>();
+            List<String> constantPreTags = new ArrayList<>();
             if (constantTags != null) {
-                for (final String constantTag : constantTags) {
-                    costantPreTags.add(constantTag);
-                }
+                Collections.addAll(constantPreTags, constantTags);
             }
             // Support "dd.internal.entity_id" internal tag.
-            updateTagsWithEntityID(costantPreTags, entityID);
+            updateTagsWithEntityID(constantPreTags, entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
-                    costantPreTags.add(literal.tag() + ":" + envVal);
+                    constantPreTags.add(literal.tag() + ":" + envVal);
                 }
             }
-            if (costantPreTags.isEmpty()) {
+            if (constantPreTags.isEmpty()) {
                 constantTagsRendered = null;
             } else {
                 constantTagsRendered = tagString(
-                        costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder()).toString();
+                        constantPreTags.toArray(new String[0]), null, new StringBuilder()).toString();
             }
-            costantPreTags = null;
+            constantPreTags = null;
         }
 
         try {
@@ -509,7 +504,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, tags) {
+            sendMetric(new StatsDMessage<Double>(aspect, type, value, sampleRate, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(format(NUMBER_FORMATTER, this.value));
                 }
