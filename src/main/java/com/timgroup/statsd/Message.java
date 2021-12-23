@@ -120,7 +120,7 @@ public abstract class Message {
     public int hashCode() {
         // cache it
         if (this.hash == null) {
-            this.hash = new Integer(Objects.hash(this.aspect)) * HASH_MULTIPLIER;
+            this.hash = Objects.hash(this.aspect) * HASH_MULTIPLIER;
             this.hash += Objects.hash(this.tags);
         }
 
@@ -138,7 +138,7 @@ public abstract class Message {
         if (object instanceof Message) {
             final Message msg = (Message)object;
 
-            boolean equals = (this.getAspect() == msg.getAspect())
+            boolean equals = (Objects.equals(this.getAspect(), msg.getAspect()))
                 && (this.getType() == msg.getType())
                 && (this.done == msg.getDone())
                 && Arrays.equals(this.tags, (msg.getTags()));
