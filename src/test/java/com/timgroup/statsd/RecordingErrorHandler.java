@@ -18,6 +18,6 @@ public class RecordingErrorHandler implements StatsDClientErrorHandler {
     }
 
     public List<Exception> getExceptions() {
-        return new ArrayList(exceptions);
+        return new ArrayList<>(exceptions);
     }
 }
