@@ -6,7 +6,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-public class NamedPipeClientChannel implements ClientChannel {
+class NamedPipeClientChannel implements ClientChannel {
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final String pipe;
@@ -17,7 +17,7 @@ public class NamedPipeClientChannel implements ClientChannel {
      * @param address Location of named pipe
      * @throws FileNotFoundException if pipe does not exist
      */
-    public NamedPipeClientChannel(NamedPipeSocketAddress address) throws FileNotFoundException {
+    NamedPipeClientChannel(NamedPipeSocketAddress address) throws FileNotFoundException {
         pipe = address.getPipe();
         randomAccessFile = new RandomAccessFile(pipe, "rw");
         fileChannel = randomAccessFile.getChannel();

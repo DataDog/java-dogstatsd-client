@@ -5,7 +5,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-public class DatagramClientChannel implements ClientChannel {
+class DatagramClientChannel implements ClientChannel {
     protected final DatagramChannel delegate;
     private final SocketAddress address;
 
@@ -14,7 +14,7 @@ public class DatagramClientChannel implements ClientChannel {
      * @param address Address to connect the channel to
      * @throws IOException if an I/O error occurs
      */
-    public DatagramClientChannel(SocketAddress address) throws IOException {
+    DatagramClientChannel(SocketAddress address) throws IOException {
         this(DatagramChannel.open(), address);
     }
 
@@ -23,7 +23,7 @@ public class DatagramClientChannel implements ClientChannel {
      * @param delegate Implementation this instance wraps
      * @param address Address to connect the channel to
      */
-    public DatagramClientChannel(DatagramChannel delegate, SocketAddress address) {
+    DatagramClientChannel(DatagramChannel delegate, SocketAddress address) {
         this.delegate = delegate;
         this.address = address;
     }
