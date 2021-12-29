@@ -166,6 +166,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected final Telemetry telemetry;
 
     private final boolean blocking;
+
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
      * specified host and port. All messages send via this client will have
@@ -368,7 +369,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Cleanly shut down this StatsD client. This method may throw an exception if
      * the socket cannot be closed.
      *
-     * In blocking mode, this will block until all messages are sent to the server.
+     * <p>In blocking mode, this will block until all messages are sent to the server.
      */
     @Override
     public void stop() {
