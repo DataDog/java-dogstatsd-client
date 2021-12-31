@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -29,7 +27,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return;
             }
 
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
+            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && messages.isEmpty() && shutdown)) {
 
                 try {
 
@@ -113,7 +111,7 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
                 return true;
             }
         } catch (InterruptedException e) {
-            // NOTHING
+            Thread.currentThread().interrupt();
         }
 
         return false;
