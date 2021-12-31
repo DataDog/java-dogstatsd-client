@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -17,7 +15,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class StatsDProcessor {
     protected static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
@@ -142,8 +139,8 @@ public abstract class StatsDProcessor {
     void shutdown() {
         shutdown = true;
         aggregator.stop();
-        for (int i = 0 ; i < workers.length ; i++) {
-            workers[i].interrupt();
+        for (Thread worker : workers) {
+            worker.interrupt();
         }
     }
 
@@ -154,6 +151,7 @@ public abstract class StatsDProcessor {
                 return endSignal.await(remaining, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 // check again...
+                Thread.currentThread().interrupt();
             }
         }
     }
