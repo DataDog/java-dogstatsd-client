@@ -1,36 +1,20 @@
 package com.timgroup.statsd;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Rule;
+import org.junit.*;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class StatsDAggregatorTest {
@@ -182,6 +166,7 @@ public class StatsDAggregatorTest {
 
         for(int i=0 ; i<10 ; i++) {
             fakeProcessor.send(new FakeMessage<Integer>("some.gauge", Message.Type.GAUGE, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("", Message.Type.GAUGE, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.histogram", Message.Type.HISTOGRAM, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.distribution", Message.Type.DISTRIBUTION, 1));
