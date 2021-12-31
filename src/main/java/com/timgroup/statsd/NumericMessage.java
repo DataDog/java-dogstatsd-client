@@ -38,8 +38,6 @@ public abstract class NumericMessage<T extends Number> extends Message {
                     setValue(getValue().longValue() + value.longValue());
                 }
         }
-
-        return;
     }
 
     /**
