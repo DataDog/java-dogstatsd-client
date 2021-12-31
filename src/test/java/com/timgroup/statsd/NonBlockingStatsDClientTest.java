@@ -1,12 +1,7 @@
 package com.timgroup.statsd;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Rule;
+import org.junit.*;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
@@ -17,12 +12,9 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Logger;
-import java.text.NumberFormat;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.comparesEqualTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -1108,18 +1100,17 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout=5000L)
     public void sends_telemetry_elsewhere() throws Exception {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
-        final DummyStatsDServer telemetryServer = new UDPDummyStatsDServer(STATSD_SERVER_PORT+10);
-        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .port(STATSD_SERVER_PORT)
-            .telemetryHostname("localhost")
-            .telemetryPort(STATSD_SERVER_PORT+10)
-            .telemetryFlushInterval(3000)
-            .errorHandler(errorHandler)
-            .build();
 
-        try {
+        final NonBlockingStatsDClient testClient = new NonBlockingStatsDClientBuilder()
+                .prefix("my.prefix")
+                .hostname("localhost")
+                .port(STATSD_SERVER_PORT)
+                .telemetryHostname("localhost")
+                .telemetryPort(STATSD_SERVER_PORT + 10)
+                .telemetryFlushInterval(3000)
+                .errorHandler(errorHandler)
+                .build();
+        try (DummyStatsDServer telemetryServer = new UDPDummyStatsDServer(STATSD_SERVER_PORT + 10)) {
             testClient.gauge("top.level.value", 423);
             server.waitForMessage("my.prefix");
 
@@ -1141,7 +1132,6 @@ public class NonBlockingStatsDClientTest {
             assertThat(messages, hasItem(startsWith("datadog.dogstatsd.client.aggregated_context:0|c")));
         } finally {
             testClient.stop();
-            telemetryServer.close();
         }
     }
 
