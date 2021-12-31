@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 abstract class DummyStatsDServer implements Closeable {
     private final List<String> messagesReceived = new ArrayList<String>();
-    private AtomicInteger packetsReceived = new AtomicInteger(0);
+    private final AtomicInteger packetsReceived = new AtomicInteger(0);
 
     protected volatile Boolean freeze = false;
 
