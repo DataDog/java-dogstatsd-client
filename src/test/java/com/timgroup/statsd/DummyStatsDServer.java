@@ -14,32 +14,33 @@ abstract class DummyStatsDServer implements Closeable {
     private final List<String> messagesReceived = new ArrayList<String>();
     private final AtomicInteger packetsReceived = new AtomicInteger(0);
 
-    protected volatile Boolean freeze = false;
+    protected volatile boolean freeze = false;
 
     protected void listen() {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 final ByteBuffer packet = ByteBuffer.allocate(1500);
-
-                while(isOpen()) {
-                    if (freeze) {
+                while (isOpen()) {
+                    if (isFrozen()) {
                         try {
                             Thread.sleep(10);
                         } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     } else {
+                        // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
+                        ((Buffer) packet).clear();  // Cast necessary to handle Java9 covariant return types
                         try {
-                            ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
-                                                       // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
                             receive(packet);
-                            packetsReceived.addAndGet(1);
+                        } catch (IOException ignore) {
+                            continue;
+                        }
+                        packetsReceived.addAndGet(1);
 
-                            packet.flip();
-                            for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
-                                addMessage(msg);
-                            }
-                        } catch (IOException e) {
+                        packet.flip();
+                        for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
+                            addMessage(msg);
                         }
                     }
                 }
@@ -73,18 +74,23 @@ abstract class DummyStatsDServer implements Closeable {
                 }
                 Thread.sleep(100L);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }
 
     public List<String> messagesReceived() {
-        synchronized(messagesReceived) {
+        synchronized (messagesReceived) {
             return new ArrayList<>(messagesReceived);
         }
     }
 
     public int getPacketsReceived() {
         return packetsReceived.get();
+    }
+
+    private boolean isFrozen() {
+        return freeze;
     }
 
     public void freeze() {
