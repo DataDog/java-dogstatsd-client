@@ -437,7 +437,9 @@ public class TelemetryTest {
                || telemetryClient.telemetry.bytesSent.get() == 0) {
             try {
                 Thread.sleep(50L);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         assertThat(telemetryClient.telemetry.metricsSent.get(), equalTo(4));
@@ -456,7 +458,9 @@ public class TelemetryTest {
         while (telemetryClient.telemetry.metricsSent.get() != 0) {
             try {
                 Thread.sleep(30L);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         telemetryClient.telemetry.stop();
 
