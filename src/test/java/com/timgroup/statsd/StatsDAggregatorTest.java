@@ -7,10 +7,7 @@ import org.junit.runners.MethodSorters;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -65,13 +62,13 @@ public class StatsDAggregatorTest {
     // fakeProcessor store messages from the telemetry only
     public static class FakeProcessor extends StatsDProcessor {
 
-        private final Queue<Message> messages;
+        private final BlockingQueue<Message> messages;
         private final AtomicInteger messageSent = new AtomicInteger(0);
         private final AtomicInteger messageAggregated = new AtomicInteger(0);
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
             super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory());
-            this.messages = new ConcurrentLinkedQueue<>();
+            this.messages = new LinkedBlockingQueue<>();
         }
 
 
@@ -80,13 +77,13 @@ public class StatsDAggregatorTest {
             protected void processLoop() {
 
                 while (!shutdown) {
-                    final Message message = messages.poll();
+                    Message message = null;
+                    try {
+                        message = messages.poll(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                     if (message == null) {
-
-                        try{
-                            Thread.sleep(50L);
-                        } catch (InterruptedException e) {}
-
                         continue;
                     }
 
@@ -108,8 +105,7 @@ public class StatsDAggregatorTest {
 
         @Override
         public boolean send(final Message msg) {
-            messages.offer(msg);
-            return true;
+            return messages.offer(msg);
         }
 
         public Queue<Message> getMessages() {
@@ -166,7 +162,7 @@ public class StatsDAggregatorTest {
 
         for(int i=0 ; i<10 ; i++) {
             fakeProcessor.send(new FakeMessage<Integer>("some.gauge", Message.Type.GAUGE, 1));
-            fakeProcessor.send(new FakeMessage<Integer>("", Message.Type.GAUGE, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("some.time", Message.Type.TIME, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.histogram", Message.Type.HISTOGRAM, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.distribution", Message.Type.DISTRIBUTION, 1));
@@ -175,10 +171,10 @@ public class StatsDAggregatorTest {
 
         waitForQueueSize(fakeProcessor.messages, 0);
 
-        // 10 gauges, 10 counts, 10 sets
+        // 10 gauges, 10 counts, 10 sets, 10 time
         assertEquals(30, fakeProcessor.messageAggregated.get());
-        // 10 histogram, 10 distribution
-        assertEquals(20, fakeProcessor.messageSent.get());
+        // 10 histogram, 10 distribution, 10 time
+        assertEquals(30, fakeProcessor.messageSent.get());
 
         // wait for aggregator flush...
         fakeProcessor.aggregator.flush();
