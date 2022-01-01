@@ -158,7 +158,7 @@
         <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jnr-unixsocket</artifactId>
-            <version>0.36</version>
+            <version>0.38.15</version>
         </dependency>
     </dependencies>
 
