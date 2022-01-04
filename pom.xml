@@ -122,6 +122,43 @@
                 </plugins>
             </build>
         </profile>
+
+        <!-- Use -X option to see classpath -->
+        <profile>
+            <id>jnr-exclude</id>
+            <!-- Compile main and test code with jnr-unixsocket in classpath, but drop it when
+                 running tests. Make sure UDP and Windows support works even if jnr-unixsocket
+                 dependency is not available.
+            -->
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.19</version>
+                        <configuration>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>com.github.jnr:jnr-unixsocket</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>jnr-latest</id>
+            <!-- This profile is for testing for compatibility with the latest version of
+                 jnr-unixsocket. Maven does not rebuild main or test code when profile changes,
+                 so we can test how the code compiled with version X runs with version Y.
+            -->
+            <dependencies>
+                 <dependency>
+                    <groupId>com.github.jnr</groupId>
+                    <artifactId>jnr-unixsocket</artifactId>
+                    <version>0.38.15</version>
+                </dependency>
+            </dependencies>
+        </profile>
     </profiles>
 
     <dependencies>
