@@ -369,9 +369,7 @@ public class TelemetryTest {
 
     @Test(timeout = 5000L)
     public void telemetry_droppedData() throws Exception {
-        boolean isLinux = System.getProperty("os.name").toLowerCase().contains("linux");
-        boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
-        Assume.assumeTrue(isLinux || isMac);
+        Assume.assumeTrue(UnixSocketTest.isUdsAvailable());
 
         // fails to send any data on the network, producing packets dropped
         NonBlockingStatsDClient clientError = new NonBlockingStatsDClientBuilder()
