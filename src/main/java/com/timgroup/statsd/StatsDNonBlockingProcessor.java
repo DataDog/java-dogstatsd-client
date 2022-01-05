@@ -16,90 +16,22 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     private final AtomicInteger qsize;  // qSize will not reflect actual size, but a close estimate.
 
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
+        @Override
+        protected Message getMessage() throws InterruptedException {
+            final Message message = messages.poll();
+            if (message != null) {
+                qsize.decrementAndGet();
+                return message;
+            }
+
+            Thread.sleep(WAIT_SLEEP_MS);
+
+            return null;
+        }
 
         @Override
-        protected void processLoop() {
-            ByteBuffer sendBuffer;
-            boolean empty = true;
-            boolean emptyHighPrio = true;
-
-            try {
-                sendBuffer = bufferPool.borrow();
-            } catch (final InterruptedException e) {
-                handler.handle(e);
-                return;
-            }
-
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && (empty = messages.isEmpty()) && shutdown)) {
-
-                try {
-
-                    if (emptyHighPrio && empty) {
-                        Thread.sleep(WAIT_SLEEP_MS);
-                        continue;
-                    }
-
-                    if (Thread.interrupted()) {
-                        return;
-                    }
-
-                    final Message message;
-                    if (!emptyHighPrio) {
-                        message = highPrioMessages.poll();
-                    } else {
-                        message = messages.poll();
-                    }
-
-                    if (message != null) {
-
-                        qsize.decrementAndGet();
-
-                        // TODO: Aggregate and fix, there's some duplicate logic
-                        if (aggregator.aggregateMessage(message)) {
-                            continue;
-                        }
-
-                        builder.setLength(0);
-
-                        message.writeTo(builder);
-                        int lowerBoundSize = builder.length();
-
-
-                        if (sendBuffer.capacity() < lowerBoundSize) {
-                            throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
-                        }
-
-                        if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                        }
-
-                        sendBuffer.mark();
-
-                        try {
-                            writeBuilderToSendBuffer(sendBuffer);
-                        } catch (BufferOverflowException boe) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                            writeBuilderToSendBuffer(sendBuffer);
-                        }
-
-                        if (null == messages.peek()) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                        }
-                    }
-                } catch (final InterruptedException e) {
-                    if (shutdown) {
-                        break;
-                    }
-                } catch (final Exception e) {
-                    handler.handle(e);
-                }
-            }
-
-            builder.setLength(0);
-            builder.trimToSize();
+        protected boolean haveMessages() {
+            return !messages.isEmpty();
         }
     }
 

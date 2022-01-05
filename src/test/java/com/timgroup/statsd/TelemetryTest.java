@@ -33,6 +33,10 @@ public class TelemetryTest {
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
             @Override
             protected void processLoop() {}
+
+            @Override Message getMessage() { return null; }
+
+            @Override boolean haveMessages() { return false; }
         }
 
         @Override
