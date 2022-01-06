@@ -33,10 +33,14 @@ public class TelemetryTest {
         private class FakeProcessingTask extends StatsDProcessor.ProcessingTask {
             @Override
             protected void processLoop() {}
+
+            @Override Message getMessage() { return null; }
+
+            @Override boolean haveMessages() { return false; }
         }
 
         @Override
-        public boolean send(final Message msg) {
+        public synchronized boolean send(final Message msg) {
             messages.add(msg);
             return true;
         }
@@ -52,7 +56,7 @@ public class TelemetryTest {
             return messages;
         }
 
-        protected List<String> getMessagesAsStrings() {
+        protected synchronized List<String> getMessagesAsStrings() {
             StringBuilder sb = new StringBuilder();
             ArrayList<String> stringMessages = new ArrayList<>(messages.size());
             for(Message m : messages) {

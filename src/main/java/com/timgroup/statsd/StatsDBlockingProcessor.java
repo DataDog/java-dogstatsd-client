@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -15,77 +13,14 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     private class ProcessingTask extends StatsDProcessor.ProcessingTask {
 
         @Override
-        protected void processLoop() {
-            ByteBuffer sendBuffer;
-            boolean empty = true;
-            boolean emptyHighPrio = true;
-
-            try {
-                sendBuffer = bufferPool.borrow();
-            } catch (final InterruptedException e) {
-                handler.handle(e);
-                return;
-            }
-
-            while (!((emptyHighPrio = highPrioMessages.isEmpty()) && messages.isEmpty() && shutdown)) {
-
-                try {
-
-                    final Message message;
-                    if (!emptyHighPrio) {
-                        message = highPrioMessages.poll();
-                    } else {
-                        message = messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
-                    }
-
-                    if (message != null) {
-
-                        if (aggregator.aggregateMessage(message)) {
-                            continue;
-                        }
-
-                        builder.setLength(0);
-
-                        message.writeTo(builder);
-                        int lowerBoundSize = builder.length();
-
-                        if (sendBuffer.capacity() < lowerBoundSize) {
-                            throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
-                        }
-
-                        if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                        }
-
-                        sendBuffer.mark();
-
-                        try {
-                            writeBuilderToSendBuffer(sendBuffer);
-                        } catch (BufferOverflowException boe) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                            writeBuilderToSendBuffer(sendBuffer);
-                        }
-
-                        if (null == messages.peek()) {
-                            outboundQueue.put(sendBuffer);
-                            sendBuffer = bufferPool.borrow();
-                        }
-                    }
-                } catch (final InterruptedException e) {
-                    if (shutdown) {
-                        break;
-                    }
-                } catch (final Exception e) {
-                    handler.handle(e);
-                }
-            }
-
-            builder.setLength(0);
-            builder.trimToSize();
+        protected Message getMessage() throws InterruptedException {
+            return messages.poll(WAIT_SLEEP_MS, TimeUnit.MILLISECONDS);
         }
 
+        @Override
+        protected boolean haveMessages() {
+            return !messages.isEmpty();
+        }
     }
 
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,

@@ -1,16 +1,12 @@
 package com.timgroup.statsd;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatsDSender {
     private final WritableByteChannel clientChannel;
@@ -120,21 +116,13 @@ public class StatsDSender {
         }
     }
 
-    void shutdown() {
+    void shutdown(boolean blocking) throws InterruptedException {
         shutdown = true;
-        for (Thread worker : workers) {
-            worker.interrupt();
-        }
-    }
-
-    boolean awaitUntil(final long deadline) {
-        while (true) {
-            long remaining = deadline - System.currentTimeMillis();
-            try {
-                return endSignal.await(remaining, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                // check again...
-                Thread.currentThread().interrupt();
+        if (blocking) {
+            endSignal.await();
+        } else {
+            for (Thread worker : workers) {
+                worker.interrupt();
             }
         }
     }

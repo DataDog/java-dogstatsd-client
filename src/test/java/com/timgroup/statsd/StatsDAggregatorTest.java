@@ -96,6 +96,12 @@ public class StatsDAggregatorTest {
                     messageSent.incrementAndGet();
                 }
             }
+
+            @Override
+            Message getMessage() { return null; }
+
+            @Override
+            boolean haveMessages() { return false; }
         }
 
         @Override
@@ -138,7 +144,11 @@ public class StatsDAggregatorTest {
 
     @AfterClass
     public static void stop() {
-        fakeProcessor.shutdown();
+        try {
+            fakeProcessor.shutdown(false);
+        } catch (InterruptedException e) {
+            return;
+        }
     }
 
     @After

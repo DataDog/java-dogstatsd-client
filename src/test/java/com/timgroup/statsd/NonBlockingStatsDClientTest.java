@@ -6,6 +6,8 @@ import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -1489,5 +1491,43 @@ public class NonBlockingStatsDClientTest {
             client.stop();
             server.close();
         }
+    }
+
+    // Test that in the blocking mode metrics are written out to the socket before close() returns.
+    volatile boolean blocking_close_sent = false;
+    @Test(timeout = 5000L)
+    public void blocking_close_test() throws Exception {
+        final int port = 17256;
+        final byte[] expect = "test:1|g\n".getBytes(StandardCharsets.UTF_8);
+        NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder() {
+                @Override
+                public NonBlockingStatsDClient build() {
+                    return new NonBlockingStatsDClient(resolve()) {
+                        @Override
+                        ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int bufferSize) throws Exception {
+                            return new DatagramClientChannel(addressLookup.call()) {
+                                @Override
+                                public int write(ByteBuffer data) throws IOException {
+                                    // The test should pass without the sleep, but if there is a
+                                    // race with the assert below, make it worse.
+                                    try {
+                                        Thread.sleep(100);
+                                    } catch (InterruptedException e) {
+                                        return 0;
+                                    }
+                                    boolean sent = data.equals(ByteBuffer.wrap(expect));
+                                    int n = super.write(data);
+                                    blocking_close_sent = sent;
+                                    return n;
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+        NonBlockingStatsDClient client = builder.hostname("localhost").port(port).blocking(true).build();
+        client.gauge("test", 1);
+        client.close();
+        assertEquals(true, blocking_close_sent);
     }
 }

@@ -164,6 +164,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected StatsDSender telemetryStatsDSender;
     protected final Telemetry telemetry;
 
+    private final boolean blocking;
+
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
      * specified host and port. All messages send via this client will have
@@ -235,6 +237,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             handler = errorHandler;
         }
 
+        this.blocking = blocking;
         {
             List<String> constantPreTags = new ArrayList<>();
             if (constantTags != null) {
@@ -362,25 +365,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Cleanly shut down this StatsD client. This method may throw an exception if
      * the socket cannot be closed.
+     *
+     * <p>In blocking mode, this will block until all messages are sent to the server.
      */
     @Override
     public void stop() {
         try {
             this.telemetry.stop();
-            statsDProcessor.shutdown();
-            statsDSender.shutdown();
+            statsDProcessor.shutdown(blocking);
+            statsDSender.shutdown(blocking);
 
             // shut down telemetry workers if need be
             if (telemetryStatsDProcessor != statsDProcessor) {
-                telemetryStatsDProcessor.shutdown();
-                telemetryStatsDSender.shutdown();
+                telemetryStatsDProcessor.shutdown(false);
+                telemetryStatsDSender.shutdown(false);
             }
-
-            long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30);
-
-            statsDProcessor.awaitUntil(deadline);
-            statsDSender.awaitUntil(deadline);
-
         } catch (final Exception e) {
             handler.handle(e);
         } finally {
