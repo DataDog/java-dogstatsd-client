@@ -122,8 +122,8 @@ public class StatsDSender {
 
     void shutdown() {
         shutdown = true;
-        for (int i = 0 ; i < workers.length ; i++) {
-            workers[i].interrupt();
+        for (Thread worker : workers) {
+            worker.interrupt();
         }
     }
 
@@ -134,6 +134,7 @@ public class StatsDSender {
                 return endSignal.await(remaining, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 // check again...
+                Thread.currentThread().interrupt();
             }
         }
     }
