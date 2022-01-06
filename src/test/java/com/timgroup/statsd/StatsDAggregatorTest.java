@@ -163,7 +163,7 @@ public class StatsDAggregatorTest {
     public void aggregate_messages() throws Exception {
 
         for(int i=0 ; i<10 ; i++) {
-            fakeProcessor.send(new FakeMessage<Integer>("some.gauge", Message.Type.GAUGE, 1));
+            fakeProcessor.send(new FakeMessage<Integer>(new String("some.gauge"), Message.Type.GAUGE, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.time", Message.Type.TIME, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
             fakeProcessor.send(new FakeMessage<Integer>("some.histogram", Message.Type.HISTOGRAM, 1));
