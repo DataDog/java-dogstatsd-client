@@ -349,7 +349,9 @@ public class TelemetryTest {
         while (client.telemetry.metricsSent.get() != 0) {
             try {
                 Thread.sleep(30L);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         client.telemetry.stop();
 
@@ -392,7 +394,9 @@ public class TelemetryTest {
                || clientError.telemetry.bytesDropped.get() == 0) {
             try {
                 Thread.sleep(50L);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         clientError.stop();
@@ -414,7 +418,9 @@ public class TelemetryTest {
                || client.telemetry.bytesSent.get() == 0) {
             try {
                 Thread.sleep(50L);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
         assertThat(client.telemetry.metricsSent.get(), equalTo(1));
