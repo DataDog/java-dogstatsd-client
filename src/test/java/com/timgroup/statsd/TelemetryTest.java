@@ -40,7 +40,7 @@ public class TelemetryTest {
         }
 
         @Override
-        public boolean send(final Message msg) {
+        public synchronized boolean send(final Message msg) {
             messages.add(msg);
             return true;
         }
@@ -56,7 +56,7 @@ public class TelemetryTest {
             return messages;
         }
 
-        protected List<String> getMessagesAsStrings() {
+        protected synchronized List<String> getMessagesAsStrings() {
             StringBuilder sb = new StringBuilder();
             ArrayList<String> stringMessages = new ArrayList<>(messages.size());
             for(Message m : messages) {
