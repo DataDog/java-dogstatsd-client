@@ -153,7 +153,9 @@ public class StatsDAggregatorTest {
         while (queue.size() != size) {
             try {
                 Thread.sleep(1000L);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
