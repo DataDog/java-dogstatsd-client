@@ -116,7 +116,7 @@ Though there are very few breaking changes in `3.x`, some code changes might be 
 |  final Callable<SocketAddress> addressLookup                         | NonBlockingStatsDClientBuilder addressLookup(Callable<SocketAddress> val)                         |
 |  final boolean blocking                          | NonBlockingStatsDClientBuilder blocking(boolean val)                         |
 |  final int bufferSize                          | NonBlockingStatsDClientBuilder socketBufferSize(int val)                         |
-|  final String... constantTags                          | NonBlockingStatsDClientBuilder queueSize(String... val)                         |
+|  final String... constantTags                          | NonBlockingStatsDClientBuilder constantTags(String... val)                         |
 |  final boolean enableTelemetry                          | NonBlockingStatsDClientBuilder enableTelemetry(boolean val)                         |
 |  final String entityID                          | NonBlockingStatsDClientBuilder entityID(String val)                         |
 |  final StatsDClientErrorHandler errorHandler                          | NonBlockingStatsDClientBuilder errorHandler(StatsDClientErrorHandler val)                         |
