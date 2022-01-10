@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixSocketAddress;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -447,11 +445,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
             return new NamedPipeClientChannel((NamedPipeSocketAddress) address);
-        } else if (address instanceof UnixSocketAddress) {
-            return new UnixDatagramClientChannel(address, timeout, bufferSize);
-        } else {
-            return new DatagramClientChannel(address);
         }
+        try {
+            if (Class.forName("jnr.unixsocket.UnixSocketAddress").isInstance(address)) {
+                return new UnixDatagramClientChannel(address, timeout, bufferSize);
+            }
+        } catch (ClassNotFoundException e) {
+            // not loaded, can't use
+        }
+
+        return new DatagramClientChannel(address);
     }
 
     abstract class StatsDMessage<T extends Number> extends NumericMessage<T> {

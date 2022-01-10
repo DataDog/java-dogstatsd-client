@@ -24,20 +24,35 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
     private static File socketFile;
     private volatile Exception lastException = new Exception();
 
-    private static boolean linux = true;
-
     public synchronized void handle(Exception exception) {
         lastException = exception;
     }
 
+    static boolean isLinux() {
+        return System.getProperty("os.name").toLowerCase().contains("linux");
+    }
+
+    static boolean isMac() {
+        return System.getProperty("os.name").toLowerCase().contains("mac");
+    }
+
+    static boolean isJnrAvailable() {
+        try {
+            Class.forName("jnr.unixsocket.UnixDatagramChannel");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    // Check if jnr.unixsocket is on the classpath.
+    static boolean isUdsAvailable() {
+        return (isLinux() || isMac()) && isJnrAvailable();
+    }
+
     @BeforeClass
     public static void supportedOnly() throws IOException {
-        boolean isLinux = System.getProperty("os.name").toLowerCase().contains("linux");
-        boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
-        if (isMac) {
-            linux = false;
-        }
-        Assume.assumeTrue(isLinux || isMac);
+        Assume.assumeTrue(isUdsAvailable());
     }
 
     @Before
@@ -145,7 +160,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             client.gauge("mycount", 20);
             Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
         }
-        String excMessage = linux ? "Resource temporarily unavailable" : "No buffer space available";
+        String excMessage = isLinux() ? "Resource temporarily unavailable" : "No buffer space available";
         assertThat(lastException.getMessage(), containsString(excMessage));
 
         // Make sure we recover after we resume listening

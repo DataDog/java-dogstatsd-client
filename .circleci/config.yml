@@ -29,7 +29,7 @@ jobs:
       MVN_EXTRA_OPTS: -Dcheckstyle.version=2.15 -Dcheckstyle.skip
     <<: *default_steps
   openjdk8:
-    docker:
+    docker: &jdk8
       - image: circleci/openjdk:8u242
     <<: *default_steps
   openjdk9:
@@ -57,6 +57,18 @@ jobs:
       - run: |
           mvn clean install
 
+  openjdk8-jnr-exclude:
+    docker: *jdk8
+    steps:
+      - checkout
+      - run: "mvn -Pjnr-exclude clean test"
+  openjdk8-jnr-latest:
+     docker: *jdk8
+     steps:
+       - checkout
+       - run: "mvn clean test -DskipTests" # build main and test with default deps
+       - run: "mvn -Pjnr-latest test"      # run with modified deps
+
 workflows:
   version: 2
   agent-tests:
@@ -67,3 +79,5 @@ workflows:
       - openjdk11
       - openjdk13
       - windows-openjdk12
+      - openjdk8-jnr-exclude
+      - openjdk8-jnr-latest
