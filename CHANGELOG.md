@@ -1,8 +1,21 @@
 # CHANGELOG
 
+## 4.0.0 / 2022.01.10
+
+This release is a correction for v3.0.0, which was released without client-side
+aggregation enabled by default.
+
+There are no incompatible API changes in this release.
+
+* [BUGFIX] Re-enable aggregation by default. See [#171][]
+* [FEATURE] Windows named pipe support. See [#169][]
+* [FEATURE] jar-with-dependencies artifact now include license information. See [#179][]
+* [FEATURE] send buffered metrics when a blocking client is closed. See [#180][]
+* [FEATURE] client can be used without jnr-posix in the classpath. See [#182][]
+
 ## 3.0.1 / 2021.12.14
 
-* [BUGFIX] Fix visibility for overrideable methods (#170)
+* [BUGFIX] Fix visibility for overrideable methods. See [#170][]
 
 ## 3.0.0 / 2021.11.02
 
@@ -66,7 +79,7 @@ Please refer to the [readme][readme configuration] for tips on how to migrate to
 * [FEATURE] Architecture revamp + non-blocking queue, improved performance. See [#94][]
 * [FEATURE] Enable buffer pool, concurrent sending threads. See [#95][]
 * [FEATURE] Adding dogstatsd telemetry to client. See [#97][]
-* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION; DD_TAGS env vars support. See [#107][], [#108][], [#111][]
+* [FEATURE] DD_SERVICE; DD_ENV; DD_VERSION env vars support. See [#107][], [#108][], [#111][]
 * [FEATURE] Allow different remote destination for telemetry. See [#109][]
 * [IMPROVEMENT] Improved abstractions + better object construction. See [#96][]
 * [IMPROVEMENT] Reduce number of allocations. Thanks [@njhill][]. See [#105][]
@@ -188,6 +201,13 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#160]: https://github.com/DataDog/java-dogstatsd-client/issues/160
 [#162]: https://github.com/DataDog/java-dogstatsd-client/issues/162
 [#164]: https://github.com/DataDog/java-dogstatsd-client/issues/164
+[#169]: https://github.com/DataDog/java-dogstatsd-client/issues/169
+[#170]: https://github.com/DataDog/java-dogstatsd-client/issues/170
+[#171]: https://github.com/DataDog/java-dogstatsd-client/issues/171
+[#179]: https://github.com/DataDog/java-dogstatsd-client/issues/179
+[#180]: https://github.com/DataDog/java-dogstatsd-client/issues/180
+[#182]: https://github.com/DataDog/java-dogstatsd-client/issues/182
+
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
 [@cameronhotchkies]: https://github.com/cameronhotchkies
