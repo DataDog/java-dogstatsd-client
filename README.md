@@ -3,7 +3,7 @@
 [![CircleCI Build Status](https://circleci.com/gh/DataDog/java-dogstatsd-client/tree/master.svg?style=svg)](https://circleci.com/gh/DataDog/java-dogstatsd-client)
 [![Travis Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.com/DataDog/java-dogstatsd-client)
 
-A StatsD client library implemented in Java. Allows for Java applications to easily communicate with statsd. The library supports Java 1.7+.
+A DogStatsD client library implemented in Java. Allows for Java applications to easily communicate with the DataDog Agent. The library supports Java 1.7+.
 
 This version was originally forked from [java-dogstatsd-client](https://github.com/indeedeng/java-dogstatsd-client) and [java-statsd-client](https://github.com/youdevise/java-statsd-client) but it is now the canonical home for the `java-dogstatsd-client`. Collaborating with the former upstream projects we have now combined efforts to provide a single release.
 
