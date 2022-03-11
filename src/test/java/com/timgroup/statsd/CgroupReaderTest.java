@@ -1,11 +1,13 @@
 package com.timgroup.statsd;
 
+import static org.junit.Assert.assertNull;
+
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class ContainerIDTest {
+public class CgroupReaderTest {
     @Test
     public void containerID_parse() throws Exception {
         // Docker
@@ -25,7 +27,7 @@ public class ContainerIDTest {
         .append("1:cpuset:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860")
         .toString();
 
-        assertThat(ContainerID.parse(docker).getContainerID(), equalTo("3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860"));
+        assertThat(CgroupReader.parse(docker), equalTo("3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860"));
 
         // Kubernetes
         String kubernetes = new StringBuilder()
@@ -42,7 +44,7 @@ public class ContainerIDTest {
         .append("1:name=systemd:/kubepods/besteffort/pod3d274242-8ee0-11e9-a8a6-1e68d864ef1a/3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1")
         .toString();
 
-        assertThat(ContainerID.parse(kubernetes).getContainerID(), equalTo("3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1"));
+        assertThat(CgroupReader.parse(kubernetes), equalTo("3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1"));
 
         // ECS EC2
         String ecs = new StringBuilder()
@@ -57,7 +59,7 @@ public class ContainerIDTest {
         .append("1:blkio:/ecs/name-ecs-classic/5a0d5ceddf6c44c1928d367a815d890f/38fac3e99302b3622be089dd41e7ccf38aff368a86cc339972075136ee2710ce")
         .toString();
 
-        assertThat(ContainerID.parse(ecs).getContainerID(), equalTo("38fac3e99302b3622be089dd41e7ccf38aff368a86cc339972075136ee2710ce"));
+        assertThat(CgroupReader.parse(ecs), equalTo("38fac3e99302b3622be089dd41e7ccf38aff368a86cc339972075136ee2710ce"));
 
         // ECS Fargate
         String ecsFargate = new StringBuilder()
@@ -74,6 +76,40 @@ public class ContainerIDTest {
         .append("1:name=systemd:/ecs/55091c13-b8cf-4801-b527-f4601742204d/432624d2150b349fe35ba397284dea788c2bf66b885d14dfc1569b01890ca7da\n")
         .toString();
 
-        assertThat(ContainerID.parse(ecsFargate).getContainerID(), equalTo("432624d2150b349fe35ba397284dea788c2bf66b885d14dfc1569b01890ca7da"));
+        assertThat(CgroupReader.parse(ecsFargate), equalTo("432624d2150b349fe35ba397284dea788c2bf66b885d14dfc1569b01890ca7da"));
+
+        // ECS Fargate >= 1.4.0
+        String ecsFargate14 = new StringBuilder()
+        .append("11:hugetlb:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("10:pids:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("9:cpuset:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("8:net_cls,net_prio:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("7:cpu,cpuacct:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("6:perf_event:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("5:freezer:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("4:devices:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("3:blkio:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("2:memory:/ecs/55091c13-b8cf-4801-b527-f4601742204d/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .append("1:name=systemd:/ecs/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
+        .toString();
+
+        assertThat(CgroupReader.parse(ecsFargate14), equalTo("34dc0b5e626f2c5c4c5170e34b10e765-1234567890"));
+
+        // Linux non-containerized
+        String nonContainerized = new StringBuilder()
+        .append("11:blkio:/user.slice/user-0.slice/session-14.scope\n")
+        .append("10:memory:/user.slice/user-0.slice/session-14.scope\n")
+        .append("9:hugetlb:/\n")
+        .append("8:cpuset:/\n")
+        .append("7:pids:/user.slice/user-0.slice/session-14.scope\n")
+        .append("6:freezer:/\n")
+        .append("5:net_cls,net_prio:/\n")
+        .append("4:perf_event:/\n")
+        .append("3:cpu,cpuacct:/user.slice/user-0.slice/session-14.scope\n")
+        .append("2:devices:/user.slice/user-0.slice/session-14.scope\n")
+        .append("1:name=systemd:/user.slice/user-0.slice/session-14.scope\n")
+        .toString();
+
+        assertNull(CgroupReader.parse(nonContainerized));
     }
 }

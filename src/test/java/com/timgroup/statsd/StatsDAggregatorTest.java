@@ -86,7 +86,7 @@ public class StatsDAggregatorTest {
         private final AtomicInteger messageAggregated = new AtomicInteger(0);
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory());
+            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory(), null);
             this.messages = new ConcurrentLinkedQueue<>();
         }
 

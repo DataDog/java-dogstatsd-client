@@ -159,7 +159,7 @@ public abstract class StatsDProcessor {
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
             final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory) throws Exception {
+            final ThreadFactory threadFactory, final String containerID) throws Exception {
 
         this.handler = handler;
         this.threadFactory = threadFactory;
@@ -172,6 +172,8 @@ public abstract class StatsDProcessor {
         this.endSignal = new CountDownLatch(workers);
         this.closeSignal = new CountDownLatch(workers);
         this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
+
+        this.containerID = containerID;
     }
 
     protected abstract ProcessingTask createProcessingTask();
@@ -215,10 +217,6 @@ public abstract class StatsDProcessor {
 
     public Telemetry getTelemetry() {
         return telemetry;
-    }
-
-    public void setContainerID(final String containerID) {
-        this.containerID = containerID;
     }
 
     void shutdown(boolean blocking) throws InterruptedException {

@@ -11,11 +11,9 @@ import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
@@ -295,7 +293,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
-                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory);
+                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream(
@@ -313,7 +311,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false, 0, aggregationShards, threadFactory);
+                        poolSize, 1, false, 0, aggregationShards, threadFactory, containerID);
             }
 
             this.telemetry = new Telemetry.Builder()
@@ -335,9 +333,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
             // set telemetry
             statsDProcessor.setTelemetry(this.telemetry);
             statsDSender.setTelemetry(this.telemetry);
-
-            // set container ID
-            statsDProcessor.setContainerID(containerID);
 
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
@@ -378,14 +373,15 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory)
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory,
+            final String containerID)
             throws Exception {
         if (blocking) {
             return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
         }
     }
 
@@ -1221,13 +1217,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
             return false;
         }
 
-        final String value = System.getenv(ORIGIN_DETECTION_ENABLED_ENV_VAR);
-        if (value != null && !value.trim().isEmpty()) {
-            Set<String> falseValues = new HashSet<String>(Arrays.asList("no", "false", "0", "n", "off"));
-            return !falseValues.contains(value.toLowerCase());
+        String value = System.getenv(ORIGIN_DETECTION_ENABLED_ENV_VAR);
+        value = value != null ? value.trim() : null;
+        if (value != null && !value.isEmpty()) {
+            return !Arrays.asList("no", "false", "0", "n", "off").contains(value.toLowerCase());
         }
 
-        // DD_ORIGIN_DETECTION_ENABLED is not set
+        // DD_ORIGIN_DETECTION_ENABLED is not set or is empty
         // default to true
         return true;
     }
@@ -1238,7 +1234,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         if (originDetectionEnabled) {
-            return ContainerID.get().getContainerID();
+            CgroupReader reader = new CgroupReader();
+            try {
+                return reader.getContainerID();
+            } catch (final IOException e) {
+                throw new StatsDClientException("Failed to get container ID", e);
+            }
         }
 
         return null;
