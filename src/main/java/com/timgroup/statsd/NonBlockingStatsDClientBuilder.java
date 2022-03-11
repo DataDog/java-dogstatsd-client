@@ -32,6 +32,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
     public int aggregationShards = StatsDAggregator.DEFAULT_SHARDS;
+    public boolean originDetectionEnabled = NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION;
 
     public Callable<SocketAddress> addressLookup;
     public Callable<SocketAddress> telemetryAddressLookup;
@@ -42,6 +43,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public String prefix;
     public String entityID;
     public String[] constantTags;
+    public String containerID;
 
     public StatsDClientErrorHandler errorHandler;
     public ThreadFactory threadFactory;
@@ -170,6 +172,16 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder threadFactory(ThreadFactory val) {
         threadFactory = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder containerID(String val) {
+        containerID = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder originDetectionEnabled(boolean val) {
+        originDetectionEnabled = val;
         return this;
     }
 

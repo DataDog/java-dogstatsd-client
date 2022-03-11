@@ -69,14 +69,19 @@ public class Telemetry {
         }
 
         @Override
-        public final void writeTo(StringBuilder builder) {
+        public final void writeTo(StringBuilder builder, String containerID) {
             builder.append(aspect)
                 .append(':')
                 .append(this.value)
                 .append('|')
                 .append(type)
-                .append(tagsString)
-                .append('\n');  // already has the statsd separator baked-in
+                .append(tagsString);
+
+            if (containerID != null && !containerID.isEmpty()) {
+                builder.append("|c:").append(containerID);
+            }
+
+            builder.append('\n');  // already has the statsd separator baked-in
         }
     }
 

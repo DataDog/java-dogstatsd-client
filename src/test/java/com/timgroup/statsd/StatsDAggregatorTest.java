@@ -65,7 +65,7 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected void writeTo(StringBuilder builder){}
+        protected void writeTo(StringBuilder builder, String containerID){}
     }
 
     public static class FakeAlphaMessage extends AlphaNumericMessage {
@@ -74,7 +74,7 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected void writeTo(StringBuilder builder){}
+        protected void writeTo(StringBuilder builder, String containerID){}
     }
 
 

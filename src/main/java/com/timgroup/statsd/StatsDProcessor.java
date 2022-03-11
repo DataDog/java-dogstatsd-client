@@ -43,6 +43,8 @@ public abstract class StatsDProcessor {
     protected volatile boolean shutdown;
     volatile boolean shutdownAgg;
 
+    protected String containerID;
+
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
         protected CharBuffer buffer = CharBuffer.wrap(builder);
@@ -97,7 +99,7 @@ public abstract class StatsDProcessor {
                     }
 
                     builder.setLength(0);
-                    message.writeTo(builder);
+                    message.writeTo(builder, containerID);
                     int lowerBoundSize = builder.length();
 
                     if (sendBuffer.capacity() < lowerBoundSize) {
@@ -213,6 +215,10 @@ public abstract class StatsDProcessor {
 
     public Telemetry getTelemetry() {
         return telemetry;
+    }
+
+    public void setContainerID(final String containerID) {
+        this.containerID = containerID;
     }
 
     void shutdown(boolean blocking) throws InterruptedException {

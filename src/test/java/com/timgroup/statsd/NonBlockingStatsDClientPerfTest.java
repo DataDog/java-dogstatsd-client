@@ -27,6 +27,7 @@ public final class NonBlockingStatsDClientPerfTest {
         .blocking(true)  // non-blocking processors will drop messages if the queue fills up
         .enableTelemetry(false)
         .enableAggregation(false)
+        .originDetectionEnabled(false)
         .build();
 
     private static final NonBlockingStatsDClient clientAggr = new NonBlockingStatsDClientBuilder().prefix("my.prefix.aggregated")
@@ -34,6 +35,7 @@ public final class NonBlockingStatsDClientPerfTest {
         .port(STATSD_SERVER_PORT)
         .blocking(true)  // non-blocking processors will drop messages if the queue fills up
         .enableTelemetry(false)
+        .originDetectionEnabled(false)
         .build();
 
     private ExecutorService executor;
