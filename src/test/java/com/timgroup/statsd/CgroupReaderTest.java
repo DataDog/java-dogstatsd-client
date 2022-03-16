@@ -111,5 +111,13 @@ public class CgroupReaderTest {
         .toString();
 
         assertNull(CgroupReader.parse(nonContainerized));
+
+        // Linux 4.4
+        String linux44 = new StringBuilder()
+        .append("11:pids:/system.slice/docker-cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411.scope\n")
+        .append("1:name=systemd:/system.slice/docker-cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411.scope\n")
+        .toString();
+
+        assertThat(CgroupReader.parse(linux44), equalTo("cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411"));
     }
 }
