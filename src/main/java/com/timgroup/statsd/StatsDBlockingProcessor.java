@@ -30,10 +30,10 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
             final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory) throws Exception {
+            final ThreadFactory threadFactory, final String containerID) throws Exception {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
-                aggregatorFlushInterval, aggregatorShards, threadFactory);
+                aggregatorFlushInterval, aggregatorShards, threadFactory, containerID);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 

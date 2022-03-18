@@ -43,6 +43,8 @@ public abstract class StatsDProcessor {
     protected volatile boolean shutdown;
     volatile boolean shutdownAgg;
 
+    String containerID;
+
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
         protected CharBuffer buffer = CharBuffer.wrap(builder);
@@ -97,7 +99,7 @@ public abstract class StatsDProcessor {
                     }
 
                     builder.setLength(0);
-                    message.writeTo(builder);
+                    message.writeTo(builder, containerID);
                     int lowerBoundSize = builder.length();
 
                     if (sendBuffer.capacity() < lowerBoundSize) {
@@ -157,7 +159,7 @@ public abstract class StatsDProcessor {
     StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
             final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory) throws Exception {
+            final ThreadFactory threadFactory, final String containerID) throws Exception {
 
         this.handler = handler;
         this.threadFactory = threadFactory;
@@ -170,6 +172,8 @@ public abstract class StatsDProcessor {
         this.endSignal = new CountDownLatch(workers);
         this.closeSignal = new CountDownLatch(workers);
         this.aggregator = new StatsDAggregator(this, aggregatorShards, aggregatorFlushInterval);
+
+        this.containerID = containerID;
     }
 
     protected abstract ProcessingTask createProcessingTask();

@@ -56,7 +56,7 @@ public abstract class Message {
      * @param builder
      *     StringBuilder the text representation will be written to.
      */
-    abstract void writeTo(StringBuilder builder);
+    abstract void writeTo(StringBuilder builder, String containerID);
 
     /**
      * Aggregate message.

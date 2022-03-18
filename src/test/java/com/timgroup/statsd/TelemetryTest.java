@@ -26,7 +26,7 @@ public class TelemetryTest {
         public final List<Message> messages = new ArrayList<>();
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory());
+            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory(), null);
         }
 
 
@@ -61,7 +61,7 @@ public class TelemetryTest {
             ArrayList<String> stringMessages = new ArrayList<>(messages.size());
             for(Message m : messages) {
                 sb.setLength(0);
-                m.writeTo(sb);
+                m.writeTo(sb, this.containerID);
                 stringMessages.add(sb.toString());
             }
             return stringMessages;
@@ -80,6 +80,7 @@ public class TelemetryTest {
         .hostname("localhost")
         .constantTags("test")
         .port(STATSD_SERVER_PORT)
+        .originDetectionEnabled(false)
         .enableTelemetry(false); // disable telemetry so we can control calls to "flush"
     private static NonBlockingStatsDClient client = builder.build();
 
@@ -90,6 +91,7 @@ public class TelemetryTest {
             .constantTags("test")
             .port(STATSD_SERVER_PORT)
             .enableAggregation(false)
+            .originDetectionEnabled(false)
             .enableTelemetry(false);  // disable telemetry so we can control calls to "flush"
     private static NonBlockingStatsDClient telemetryClient = telemetryBuilder.build();
 
@@ -131,6 +133,7 @@ public class TelemetryTest {
         client.telemetry.reset();
         telemetryClient.telemetry.reset();
         fakeProcessor.clear();
+        fakeProcessor.containerID = null;
     }
 
     @Test(timeout = 5000L)
@@ -382,6 +385,7 @@ public class TelemetryTest {
                 .constantTags("test")
                 .port(0)
                 .enableTelemetry(false) // disable telemetry so we can control calls to "flush"
+                .originDetectionEnabled(false)
                 .build();
 
         assertThat(clientError.statsDProcessor.bufferPool.getBufferSize(), equalTo(8192));
@@ -491,5 +495,50 @@ public class TelemetryTest {
                     telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
         assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
                     telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
+    }
+
+    @Test(timeout = 5000L)
+    public void telemetry_containerID() throws Exception {
+        final String fakeContainerID = "fake-container-id";
+        client.count("mycount", 24);
+        fakeProcessor.containerID = fakeContainerID;
+
+        // wait for the "mycount" to be sent
+        server.waitForMessage("mycount");
+        server.clear();
+        fakeProcessor.clear();
+
+        assertThat(client.telemetry.metricsSent.get(), equalTo(1));
+        client.telemetry.flush();
+        assertThat(client.telemetry.metricsSent.get(), equalTo(0));
+
+        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.bytes_sent:29|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+
+        assertThat(statsdMessages,
+                   hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
     }
 }

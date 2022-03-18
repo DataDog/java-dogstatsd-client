@@ -10,6 +10,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
@@ -54,6 +55,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final String DD_NAMED_PIPE_ENV_VAR = "DD_DOGSTATSD_PIPE_NAME";
     public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
+    public static final String ORIGIN_DETECTION_ENABLED_ENV_VAR = "DD_ORIGIN_DETECTION_ENABLED";
 
     enum Literal {
         SERVICE,
@@ -87,6 +89,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
 
     public static final boolean DEFAULT_ENABLE_AGGREGATION = true;
+    public static final boolean DEFAULT_ENABLE_ORIGIN_DETECTION = true;
 
     public static final String CLIENT_TAG = "client:java";
     public static final String CLIENT_VERSION_TAG = "client_version:";
@@ -214,6 +217,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
      * @param aggregationShards
      *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
+     * @param containerID
+     *     Allows passing the container ID, this will be used by the Agent to enrich
+     *     metrics with container tags.
+     *     This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
+     *     When configured, the provided container ID is prioritized over the container ID discovered
+     *     via Origin Detection. When entityID or DD_ENTITY_ID are set, this value is ignored.
+     * @param originDetectionEnabled
+     *     Enable/disable the client origin detection.
+     *     This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
+     *     When enabled, the client tries to discover its container ID and sends it to the Agent
+     *     to enrich the metrics with container tags.
+     *     Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
+     *     The client tries to read the container ID by parsing the file /proc/self/cgroup.
+     *     This is not supported on Windows.
+     *     The client prioritizes the value passed via or entityID or DD_ENTITY_ID (if set) over the container ID.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -222,7 +240,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
-            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory customThreadFactory)
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory customThreadFactory,
+            String containerID, final boolean originDetectionEnabled)
             throws StatsDClientException {
 
         if ((prefix != null) && (!prefix.isEmpty())) {
@@ -245,7 +264,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
             }
             // Support "dd.internal.entity_id" internal tag.
-            updateTagsWithEntityID(costantPreTags, entityID);
+            final boolean hasEntityID = updateTagsWithEntityID(costantPreTags, entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
@@ -259,6 +278,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
                         costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder()).toString();
             }
             costantPreTags = null;
+            // Origin detection
+            if (hasEntityID) {
+                containerID = null;
+            } else {
+                boolean originEnabled = isOriginDetectionEnabled(containerID, originDetectionEnabled, hasEntityID);
+                containerID = getContainerID(containerID, originEnabled);
+            }
         }
 
         try {
@@ -267,7 +293,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
             statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
-                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory);
+                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream(
@@ -285,7 +311,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
-                        poolSize, 1, false, 0, aggregationShards, threadFactory);
+                        poolSize, 1, false, 0, aggregationShards, threadFactory, containerID);
             }
 
             this.telemetry = new Telemetry.Builder()
@@ -341,19 +367,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
             builder.bufferPoolSize, builder.processorWorkers, builder.senderWorkers,
             builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
             (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
-            builder.aggregationShards, builder.threadFactory);
+            builder.aggregationShards, builder.threadFactory, builder.containerID,
+            builder.originDetectionEnabled);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory)
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory,
+            final String containerID)
             throws Exception {
         if (blocking) {
             return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
         }
     }
 
@@ -466,7 +494,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         @Override
-        public final void writeTo(StringBuilder builder) {
+        public final void writeTo(StringBuilder builder, String containerID) {
             builder.append(prefix).append(aspect).append(':');
             writeValue(builder);
             builder.append('|').append(type);
@@ -474,6 +502,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
             }
             tagString(this.tags, builder);
+            if (containerID != null && !containerID.isEmpty()) {
+                builder.append("|c:").append(containerID);
+            }
 
             builder.append('\n');
         }
@@ -1019,7 +1050,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordEvent(final Event event, final String... eventTags) {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "") {
-            @Override public void writeTo(StringBuilder builder) {
+            @Override public void writeTo(StringBuilder builder, String containerID) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
                 builder.append(Message.Type.EVENT.toString())
@@ -1037,6 +1068,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 eventMap(event, builder);
                 tagString(eventTags, builder);
+                if (containerID != null && !containerID.isEmpty()) {
+                    builder.append("|c:").append(containerID);
+                }
 
                 builder.append('\n');
             }
@@ -1071,7 +1105,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "") {
-            @Override public void writeTo(StringBuilder sb) {
+            @Override public void writeTo(StringBuilder sb, String containerID) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
                 sb.append(Message.Type.SERVICE_CHECK.toString())
                     .append("|")
@@ -1087,6 +1121,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 tagString(sc.getTags(), sb);
                 if (sc.getMessage() != null) {
                     sb.append("|m:").append(sc.getEscapedMessage());
+                }
+                if (containerID != null && !containerID.isEmpty()) {
+                    sb.append("|c:").append(containerID);
                 }
 
                 sb.append('\n');
@@ -1154,11 +1191,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append(getValue());
             }
 
-            @Override protected final void writeTo(StringBuilder builder) {
+            @Override protected final void writeTo(StringBuilder builder, String containerID) {
                 builder.append(prefix).append(aspect).append(':');
                 writeValue(builder);
                 builder.append('|').append(type);
                 tagString(this.tags, builder);
+                if (containerID != null && !containerID.isEmpty()) {
+                    builder.append("|c:").append(containerID);
+                }
 
                 builder.append('\n');
             }
@@ -1169,5 +1209,39 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
+    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled, boolean hasEntityID) {
+        if (!originDetectionEnabled || hasEntityID || (containerID != null && !containerID.isEmpty())) {
+            // origin detection is explicitly disabled
+            // or DD_ENTITY_ID was found
+            // or a user-defined container ID was provided
+            return false;
+        }
 
+        String value = System.getenv(ORIGIN_DETECTION_ENABLED_ENV_VAR);
+        value = value != null ? value.trim() : null;
+        if (value != null && !value.isEmpty()) {
+            return !Arrays.asList("no", "false", "0", "n", "off").contains(value.toLowerCase());
+        }
+
+        // DD_ORIGIN_DETECTION_ENABLED is not set or is empty
+        // default to true
+        return true;
+    }
+
+    private String getContainerID(String containerID, boolean originDetectionEnabled) {
+        if (containerID != null && !containerID.isEmpty()) {
+            return containerID;
+        }
+
+        if (originDetectionEnabled) {
+            CgroupReader reader = new CgroupReader();
+            try {
+                return reader.getContainerID();
+            } catch (final IOException e) {
+                throw new StatsDClientException("Failed to get container ID", e);
+            }
+        }
+
+        return null;
+    }
 }

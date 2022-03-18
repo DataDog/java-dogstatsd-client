@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -34,6 +35,7 @@ public class NonBlockingStatsDClientTest {
     private static final int STATSD_SERVER_PORT = 17254;
     private static NonBlockingStatsDClient client;
     private static NonBlockingStatsDClient clientUnaggregated;
+    private static NonBlockingStatsDClient clientWithContainerID;
     private static DummyStatsDServer server;
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
@@ -49,6 +51,7 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .enableTelemetry(false)
+            .originDetectionEnabled(false)
             .build();
         clientUnaggregated = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
@@ -56,6 +59,14 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .enableTelemetry(false)
             .enableAggregation(false)
+            .originDetectionEnabled(false)
+            .build();
+        clientWithContainerID = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)
+            .containerID("fake-container-id")
             .build();
     }
 
@@ -64,6 +75,7 @@ public class NonBlockingStatsDClientTest {
         try {
             client.stop();
             clientUnaggregated.stop();
+            clientWithContainerID.stop();
             server.close();
         } catch (java.io.IOException ignored) {
         }
@@ -444,6 +456,7 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423, "baz");
@@ -464,6 +477,7 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423, "baz");
@@ -484,6 +498,7 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423, 1, "baz");
@@ -506,6 +521,7 @@ public class NonBlockingStatsDClientTest {
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
             .enableAggregation(false)
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423, 1, "baz");
@@ -526,6 +542,7 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423);
@@ -546,6 +563,7 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags("instance:foo", "app:bar")
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423);
@@ -629,6 +647,7 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .constantTags(constantTags)
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423);
@@ -694,6 +713,7 @@ public class NonBlockingStatsDClientTest {
         environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("value", 423);
@@ -716,6 +736,7 @@ public class NonBlockingStatsDClientTest {
                     .prefix("checkEnvVars")
                     .hostname("localhost")
                     .port(STATSD_SERVER_PORT)
+                    .originDetectionEnabled(false)
                     .build();
             server.clear();
             client.gauge("value", 42);
@@ -740,6 +761,7 @@ public class NonBlockingStatsDClientTest {
             .prefix("")
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -759,6 +781,7 @@ public class NonBlockingStatsDClientTest {
             .prefix("")
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("top.level.value", 423);
@@ -777,6 +800,7 @@ public class NonBlockingStatsDClientTest {
             .prefix(null)
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -796,6 +820,7 @@ public class NonBlockingStatsDClientTest {
             .prefix(null)
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
         try {
             client.gauge("top.level.value", 423);
@@ -813,6 +838,7 @@ public class NonBlockingStatsDClientTest {
         final NonBlockingStatsDClient no_prefix_client = new NonBlockingStatsDClientBuilder()
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
         try {
             no_prefix_client.gauge("top.level.value", 423);
@@ -914,6 +940,7 @@ public class NonBlockingStatsDClientTest {
             .prefix("")
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
         final Event event = Event.builder()
                 .withTitle("title1")
@@ -942,6 +969,7 @@ public class NonBlockingStatsDClientTest {
             .prefix("")
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
+            .originDetectionEnabled(false)
             .build();
 
         final Event event = Event.builder()
@@ -1038,6 +1066,7 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build()) {
 
             final byte[] messageBytes = new byte[1600];
@@ -1077,6 +1106,7 @@ public class NonBlockingStatsDClientTest {
                 .hostname("localhost")
                 .port(STATSD_SERVER_PORT)
                 .errorHandler(errorHandler)
+                .originDetectionEnabled(false)
                 .build()) {
 
             final byte[] messageBytes = new byte[1600];
@@ -1119,6 +1149,7 @@ public class NonBlockingStatsDClientTest {
             .telemetryPort(STATSD_SERVER_PORT+10)
             .telemetryFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1158,6 +1189,7 @@ public class NonBlockingStatsDClientTest {
             .enableAggregation(true)
             .aggregationFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1187,6 +1219,7 @@ public class NonBlockingStatsDClientTest {
             .enableAggregation(true)
             .aggregationFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1220,6 +1253,7 @@ public class NonBlockingStatsDClientTest {
             .enableAggregation(true)
             .aggregationFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1255,6 +1289,7 @@ public class NonBlockingStatsDClientTest {
             .enableAggregation(true)
             .aggregationFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1286,6 +1321,7 @@ public class NonBlockingStatsDClientTest {
             .aggregationFlushInterval(3000)
             .telemetryFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1322,6 +1358,7 @@ public class NonBlockingStatsDClientTest {
             .enableAggregation(true)
             .aggregationFlushInterval(3000)
             .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
             .build();
 
         try {
@@ -1385,6 +1422,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClientBuilder builder = new SlowStatsDNonBlockingStatsDClientBuilder().prefix("")
             .hostname("localhost")
+            .originDetectionEnabled(false)
             .port(port);
         final SlowStatsDNonBlockingStatsDClient client = ((SlowStatsDNonBlockingStatsDClientBuilder)builder).build();
 
@@ -1398,6 +1436,138 @@ public class NonBlockingStatsDClientTest {
             server.close();
             assertEquals(0, client.getLock().getCount());
         }
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_gauge_with_containerID() throws Exception {
+        clientWithContainerID.gauge("value", 423, "foo");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#foo|c:fake-container-id")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_counter_with_containerID() throws Exception {
+        clientWithContainerID.count("value", 423, "foo");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|c|#foo|c:fake-container-id")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_set_with_containerID() throws Exception {
+        clientWithContainerID.recordSetValue("myset", "myuserid", "foo");
+        server.waitForMessage("my.prefix.myset");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.myset:myuserid|s|#foo|c:fake-container-id")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_service_check_with_containerID() throws Exception {
+        final String inputMessage = "\u266c \u2020\u00f8U \n\u2020\u00f8U \u00a5\u00bau|m: T0\u00b5 \u266a"; // "♬ †øU \n†øU ¥ºu|m: T0µ ♪"
+        final String outputMessage = "\u266c \u2020\u00f8U \\n\u2020\u00f8U \u00a5\u00bau|m\\: T0\u00b5 \u266a"; // note the escaped colon
+        final String[] tags = {"key1:val1", "key2:val2"};
+        final ServiceCheck sc = ServiceCheck.builder()
+                .withName("my_check.name")
+                .withStatus(ServiceCheck.Status.WARNING)
+                .withMessage(inputMessage)
+                .withHostname("i-abcd1234")
+                .withTags(tags)
+                .withTimestamp(1420740000)
+                .build();
+
+        assertEquals(outputMessage, sc.getEscapedMessage());
+
+        clientWithContainerID.serviceCheck(sc);
+        server.waitForMessage("_sc");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo(String.format("_sc|my_check.name|1|d:1420740000|h:i-abcd1234|#key2:val2,key1:val1|m:%s|c:fake-container-id",
+                outputMessage))));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_event_with_containerID() throws Exception {
+
+        final Event event = Event.builder()
+                .withTitle("title1")
+                .withText("text1\nline2")
+                .withDate(1234567000)
+                .withHostname("host1")
+                .withPriority(Event.Priority.LOW)
+                .withAggregationKey("key1")
+                .withAlertType(Event.AlertType.ERROR)
+                .withSourceTypeName("sourcetype1")
+                .build();
+
+        clientWithContainerID.recordEvent(event);
+        server.waitForMessage();
+
+        assertThat(
+            server.messagesReceived(),
+            hasItem(comparesEqualTo("_e{16,12}:my.prefix.title1|text1\\nline2|d:1234567|h:host1|k:key1|p:low|t:error|s:sourcetype1|c:fake-container-id"))
+        );
+    }
+
+    @Test(timeout = 5000L)
+    public void origin_detection_env_false() throws Exception {
+        environmentVariables.set(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR, "false");
+
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .errorHandler(null)
+            .enableTelemetry(false)
+            .build();
+
+        assertFalse(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION, false));
+        environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
+    }
+
+    @Test(timeout = 5000L)
+    public void origin_detection_env_unknown() throws Exception {
+        environmentVariables.set(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR, "unknown"); // default to true
+
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .errorHandler(null)
+            .enableTelemetry(false)
+            .build();
+
+        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION, false));
+        environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
+    }
+
+    @Test(timeout = 5000L)
+    public void origin_detection_env_unset() throws Exception {
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .errorHandler(null)
+            .enableTelemetry(false)
+            .build();
+
+        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION, false));
+    }
+
+    @Test(timeout = 5000L)
+    public void origin_detection_arg_false() throws Exception {
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .queueSize(Integer.MAX_VALUE)
+            .errorHandler(null)
+            .enableTelemetry(false)
+            .build();
+
+        assertFalse(client.isOriginDetectionEnabled(null, false, false));
     }
 
     private static class SlowStatsDNonBlockingStatsDClient extends NonBlockingStatsDClient {
@@ -1423,6 +1593,7 @@ public class NonBlockingStatsDClientTest {
                 .senderWorkers(senderWorkers)
                 .processorWorkers(processorWorkers)
                 .maxPacketSizeBytes(maxPacketSizeBytes)
+                .originDetectionEnabled(false)
                 .resolve());
 
             lock = new CountDownLatch(1);
@@ -1487,6 +1658,7 @@ public class NonBlockingStatsDClientTest {
 	final NonBlockingStatsDClientBuilder builder = new NonsamplingClientBuilder()
 	    .prefix("")
             .hostname("localhost")
+        .originDetectionEnabled(false)
 	    .port(port);
 
 	final NonsamplingClient client = ((NonsamplingClientBuilder)builder).build();
@@ -1512,6 +1684,7 @@ public class NonBlockingStatsDClientTest {
         NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder() {
                 @Override
                 public NonBlockingStatsDClient build() {
+                    this.originDetectionEnabled(false);
                     return new NonBlockingStatsDClient(resolve()) {
                         @Override
                         ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int bufferSize) throws Exception {

@@ -71,6 +71,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
+            .originDetectionEnabled(false)
             .build();
 
         clientAggregate = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
@@ -81,6 +82,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
+            .originDetectionEnabled(false)
             .build();
     }
 
