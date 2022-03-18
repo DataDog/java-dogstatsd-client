@@ -43,7 +43,7 @@ public abstract class StatsDProcessor {
     protected volatile boolean shutdown;
     volatile boolean shutdownAgg;
 
-    protected String containerID;
+    String containerID;
 
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();

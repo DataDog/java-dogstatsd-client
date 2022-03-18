@@ -1209,7 +1209,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
-    protected boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled, boolean hasEntityID) {
+    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled, boolean hasEntityID) {
         if (!originDetectionEnabled || hasEntityID || (containerID != null && !containerID.isEmpty())) {
             // origin detection is explicitly disabled
             // or DD_ENTITY_ID was found
@@ -1228,7 +1228,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return true;
     }
 
-    protected String getContainerID(String containerID, boolean originDetectionEnabled) {
+    private String getContainerID(String containerID, boolean originDetectionEnabled) {
         if (containerID != null && !containerID.isEmpty()) {
             return containerID;
         }

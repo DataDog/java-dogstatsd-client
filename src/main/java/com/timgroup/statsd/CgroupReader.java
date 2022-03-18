@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  * A reader class that retrieves the current container ID parsed from a the cgroup file.
  *
  */
-public class CgroupReader {
+class CgroupReader {
     private static final Path CGROUP_PATH = Paths.get("/proc/self/cgroup");
     private static final String CONTAINER_SOURCE = "[0-9a-f]{64}";
     private static final String TASK_SOURCE = "[0-9a-f]{32}-\\d+";
