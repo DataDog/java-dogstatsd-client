@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.1.0 / 2022.04.11
+
+* [FEATURE] Client-side origin detection enables accurate metric attribution via both UDP and UDS. See [#188][]
+
 ## 4.0.0 / 2022.01.10
 
 This release is a correction for v3.0.0, which was released without client-side
@@ -207,6 +211,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#179]: https://github.com/DataDog/java-dogstatsd-client/issues/179
 [#180]: https://github.com/DataDog/java-dogstatsd-client/issues/180
 [#182]: https://github.com/DataDog/java-dogstatsd-client/issues/182
+[#188]: https://github.com/DataDog/java-dogstatsd-client/issues/188
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz

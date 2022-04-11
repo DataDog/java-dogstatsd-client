@@ -7,7 +7,7 @@
     <artifactId>java-dogstatsd-client</artifactId>
     <packaging>jar</packaging>
     <name>java-dogstatsd-client</name>
-    <version>4.0.0</version>
+    <version>4.1.0</version>
     <description>A tiny library allowing Java applications to communicate with DataDog statsd instances easily.</description>
     <url>https://github.com/DataDog/java-dogstatsd-client</url>
 
