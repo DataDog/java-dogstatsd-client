@@ -66,7 +66,6 @@ public abstract class StatsDProcessor {
             try {
                 sendBuffer = bufferPool.borrow();
             } catch (final InterruptedException e) {
-                handler.handle(e);
                 return;
             }
 
