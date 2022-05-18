@@ -55,7 +55,7 @@ public abstract class AlphaNumericMessage extends Message {
 
         if (object instanceof AlphaNumericMessage ) {
             AlphaNumericMessage msg = (AlphaNumericMessage)object;
-            return super.equals(msg) && (this.value == msg.getValue());
+            return super.equals(msg) && (this.value.equals(msg.getValue()));
         }
 
         return false;
