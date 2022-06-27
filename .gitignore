@@ -8,6 +8,7 @@ build
 /.settings/
 *.swp
 *.swo
+.vscode/
 
 # jenv
 .java-version
