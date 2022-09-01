@@ -129,8 +129,9 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         // Delete the socket file, client should throw an IOException
         lastException = new Exception();
         socketFile.delete();
+
+        client.gauge("mycount", 21);
         while(lastException.getMessage() == null) {
-            client.gauge("mycount", 20);
             Thread.sleep(10);
         }
         assertThat(lastException.getMessage(), containsString("No such file or directory"));
