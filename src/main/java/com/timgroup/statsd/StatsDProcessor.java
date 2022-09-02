@@ -91,6 +91,12 @@ public abstract class StatsDProcessor {
                             closeSignal.countDown();
                             clientClosed = true;
                         }
+                        if (clientClosed) {
+                            // We are draining highPrioMessages, which is a non-blocking
+                            // queue. Avoid a busy loop if the queue is empty while the aggregator
+                            // is flushing.
+                            Thread.sleep(WAIT_SLEEP_MS);
+                        }
                         continue;
                     }
 
