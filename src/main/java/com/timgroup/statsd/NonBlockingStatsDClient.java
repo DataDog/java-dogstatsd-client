@@ -167,6 +167,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected final Telemetry telemetry;
 
     private final boolean blocking;
+    private final boolean validate = true;
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
@@ -275,7 +276,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 constantTagsRendered = null;
             } else {
                 constantTagsRendered = tagString(
-                        costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder()).toString();
+                        costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder(), validate).toString();
             }
             costantPreTags = null;
             // Origin detection
@@ -439,7 +440,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Return tag list as a tag string.
      * Generate a suffix conveying the given tag list to the client
      */
-    static StringBuilder tagString(final String[] tags, final String tagPrefix, final StringBuilder sb) {
+    static StringBuilder tagString(final String[] tags, final String tagPrefix, final StringBuilder sb, final boolean validateTags) {
         if (tagPrefix != null) {
             sb.append(tagPrefix);
             if ((tags == null) || (tags.length == 0)) {
@@ -454,7 +455,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         for (int n = tags.length - 1; n >= 0; n--) {
-            sb.append(tags[n]);
+            if (validateTags) {
+                appendTagValidated(sb, tags[n]);
+            }
+            else {
+                sb.append(tags[n]);
+            }
             if (n > 0) {
                 sb.append(',');
             }
@@ -466,7 +472,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Generate a suffix conveying the given tag list to the client.
      */
     StringBuilder tagString(final String[] tags, StringBuilder builder) {
-        return tagString(tags, constantTagsRendered, builder);
+        return tagString(tags, constantTagsRendered, builder, validate);
     }
 
     ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int bufferSize) throws Exception {
@@ -495,7 +501,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         @Override
         public final void writeTo(StringBuilder builder, String containerID) {
-            builder.append(prefix).append(aspect).append(':');
+            builder.append(prefix);
+            if (validate) {
+                appendValidated(builder, aspect);
+            } else {
+                builder.append(aspect);
+            }
+            builder.append(':');
             writeValue(builder);
             builder.append('|').append(type);
             if (!Double.isNaN(sampleRate)) {
@@ -512,6 +524,25 @@ public class NonBlockingStatsDClient implements StatsDClient {
         protected abstract void writeValue(StringBuilder builder);
     }
 
+    private static void appendValidated(StringBuilder builder, String aspect) {
+        for (int i = 0; i < aspect.length(); i++) {
+            char ch = aspect.charAt(i);
+            if (ch < 32 || ch == '|' || ch == ':') {
+                ch = '_';
+            }
+            builder.append(ch);
+        }
+    }
+
+    private static void appendTagValidated(StringBuilder builder, String aspect) {
+        for (int i = 0; i < aspect.length(); i++) {
+            char ch = aspect.charAt(i);
+            if (ch < 32 || ch == '|' || ch == ',') {
+                ch = '_';
+            }
+            builder.append(ch);
+        }
+    }
 
     private boolean sendMetric(final Message message) {
         return send(message);

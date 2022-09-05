@@ -16,7 +16,7 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
         if (!Double.isNaN(sampleRate)) {
             builder.append('|').append('@').append(NonBlockingStatsDClient.format(NonBlockingStatsDClient.SAMPLE_RATE_FORMATTER, sampleRate));
         }
-        NonBlockingStatsDClient.tagString(this.tags, "", builder);
+        NonBlockingStatsDClient.tagString(this.tags, "", builder, false);
         if (containerID != null && !containerID.isEmpty()) {
             builder.append("|c:").append(containerID);
         }
