@@ -18,6 +18,9 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 import java.text.NumberFormat;
 
@@ -1734,5 +1737,61 @@ public class NonBlockingStatsDClientTest {
         client.gauge("test", 1);
         client.close();
         assertEquals(true, blocking_close_sent);
+    }
+
+
+    @Test(timeout = 5000L)
+    public void failed_write_buffer() throws Exception {
+        final BlockingQueue sync = new ArrayBlockingQueue(1);
+        final IOException marker = new IOException();
+        NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder() {
+                @Override
+                public NonBlockingStatsDClient build() {
+                    this.originDetectionEnabled(false);
+                    this.bufferPoolSize(1);
+                    return new NonBlockingStatsDClient(resolve()) {
+                        @Override
+                        ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int bufferSize) throws Exception {
+                            return new DatagramClientChannel(addressLookup.call()) {
+                                @Override
+                                public int write(ByteBuffer data) throws IOException {
+                                    try {
+                                        sync.put(new Object());
+                                    } catch (InterruptedException e) {
+                                    }
+                                    throw marker;
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+
+        final BlockingQueue errors = new LinkedBlockingQueue();
+        NonBlockingStatsDClient client = builder
+            .hostname("localhost")
+            .blocking(true)
+            .errorHandler(new StatsDClientErrorHandler() {
+                    @Override
+                    public void handle(Exception ex) {
+                        if (ex == marker) {
+                            return;
+                        }
+                        System.out.println(ex.toString());
+                        try {
+                            errors.put(ex);
+                        } catch (InterruptedException e) {
+                        }
+                    }
+
+                })
+            .build();
+
+        client.gauge("test", 1);
+        sync.take();
+        client.gauge("test", 1);
+        client.stop();
+
+        assertEquals(0, errors.size());
     }
 }
