@@ -1,17 +1,13 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -24,8 +20,8 @@ public class StatsDAggregator {
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
 
     private static final MethodHandle MAP_PUT_IF_ABSENT = buildMapPutIfAbsent();
-    protected final Set<Message.Type> aggregateSet = new HashSet<>(
-            Arrays.asList(Message.Type.COUNT, Message.Type.GAUGE, Message.Type.SET));
+    protected static final Set<Message.Type> AGGREGATE_SET = EnumSet.of(Message.Type.COUNT, Message.Type.GAUGE,
+            Message.Type.SET);
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
 
     protected final int shardGranularity;
@@ -91,7 +87,7 @@ public class StatsDAggregator {
     }
 
     public boolean isTypeAggregate(Message.Type type) {
-        return aggregateSet.contains(type);
+        return AGGREGATE_SET.contains(type);
     }
 
     /**
