@@ -3,16 +3,16 @@ package com.timgroup.statsd;
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class Message {
+public abstract class Message implements Comparable<Message> {
     final String aspect;
     final Message.Type type;
     final String[] tags;
     protected boolean done;
-    protected Integer hash;
+    protected int hash = Integer.MIN_VALUE;
 
     // borrowed from Array.hashCode implementation:
     // https://github.com/openjdk/jdk11/blob/master/src/java.base/share/classes/java/util/Arrays.java#L4454-L4465
-    protected final int HASH_MULTIPLIER = 31;
+    protected static final int HASH_MULTIPLIER = 31;
 
     public enum Type {
         GAUGE("g"),
@@ -36,14 +36,11 @@ public abstract class Message {
     }
 
     protected Message(Message.Type type) {
-        this.aspect = "";
-        this.type = type;
-        this.done = false;
-        this.tags = null;
+        this("", type, null);
     }
 
     protected Message(String aspect, Message.Type type, String[] tags) {
-        this.aspect = aspect;
+        this.aspect = aspect == null ? "" : aspect;
         this.type = type;
         this.done = false;
         this.tags = tags;
@@ -119,9 +116,10 @@ public abstract class Message {
     @Override
     public int hashCode() {
         // cache it
-        if (this.hash == null) {
-            this.hash = new Integer(Objects.hash(this.aspect)) * HASH_MULTIPLIER;
-            this.hash += Objects.hash(this.tags);
+        if (this.hash == Integer.MIN_VALUE) {
+            this.hash = type.hashCode() * HASH_MULTIPLIER * HASH_MULTIPLIER
+                    + aspect.hashCode() * HASH_MULTIPLIER
+                    + Arrays.hashCode(this.tags);
         }
 
         return this.hash;
@@ -132,20 +130,26 @@ public abstract class Message {
      */
     @Override
     public boolean equals(Object object) {
-        if (object == null) {
-            return false;
+        if (object == this) {
+            return true;
         }
         if (object instanceof Message) {
             final Message msg = (Message)object;
 
-            boolean equals = (Objects.equals(this.getAspect(), msg.getAspect()))
+            return (Objects.equals(this.getAspect(), msg.getAspect()))
                 && (this.getType() == msg.getType())
-                && (this.done == msg.getDone())
-                && Arrays.equals(this.tags, (msg.getTags()));
-
-            return equals;
+                && Arrays.equals(this.tags, msg.getTags());
         }
 
         return false;
+    }
+
+    @Override
+    public int compareTo(Message message) {
+        int typeComparison = getType().compareTo(message.getType());
+        if (typeComparison == 0) {
+            return getAspect().compareTo(message.getAspect());
+        }
+        return typeComparison;
     }
 }
