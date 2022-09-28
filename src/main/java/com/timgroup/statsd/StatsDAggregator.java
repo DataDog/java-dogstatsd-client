@@ -2,6 +2,9 @@ package com.timgroup.statsd;
 
 import com.timgroup.statsd.Message;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,6 +22,8 @@ public class StatsDAggregator {
     public static int DEFAULT_SHARDS = 4;  // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
+
+    private static final MethodHandle MAP_PUT_IF_ABSENT = buildMapPutIfAbsent();
     protected final Set<Message.Type> aggregateSet = new HashSet<>(
             Arrays.asList(Message.Type.COUNT, Message.Type.GAUGE, Message.Type.SET));
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
@@ -108,10 +113,8 @@ public class StatsDAggregator {
 
         synchronized (map) {
             // For now let's just put the message in the map
-            if (!map.containsKey(message)) {
-                map.put(message, message);
-            } else {
-                Message msg = map.get(message);
+            Message msg = putIfAbsent(map, message);
+            if (msg != null) {
                 msg.aggregate(message);
                 if (telemetry != null) {
                     telemetry.incrAggregatedContexts(1);
@@ -162,6 +165,43 @@ public class StatsDAggregator {
                     iter.remove();
                 }
             }
+        }
+    }
+
+    /**
+     * Emulates {@code Map.putIfAbsent} semantics. Replace when baselining at JDK8+.
+     * @return the previous value associated with the message, or null if the value was not seen before
+     */
+    private static Message putIfAbsent(Map<Message, Message> map, Message message) {
+        if (MAP_PUT_IF_ABSENT != null) {
+            try {
+                return (Message) (Object) MAP_PUT_IF_ABSENT.invokeExact(map, (Object) message, (Object) message);
+            } catch (Throwable ignore) {
+                return putIfAbsentFallback(map, message);
+            }
+        }
+        return putIfAbsentFallback(map, message);
+    }
+
+    /**
+     * Emulates {@code Map.putIfAbsent} semantics. Replace when baselining at JDK8+.
+     * @return the previous value associated with the message, or null if the value was not seen before
+     */
+    private static Message putIfAbsentFallback(Map<Message, Message> map, Message message) {
+        if (map.containsKey(message)) {
+            return map.get(message);
+        }
+        map.put(message, message);
+        return null;
+    }
+
+    private static MethodHandle buildMapPutIfAbsent() {
+        try {
+            return MethodHandles.publicLookup()
+                    .findVirtual(Map.class, "putIfAbsent",
+                            MethodType.methodType(Object.class, Object.class, Object.class));
+        } catch (Throwable ignore) {
+            return null;
         }
     }
 }
