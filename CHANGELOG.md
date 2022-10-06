@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 4.1.0 / 2022.10.06
+
+* [FEATURE] Client-side origin detection. See[#188][]
+* [BUGFIX] Don't report the expected InterruptedException. See [#193][]
+* [BUGFIX] Fix performance issue in the aggregator. See [#194][] (Thanks [@retronym][])
+* [BUGFIX] Clear buffers before returning them to the pool. See [#200][]
+* [BUGFIX] Fix high CPU usage during client shutdown. See [#201][]
+
 ## 4.0.0 / 2022.01.10
 
 This release is a correction for v3.0.0, which was released without client-side
@@ -207,6 +215,11 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#179]: https://github.com/DataDog/java-dogstatsd-client/issues/179
 [#180]: https://github.com/DataDog/java-dogstatsd-client/issues/180
 [#182]: https://github.com/DataDog/java-dogstatsd-client/issues/182
+[#188]: https://github.com/DataDog/java-dogstatsd-client/issues/188
+[#193]: https://github.com/DataDog/java-dogstatsd-client/issues/193
+[#194]: https://github.com/DataDog/java-dogstatsd-client/issues/194
+[#200]: https://github.com/DataDog/java-dogstatsd-client/issues/200
+[#201]: https://github.com/DataDog/java-dogstatsd-client/issues/201
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
@@ -217,3 +230,4 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [@hanny24]: https://github.com/hanny24
 [@njhill]: https://github.com/njhill
 [@snopoke]: https://github.com/snopoke
+[@retronym]: https://github.com/retronym
