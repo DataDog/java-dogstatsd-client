@@ -1,34 +1,15 @@
 package com.timgroup.statsd;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Rule;
+import org.junit.*;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.logging.Logger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -80,7 +61,7 @@ public class StatsDAggregatorTest {
 
     // fakeProcessor store messages from the telemetry only
     public static class FakeProcessor extends StatsDProcessor {
-
+        Map<String, Map<Message.Type, Map<String, Integer>>> detailedMessageCounts = new HashMap<>();
         private final Queue<Message> messages;
         private final AtomicInteger messageSent = new AtomicInteger(0);
         private final AtomicInteger messageAggregated = new AtomicInteger(0);
@@ -107,12 +88,32 @@ public class StatsDAggregatorTest {
                     }
 
                     if (aggregator.aggregateMessage(message)) {
+                        recordDetailedMessageCount(message);
                         messageAggregated.incrementAndGet();
                         continue;
                     }
 
                     // otherwise just "send" it
                     messageSent.incrementAndGet();
+                }
+            }
+
+            private synchronized void recordDetailedMessageCount(Message message) {
+                Map<Message.Type, Map<String, Integer>> byType = detailedMessageCounts.get(message.getAspect());
+                if (byType == null) {
+                    byType = new EnumMap<>(Message.Type.class);
+                    detailedMessageCounts.put(message.getAspect(), byType);
+                }
+                Map<String, Integer> byTag = byType.get(message.getType());
+                if (byTag == null) {
+                    byTag = new HashMap<>();
+                    byType.put(message.getType(), byTag);
+                }
+                if (message.getTags() != null) {
+                    for (String tag : message.getTags()) {
+                        Integer oldCount = byTag.get(tag);
+                        byTag.put(tag, oldCount == null ? 1 : oldCount + 1);
+                    }
                 }
             }
 
@@ -255,5 +256,37 @@ public class StatsDAggregatorTest {
         NumericMessage message = (NumericMessage)fakeProcessor.highPrioMessages.element();
         assertEquals(9, message.getValue());
 
+    }
+
+    @Test(timeout = 5000L)
+    public void test_aggregation_degradation_to_treenodes() {
+        // these counts have been determined to trigger treeification of the message aggregates
+        int messageCount = 10000;
+        int numTags = 100;
+        Assume.assumeTrue("assertions depend on divisibility",messageCount % numTags == 0);
+        String[][] tags = new String[numTags][];
+        for (int i = 0; i < numTags; i++) {
+            tags[i] = new String[] {String.valueOf(i)};
+        }
+        for (int i = 0; i < messageCount; i++) {
+            fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, i, tags[i % numTags]) {
+                @Override
+                void writeTo(StringBuilder builder, String containerID) {
+
+                }
+
+                @Override
+                public int hashCode() {
+                    // provoke collisions
+                    return 0;
+                }
+            });
+        }
+        waitForQueueSize(fakeProcessor.messages, 0);
+        Map<String, Integer> aggregatesByTag = fakeProcessor.detailedMessageCounts.get("some.counter").get(Message.Type.COUNT);
+        assertEquals("must get the right number of tag aggregates", numTags, aggregatesByTag.size());
+        for (Map.Entry<String, Integer> tagCount : aggregatesByTag.entrySet()) {
+            assertEquals(tagCount.getKey() + " must have the right message count", messageCount / numTags, tagCount.getValue().intValue());
+        }
     }
 }

@@ -144,6 +144,13 @@ public abstract class Message implements Comparable<Message> {
         return false;
     }
 
+    /**
+     * Note: this class has a natural ordering that is inconsistent with equals.
+     * Specifically, its natural order ignores tag-values. This is good enough
+     * for `HashMap` storage which does not require total order, but this precludes
+     * {@code Message} from being stored in a {@code SortedSet}.
+     * @param message the object to be compared.
+     */
     @Override
     public int compareTo(Message message) {
         int typeComparison = getType().compareTo(message.getType());
