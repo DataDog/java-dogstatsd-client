@@ -8,7 +8,6 @@ public abstract class Message implements Comparable<Message> {
     final Message.Type type;
     final String[] tags;
     protected boolean done;
-    protected int hash = Integer.MIN_VALUE;
 
     // borrowed from Array.hashCode implementation:
     // https://github.com/openjdk/jdk11/blob/master/src/java.base/share/classes/java/util/Arrays.java#L4454-L4465
@@ -115,14 +114,9 @@ public abstract class Message implements Comparable<Message> {
      */
     @Override
     public int hashCode() {
-        // cache it
-        if (this.hash == Integer.MIN_VALUE) {
-            this.hash = type.hashCode() * HASH_MULTIPLIER * HASH_MULTIPLIER
-                    + aspect.hashCode() * HASH_MULTIPLIER
-                    + Arrays.hashCode(this.tags);
-        }
-
-        return this.hash;
+        return type.hashCode() * HASH_MULTIPLIER * HASH_MULTIPLIER
+                + aspect.hashCode() * HASH_MULTIPLIER
+                + Arrays.hashCode(this.tags);
     }
 
     /**
@@ -143,19 +137,30 @@ public abstract class Message implements Comparable<Message> {
 
         return false;
     }
-
-    /**
-     * Note: this class has a natural ordering that is inconsistent with equals.
-     * Specifically, its natural order ignores tag-values. This is good enough
-     * for `HashMap` storage which does not require total order, but this precludes
-     * {@code Message} from being stored in a {@code SortedSet}.
-     * @param message the object to be compared.
-     */
+    
     @Override
     public int compareTo(Message message) {
         int typeComparison = getType().compareTo(message.getType());
         if (typeComparison == 0) {
-            return getAspect().compareTo(message.getAspect());
+            int aspectComparison = getAspect().compareTo(message.getAspect());
+            if (aspectComparison == 0) {
+                if (tags == null && message.tags == null) {
+                    return 0;
+                } else if (tags == null) {
+                    return 1;
+                } else if (message.tags == null) {
+                    return -1;
+                }
+                if (tags.length == message.tags.length) {
+                    int comparison = 0;
+                    for (int i = 0; i < tags.length && comparison == 0; i++) {
+                        comparison = tags[i].compareTo(message.tags[i]);
+                    }
+                    return comparison;
+                }
+                return tags.length < message.tags.length ? 1 : -1;
+            }
+            return aspectComparison;
         }
         return typeComparison;
     }

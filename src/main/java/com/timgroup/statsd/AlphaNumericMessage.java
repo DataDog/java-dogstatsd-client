@@ -34,13 +34,7 @@ public abstract class AlphaNumericMessage extends Message {
 
     @Override
     public int hashCode() {
-
-        // cache it
-        if (this.hash == Integer.MIN_VALUE) {
-            this.hash = super.hashCode() * HASH_MULTIPLIER + this.value.hashCode();
-        }
-
-        return this.hash;
+        return super.hashCode() * HASH_MULTIPLIER + this.value.hashCode();
     }
 
     @Override
