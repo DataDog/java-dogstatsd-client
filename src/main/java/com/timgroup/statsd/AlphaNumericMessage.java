@@ -1,8 +1,5 @@
 package com.timgroup.statsd;
 
-import java.util.Objects;
-
-
 public abstract class AlphaNumericMessage extends Message {
 
     protected final String value;
@@ -37,13 +34,7 @@ public abstract class AlphaNumericMessage extends Message {
 
     @Override
     public int hashCode() {
-
-        // cache it
-        if (this.hash == null) {
-            this.hash = super.hashCode() * HASH_MULTIPLIER + Objects.hash(this.value);
-        }
-
-        return this.hash;
+        return super.hashCode() * HASH_MULTIPLIER + this.value.hashCode();
     }
 
     @Override
@@ -55,10 +46,19 @@ public abstract class AlphaNumericMessage extends Message {
 
         if (object instanceof AlphaNumericMessage ) {
             AlphaNumericMessage msg = (AlphaNumericMessage)object;
-            return super.equals(msg) && (this.value.equals(msg.getValue()));
+            return this.value.equals(msg.getValue());
         }
 
         return false;
+    }
+
+    @Override
+    public int compareTo(Message message) {
+        int comparison = super.compareTo(message);
+        if (comparison == 0 && message instanceof AlphaNumericMessage) {
+            return value.compareTo(((AlphaNumericMessage) message).getValue());
+        }
+        return comparison;
     }
 }
 

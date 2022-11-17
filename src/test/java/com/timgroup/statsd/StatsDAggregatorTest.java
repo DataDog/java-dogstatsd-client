@@ -2,33 +2,24 @@ package com.timgroup.statsd;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Rule;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.FixMethodOrder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runners.MethodSorters;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -218,8 +209,13 @@ public class StatsDAggregatorTest {
         final int iterations = 10;
 
         for(int i=0 ; i<StatsDAggregator.DEFAULT_SHARDS*iterations ; i++) {
-            FakeMessage<Integer> gauge = new FakeMessage<>("some.gauge", Message.Type.GAUGE, 1);
-            gauge.hash = i+1;
+            final int hash = i + 1;
+            FakeMessage<Integer> gauge = new FakeMessage<Integer>("some.gauge", Message.Type.GAUGE, 1) {
+                @Override
+                public int hashCode() {
+                    return hash;
+                }
+            };
             fakeProcessor.send(gauge);
         }
 
@@ -255,5 +251,41 @@ public class StatsDAggregatorTest {
         NumericMessage message = (NumericMessage)fakeProcessor.highPrioMessages.element();
         assertEquals(9, message.getValue());
 
+    }
+
+    @Test(timeout = 5000L)
+    public void test_aggregation_degradation_to_treenodes() {
+        fakeProcessor.aggregator.flush();
+        fakeProcessor.clear();
+        // these counts have been determined to trigger treeification of the message aggregates
+        int numMessages = 10000;
+        int numTags = 100;
+        Assume.assumeTrue("assertions depend on divisibility",numMessages % numTags == 0);
+        String[][] tags = new String[numTags][];
+        for (int i = 0; i < numTags; i++) {
+            tags[i] = new String[] {String.valueOf(i)};
+        }
+        for (int i = 0; i < numMessages; i++) {
+            fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, tags[i % numTags]) {
+                @Override
+                void writeTo(StringBuilder builder, String containerID) {
+
+                }
+
+                @Override
+                public int hashCode() {
+                    // provoke collisions
+                    return 0;
+                }
+            });
+        }
+        waitForQueueSize(fakeProcessor.messages, 0);
+        fakeProcessor.aggregator.flush();
+        assertEquals(numTags, fakeProcessor.highPrioMessages.size());
+        for (int i = 0; i < numTags; i++) {
+            Message message = fakeProcessor.highPrioMessages.poll();
+            assertTrue(message instanceof NumericMessage);
+            assertEquals(numMessages / numTags, ((NumericMessage<Integer>) message).value.intValue());
+        }
     }
 }
