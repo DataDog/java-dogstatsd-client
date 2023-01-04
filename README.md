@@ -54,33 +54,6 @@ public class DogStatsdClient {
 }
 ```
 
-alternatively:
-
-```java
-import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
-import com.timgroup.statsd.NonBlockingStatsDClient;
-import com.timgroup.statsd.StatsDClient;
-
-public class DogStatsdClient {
-
-    public static void main(String[] args) throws Exception {
-
-        // resolve() returns a copy of NonBlockingStatsDClient with
-        // any implicit elements resolved, and may also be passed to
-        // NonBlockingStatsDClient to as a sole constructor argument.
-
-        StatsDClient client = new NonBlockingStatsDClient(
-            new NonBlockingStatsDClientBuilder()
-                .prefix("statsd")
-                .hostname("localhost")
-                .port(8125)
-                .resolve());
-
-        // use your client...
-    }
-}
-```
-
 ### v2.x
 
 Client version `v3.x` is now preferred over the older client `v2.x` release line. We do suggest you upgrade to the newer `v3.x` at
