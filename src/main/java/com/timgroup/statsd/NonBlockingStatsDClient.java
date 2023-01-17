@@ -20,6 +20,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import java.time.Instant;
+
 /**
  * A simple StatsD client implementation facilitating metrics recording.
  *
@@ -42,6 +44,11 @@ import java.util.concurrent.TimeUnit;
  * IO operations being carried out in a separate thread. Furthermore, these methods are guaranteed
  * not to throw an exception which may disrupt application execution.
  *
+ * <p>Some methods allow recording a value for a specific point in time by taking an Instant
+ * parameter. Such values are exempt from aggregation and should indicate the final metric value
+ * at the given time. Please refer to Datadog documentation for the range of accepted timestamp
+ * values.
+ *
  * <p>As part of a clean system shutdown, the {@link #stop()} method should be invoked
  * on any StatsD clients.</p>
  *
@@ -56,6 +63,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
     public static final String ORIGIN_DETECTION_ENABLED_ENV_VAR = "DD_ORIGIN_DETECTION_ENABLED";
+
+    private static final Instant MIN_TIMESTAMP = Instant.ofEpochSecond(1);
 
     enum Literal {
         SERVICE,
@@ -487,10 +496,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     abstract class StatsDMessage<T extends Number> extends NumericMessage<T> {
         final double sampleRate; // NaN for none
+        final Instant timestamp; // null for none
 
-        protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, String[] tags) {
+        protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, Instant timestamp, String[] tags) {
             super(aspect, type, value, tags);
             this.sampleRate = sampleRate;
+            this.timestamp = timestamp;
         }
 
         @Override
@@ -501,12 +512,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
             if (!Double.isNaN(sampleRate)) {
                 builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
             }
+            if (timestamp != null) {
+                builder.append("|T").append(timestamp.getEpochSecond());
+            }
             tagString(this.tags, builder);
             if (containerID != null && !containerID.isEmpty()) {
                 builder.append("|c:").append(containerID);
             }
 
             builder.append('\n');
+        }
+
+        @Override
+        public boolean canAggregate() {
+            // Timestamped values can not be aggregated.
+            return super.canAggregate() && this.timestamp == null;
         }
 
         protected abstract void writeValue(StringBuilder builder);
@@ -528,8 +548,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return success;
     }
 
-    // send double with sample rate
-    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
+    // send double with sample rate and timestamp
+    private void send(String aspect, final double value, Message.Type type, double sampleRate, Instant timestamp, String[] tags) {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -542,7 +562,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, tags) {
+            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, timestamp, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(format(NUMBER_FORMATTER, this.value));
                 }
@@ -550,13 +570,24 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
+    private void send(String aspect, final double value, Message.Type type, Instant timestamp, String[] tags) {
+        if (timestamp.isBefore(MIN_TIMESTAMP)) {
+            timestamp = MIN_TIMESTAMP;
+        }
+        send(aspect, value, type, Double.NaN, timestamp, tags);
+    }
+
+    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
+        send(aspect, value, type, sampleRate, null, tags);
+    }
+
     // send double without sample rate
     private void send(String aspect, final double value, Message.Type type, String[] tags) {
-        send(aspect, value, type, Double.NaN, tags);
+        send(aspect, value, type, Double.NaN, null, tags);
     }
 
     // send long with sample rate
-    private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
+    private void send(String aspect, final long value, Message.Type type, double sampleRate, Instant timestamp, String[] tags) {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -569,7 +600,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, tags) {
+            sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, timestamp, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(this.value);
                 }
@@ -577,9 +608,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
+    private void send(String aspect, final long value, Message.Type type, Instant timestamp, String[] tags) {
+        if (timestamp.isBefore(MIN_TIMESTAMP)) {
+            timestamp = MIN_TIMESTAMP;
+        }
+
+        send(aspect, value, type, Double.NaN, timestamp, tags);
+    }
+
+    private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
+        send(aspect, value, type, sampleRate, null, tags);
+    }
+
     // send long without sample rate
     private void send(String aspect, final long value, Message.Type type, String[] tags) {
-        send(aspect, value, type, Double.NaN, tags);
+        send(aspect, value, type, Double.NaN, null, tags);
     }
 
     /**
@@ -608,6 +651,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void count(final String aspect, final long value, final Instant timestamp, final String...tags) {
+        send(aspect, value, Message.Type.COUNT, timestamp, tags);
+    }
+
+    /**
      * Adjusts the specified counter by a given delta.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
@@ -630,6 +681,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void count(final String aspect, final double delta, final double sampleRate, final String...tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, tags);
+    }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void count(final String aspect, final double value, final Instant timestamp, final String...tags) {
+        send(aspect, value, Message.Type.COUNT, timestamp, tags);
     }
 
     /**
@@ -736,6 +794,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordGaugeValue(final String aspect, final double value, final Instant timestamp, final String... tags) {
+        send(aspect, value, Message.Type.GAUGE, timestamp, tags);
+    }
+
+    /**
      * Records the latest fixed value for the specified named gauge.
      *
      * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
@@ -761,6 +827,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordGaugeValue(final String aspect, final long value, final Instant timestamp, final String... tags) {
+        send(aspect, value, Message.Type.GAUGE, timestamp, tags);
+    }
+
+    /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
      */
     @Override
@@ -774,6 +848,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void gauge(final String aspect, final double value, final double sampleRate, final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void gauge(final String aspect, final double value, final Instant timestamp, final String... tags) {
+        recordGaugeValue(aspect, value, timestamp, tags);
     }
 
 
@@ -791,6 +873,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void gauge(final String aspect, final long value, final double sampleRate, final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void gauge(final String aspect, final long value, final Instant timestamp, final String... tags) {
+        recordGaugeValue(aspect, value, timestamp, tags);
     }
 
     /**

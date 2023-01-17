@@ -1,6 +1,7 @@
 package com.timgroup.statsd;
 
 import java.io.Closeable;
+import java.time.Instant;
 
 /**
  * Describes a client connection to a StatsD server, which may be used to post metrics
@@ -68,6 +69,27 @@ public interface StatsDClient extends Closeable {
     void count(String aspect, long delta, double sampleRate, String... tags);
 
     /**
+     * Set the counter metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param value
+     *     the amount to adjust the counter by
+     * @param timestamp
+     *     timestamp of the value
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, long value, Instant timestamp, String... tags);
+
+    /**
      * Adjusts the specified counter by a given delta.
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
@@ -100,6 +122,27 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void count(String aspect, double delta, double sampleRate, String... tags);
+
+    /**
+     * Set the counter metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param value
+     *     the amount to adjust the counter by
+     * @param timestamp
+     *     timestamp of the value
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, double value, Instant timestamp, String... tags);
 
     /**
      * Increments the specified counter by one.
@@ -240,6 +283,27 @@ public interface StatsDClient extends Closeable {
     void recordGaugeValue(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Set the gauge metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordGaugeValue(String aspect, double value, Instant timestamp, String... tags);
+
+    /**
      * Records the latest fixed value for the specified named gauge.
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
@@ -274,6 +338,27 @@ public interface StatsDClient extends Closeable {
     void recordGaugeValue(String aspect, long value, double sampleRate, String... tags);
 
     /**
+     * Set the gauge metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordGaugeValue(String aspect, long value, Instant timestamp, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
      *
      * @param aspect
@@ -300,6 +385,23 @@ public interface StatsDClient extends Closeable {
     void gauge(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, double, Instant, String[])}.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gauge(String aspect, double value, Instant timestamp, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
      *
      * @param aspect
@@ -324,6 +426,23 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void gauge(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, long, Instant, String[])}.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gauge(String aspect, long value, Instant timestamp, String... tags);
 
     /**
      * Records an execution time in milliseconds for the specified named operation.
