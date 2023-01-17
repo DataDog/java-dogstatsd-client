@@ -1,11 +1,9 @@
 package com.timgroup.statsd;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -15,8 +13,6 @@ public class StatsDAggregator {
     public static int DEFAULT_SHARDS = 4;  // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
-    protected static final Set<Message.Type> AGGREGATE_SET = EnumSet.of(Message.Type.COUNT, Message.Type.GAUGE,
-            Message.Type.SET);
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
 
     protected final int shardGranularity;
@@ -81,10 +77,6 @@ public class StatsDAggregator {
         }
     }
 
-    public boolean isTypeAggregate(Message.Type type) {
-        return AGGREGATE_SET.contains(type);
-    }
-
     /**
      * Aggregate a message if possible.
      *
@@ -93,7 +85,7 @@ public class StatsDAggregator {
      *
      * */
     public boolean aggregateMessage(Message message) {
-        if (flushInterval == 0 || !isTypeAggregate(message.getType()) || message.getDone()) {
+        if (flushInterval == 0 || !message.canAggregate() || message.getDone()) {
             return false;
         }
 
