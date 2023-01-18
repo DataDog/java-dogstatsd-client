@@ -1,8 +1,8 @@
 package com.timgroup.statsd;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
 
 public abstract class Message implements Comparable<Message> {

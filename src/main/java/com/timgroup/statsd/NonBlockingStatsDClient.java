@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +21,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import java.time.Instant;
 
 /**
  * A simple StatsD client implementation facilitating metrics recording.
@@ -682,6 +682,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void count(final String aspect, final double delta, final double sampleRate, final String...tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, tags);
     }
+
     /**
      * {@inheritDoc}
      */
