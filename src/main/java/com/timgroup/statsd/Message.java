@@ -1,9 +1,12 @@
 package com.timgroup.statsd;
 
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 
 public abstract class Message implements Comparable<Message> {
+
     final String aspect;
     final Message.Type type;
     final String[] tags;
@@ -33,6 +36,8 @@ public abstract class Message implements Comparable<Message> {
             return this.type;
         }
     }
+
+    protected static final Set<Type> AGGREGATE_SET = EnumSet.of(Type.COUNT, Type.GAUGE, Type.SET);
 
     protected Message(Message.Type type) {
         this("", type, null);
@@ -92,13 +97,11 @@ public abstract class Message implements Comparable<Message> {
 
     /**
      * Return whether a message can be aggregated.
-     * Not sure if this makes sense.
      *
      * @return boolean on whether or not this message type may be aggregated.
      */
     public boolean canAggregate() {
-        // return (this.type == m.type);
-        return false;
+        return AGGREGATE_SET.contains(type);
     }
 
     public void setDone(boolean done) {

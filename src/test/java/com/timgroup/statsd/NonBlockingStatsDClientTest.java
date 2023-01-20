@@ -8,6 +8,7 @@ import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
+import org.junit.function.ThrowingRunnable;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -148,6 +149,45 @@ public class NonBlockingStatsDClientTest {
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24|c|@1.000000|#baz,foo:bar")));
     }
 
+    @Test(timeout = 5000L)
+    public void sends_long_counter_value_with_timestamp() throws Exception {
+        clientUnaggregated.countWithTimestamp("mycount", 24l, 1032127200, "foo:bar", "baz");
+        clientUnaggregated.countWithTimestamp("mycount", 42l, 1032127200, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24|c|T1032127200|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:42|c|T1032127200|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_counter_value_with_timestamp() throws Exception {
+        clientUnaggregated.countWithTimestamp("mycount", 24.5d, 1032127200, "foo:bar", "baz");
+        clientUnaggregated.countWithTimestamp("mycount", 42.5d, 1032127200, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24.5|c|T1032127200|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:42.5|c|T1032127200|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_long_counter_value_with_incorrect_timestamp() throws Exception {
+        clientUnaggregated.countWithTimestamp("mycount", 24l, -1, "foo:bar", "baz");
+        clientUnaggregated.countWithTimestamp("mycount", 42l, 0, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24|c|T1|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:42|c|T1|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_counter_value_with_incorrect_timestamp() throws Exception {
+        clientUnaggregated.countWithTimestamp("mycount", 24.5d, -1, "foo:bar", "baz");
+        clientUnaggregated.countWithTimestamp("mycount", 42.5d, 0, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:24.5|c|T1|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mycount:42.5|c|T1|#baz,foo:bar")));
+    }
 
     @Test(timeout = 5000L)
     public void sends_counter_increment_to_statsd() throws Exception {
@@ -269,6 +309,46 @@ public class NonBlockingStatsDClientTest {
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423|g|@1.000000|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_long_gauge_with_timestamp() throws Exception {
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 234l, 1205794800, "foo:bar", "baz");
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 423l, 1205794800, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:234|g|T1205794800|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423|g|T1205794800|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_gauge_with_timestamp() throws Exception {
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 243.5d, 1205794800, "foo:bar", "baz");
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 423.5d, 1205794800, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:243.5|g|T1205794800|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423.5|g|T1205794800|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_long_gauge_with_incorrect_timestamp() throws Exception {
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 234l, 0, "foo:bar", "baz");
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 423l, -1, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:234|g|T1|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423|g|T1|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_gauge_with_incorrect_timestamp() throws Exception {
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 243.5d, 0, "foo:bar", "baz");
+        clientUnaggregated.gaugeWithTimestamp("mygauge", 423.5d, -1, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:243.5|g|T1|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423.5|g|T1|#baz,foo:bar")));
     }
 
     @Test(timeout = 5000L)

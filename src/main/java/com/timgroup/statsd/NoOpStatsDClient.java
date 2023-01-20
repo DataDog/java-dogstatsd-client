@@ -20,6 +20,10 @@ public final class NoOpStatsDClient implements StatsDClient {
 
     @Override public void count(String aspect, double delta, double sampleRate, String... tags) { }
 
+    @Override public void countWithTimestamp(String aspect, long delta, long timestamp, String... tags) { }
+
+    @Override public void countWithTimestamp(String aspect, double delta, long timestamp, String... tags) { }
+
     @Override public void incrementCounter(String aspect, String... tags) { }
 
     @Override public void incrementCounter(String aspect, double sampleRate, String... tags) { }
@@ -51,6 +55,10 @@ public final class NoOpStatsDClient implements StatsDClient {
     @Override public void gauge(String aspect, long value, String... tags) { }
 
     @Override public void gauge(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void gaugeWithTimestamp(String aspect, double value, long timestamp, String... tags) { }
+
+    @Override public void gaugeWithTimestamp(String aspect, long value, long timestamp, String... tags) { }
 
     @Override public void recordExecutionTime(String aspect, long timeInMs, String... tags) { }
 

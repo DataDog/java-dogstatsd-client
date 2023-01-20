@@ -102,6 +102,48 @@ public interface StatsDClient extends Closeable {
     void count(String aspect, double delta, double sampleRate, String... tags);
 
     /**
+     * Set the counter metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param value
+     *     the amount to adjust the counter by
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void countWithTimestamp(String aspect, long value, long timestamp, String... tags);
+
+    /**
+     * Set the counter metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param value
+     *     the amount to adjust the counter by
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void countWithTimestamp(String aspect, double value, long timestamp, String... tags);
+
+    /**
      * Increments the specified counter by one.
      *
      * <p>This method is a DataDog extension, and may not work with other servers.</p>
@@ -323,7 +365,42 @@ public interface StatsDClient extends Closeable {
      * @param tags
      *     array of tags to be added to the data
      */
+
     void gauge(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Set the gauge metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gaugeWithTimestamp(String aspect, double value, long timestamp, String... tags);
+
+    /**
+     * Set the gauge metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gaugeWithTimestamp(String aspect, long value, long timestamp, String... tags);
 
     /**
      * Records an execution time in milliseconds for the specified named operation.
