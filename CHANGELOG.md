@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 4.2.0 / 2023.01.23
+
+* [FEATURE] Sending metrics with a timestamp. See [#211][]
+* [IMPROVEMENT] Various performance optimizations. See [#203][]
+
 ## 4.1.0 / 2022.10.06
 
 * [FEATURE] Client-side origin detection. See[#188][]
@@ -220,6 +225,8 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#194]: https://github.com/DataDog/java-dogstatsd-client/issues/194
 [#200]: https://github.com/DataDog/java-dogstatsd-client/issues/200
 [#201]: https://github.com/DataDog/java-dogstatsd-client/issues/201
+[#203]: https://github.com/DataDog/java-dogstatsd-client/issues/203
+[#210]: https://github.com/DataDog/java-dogstatsd-client/issues/210
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
