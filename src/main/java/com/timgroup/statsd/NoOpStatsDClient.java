@@ -92,6 +92,30 @@ public final class NoOpStatsDClient implements StatsDClient {
 
     @Override public void recordDistributionValue(String aspect, long value, double sampleRate, String... tags) { }
 
+    @Override
+    public void recordDistributionValue(String aspect, double[] values, String... tags) { }
+
+    @Override
+    public void recordDistributionValue(String aspect, double[] values, double sampleRate, String... tags) { }
+
+    @Override
+    public void recordDistributionValue(String aspect, long[] values, String... tags) { }
+
+    @Override
+    public void recordDistributionValue(String aspect, long[] values, double sampleRate, String... tags) { }
+
+    @Override
+    public void distribution(String aspect, double[] values, String... tags) { }
+
+    @Override
+    public void distribution(String aspect, double[] values, double sampleRate, String... tags) { }
+
+    @Override
+    public void distribution(String aspect, long[] values, String... tags) { }
+
+    @Override
+    public void distribution(String aspect, long[] values, double sampleRate, String... tags) { }
+
     @Override public void distribution(String aspect, double value, String... tags) { }
 
     @Override public void distribution(String aspect, double value, double sampleRate, String... tags) { }

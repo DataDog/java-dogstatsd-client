@@ -651,6 +651,74 @@ public interface StatsDClient extends Closeable {
     void recordDistributionValue(String aspect, long value, double sampleRate, String... tags);
 
     /**
+     * Records values for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, double[] values, String... tags);
+
+    /**
+     * Records values for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, double[] values, double sampleRate, String... tags);
+
+    /**
+     * Records values for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long[] values, String... tags);
+
+    /**
+     * Records values for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long[] values, double sampleRate, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, double, String[])}.
      *
      * @param aspect
@@ -701,6 +769,58 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void distribution(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double[], String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, double[] values, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double[], double, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, double[] values, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, long[], String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, long[] values, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, long[], double, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param values
+     *     the values to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, long[] values, double sampleRate, String... tags);
 
     /**
      * Records an event.

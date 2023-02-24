@@ -18,7 +18,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -531,6 +530,80 @@ public class NonBlockingStatsDClient implements StatsDClient {
         protected abstract void writeValue(StringBuilder builder);
     }
 
+    abstract class MultiValuedStatsDMessage extends Message {
+        private final double sampleRate; // NaN for none
+        private final long timestamp; // zero for none
+
+        MultiValuedStatsDMessage(String aspect, Message.Type type, String[] tags, double sampleRate, long timestamp) {
+            super(aspect, type, tags);
+            this.sampleRate = sampleRate;
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public final boolean canAggregate() {
+            return false;
+        }
+
+        @Override
+        public final void aggregate(Message message) { }
+
+        @Override
+        public final void writeTo(StringBuilder builder, String containerID) {
+            builder.append(prefix).append(aspect);
+            writeValuesTo(builder);
+            builder.append('|').append(type);
+            if (!Double.isNaN(sampleRate)) {
+                builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
+            }
+            if (timestamp != 0) {
+                builder.append("|T").append(timestamp);
+            }
+            tagString(tags, builder);
+            if (containerID != null && !containerID.isEmpty()) {
+                builder.append("|c:").append(containerID);
+            }
+
+            builder.append('\n');
+        }
+
+        protected abstract void writeValuesTo(StringBuilder builder);
+    }
+
+    final class LongsStatsDMessage extends MultiValuedStatsDMessage {
+        private final long[] values;
+
+        LongsStatsDMessage(String aspect, Message.Type type, long[] values, double sampleRate, long timestamp, String[] tags) {
+            super(aspect, type, tags, sampleRate, timestamp);
+            this.values = values;
+        }
+
+        @Override
+        protected void writeValuesTo(StringBuilder builder) {
+            for (long value: values) {
+                builder.append(':').append(value);
+            }
+        }
+    }
+
+    final class DoublesStatsDMessage extends MultiValuedStatsDMessage {
+        private final double[] values;
+
+        DoublesStatsDMessage(String aspect, Message.Type type, double[] values, double sampleRate, long timestamp,
+                             String[] tags) {
+            super(aspect, type, tags, sampleRate,timestamp);
+            this.values = values;
+        }
+
+        @Override
+        protected void writeValuesTo(StringBuilder builder) {
+            for (double value: values) {
+                builder.append(':').append(value);
+            }
+        }
+    }
+
+
 
     private boolean sendMetric(final Message message) {
         return send(message);
@@ -607,6 +680,56 @@ public class NonBlockingStatsDClient implements StatsDClient {
     // send long without sample rate
     private void send(String aspect, final long value, Message.Type type, String[] tags) {
         send(aspect, value, type, Double.NaN, 0, tags);
+    }
+
+    private void send(String aspect, long[] values, Message.Type type, double sampleRate, long timestamp, String[] tags) {
+        if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
+            switch (type) {
+                case COUNT:
+                    sampleRate = Double.NaN;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if ((Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) && values != null && values.length > 0) {
+            sendMetric(new LongsStatsDMessage(aspect, type, values, sampleRate, timestamp, tags));
+        }
+    }
+
+    private void send(String aspect, long[] values, Message.Type type, double sampleRate, String[] tags) {
+        send(aspect, values, type, sampleRate, 0, tags);
+    }
+
+    // send longs without sample rate
+    private void send(String aspect, long[] values, Message.Type type, String[] tags) {
+        send(aspect, values, type, Double.NaN, 0, tags);
+    }
+
+    private void send(String aspect, double[] values, Message.Type type, double sampleRate, long timestamp, String[] tags) {
+        if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
+            switch (type) {
+                case COUNT:
+                    sampleRate = Double.NaN;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if ((Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) && values != null && values.length > 0) {
+            sendMetric(new DoublesStatsDMessage(aspect, type, values, sampleRate, timestamp, tags));
+        }
+    }
+
+    private void send(String aspect, double[] values, Message.Type type, double sampleRate, String[] tags) {
+        send(aspect, values, type, sampleRate, 0, tags);
+    }
+
+    // send doubles without sample rate
+    private void send(String aspect, double[] values, Message.Type type, String[] tags) {
+        send(aspect, values, type, Double.NaN, 0, tags);
     }
 
     private void sendWithTimestamp(String aspect, final double value, Message.Type type, long timestamp, String[] tags) {
@@ -1037,6 +1160,70 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordDistributionValue(final String aspect, final long value, final double sampleRate, final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordDistributionValue(String aspect, double[] values, String... tags) {
+        send(aspect, values, Message.Type.DISTRIBUTION, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordDistributionValue(String aspect, double[] values, double sampleRate, String... tags) {
+        send(aspect, values, Message.Type.DISTRIBUTION, sampleRate, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordDistributionValue(String aspect, long[] values, String... tags) {
+        send(aspect, values, Message.Type.DISTRIBUTION, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void recordDistributionValue(String aspect, long[] values, double sampleRate, String... tags) {
+        send(aspect, values, Message.Type.DISTRIBUTION, sampleRate, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void distribution(String aspect, double[] values, String... tags) {
+        recordDistributionValue(aspect, values, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void distribution(String aspect, double[] values, double sampleRate, String... tags) {
+        recordDistributionValue(aspect, values, sampleRate, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void distribution(String aspect, long[] values, String... tags) {
+        recordDistributionValue(aspect, values, tags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void distribution(String aspect, long[] values, double sampleRate, String... tags) {
+        recordDistributionValue(aspect, values, sampleRate, tags);
     }
 
     /**

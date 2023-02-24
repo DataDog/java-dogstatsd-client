@@ -476,6 +476,63 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void sends_multivalued_distribution_to_statsd() throws Exception {
+
+        client.recordDistributionValue("mydistribution", new long[] { 423L, 234L });
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_multivalued_distribution_to_statsd() throws Exception {
+
+
+        client.recordDistributionValue("mydistribution", new double[] { 0.423D, 0.234D });
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:0.423:0.234|d")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_multivalued_distribution_to_statsd_with_tags() throws Exception {
+
+
+        client.recordDistributionValue("mydistribution", new long[] { 423L, 234L }, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_multivalued_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
+
+        clientUnaggregated.recordDistributionValue("mydistribution", new long[] { 423L, 234L }, 1, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@1.000000|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_multivalued_distribution_to_statsd_with_tags() throws Exception {
+
+
+        client.recordDistributionValue("mydistribution", new double[] { 0.423D, 0.234D }, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:0.423:0.234|d|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_double_multivalued_distribution_with_sample_rate_to_statsd_with_tags() throws Exception {
+
+        clientUnaggregated.recordDistributionValue("mydistribution", new double[] { 0.423D, 0.234D }, 1, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:0.423:0.234|d|@1.000000|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
     public void sends_timer_to_statsd() throws Exception {
 
 
