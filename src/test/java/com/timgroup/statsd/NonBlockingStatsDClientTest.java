@@ -1679,27 +1679,8 @@ public class NonBlockingStatsDClientTest {
 
         private CountDownLatch lock;
 
-        SlowStatsDNonBlockingStatsDClient(final String prefix,  final int queueSize,
-                String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize,
-                final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
-                final int senderWorkers, boolean blocking) throws StatsDClientException {
-
-            super(new NonBlockingStatsDClientBuilder()
-                .prefix(prefix)
-                .queueSize(queueSize)
-                .constantTags(constantTags)
-                .errorHandler(errorHandler)
-                .addressLookup(addressLookup)
-                .timeout(timeout)
-                .entityID(entityID)
-                .bufferPoolSize(poolSize)
-                .blocking(blocking)
-                .senderWorkers(senderWorkers)
-                .processorWorkers(processorWorkers)
-                .maxPacketSizeBytes(maxPacketSizeBytes)
-                .originDetectionEnabled(false)
-                .resolve());
+        SlowStatsDNonBlockingStatsDClient(NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+            super(builder);
 
             lock = new CountDownLatch(1);
         }
@@ -1720,21 +1701,7 @@ public class NonBlockingStatsDClientTest {
 
         @Override
         public SlowStatsDNonBlockingStatsDClient build() throws StatsDClientException {
-            int packetSize = maxPacketSizeBytes;
-            if (packetSize == 0) {
-                packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
-                    NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
-            }
-
-            if (addressLookup != null) {
-                return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, packetSize, entityID, bufferPoolSize,
-                        processorWorkers, senderWorkers, blocking);
-            } else {
-                return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
-                        entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking);
-            }
+            return new SlowStatsDNonBlockingStatsDClient(resolve());
         }
     }
 
