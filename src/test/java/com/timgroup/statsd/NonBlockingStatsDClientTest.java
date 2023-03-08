@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -24,14 +25,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 import java.text.NumberFormat;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
+
+import org.junit.function.ThrowingRunnable;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NonBlockingStatsDClientTest {
@@ -1840,5 +1844,15 @@ public class NonBlockingStatsDClientTest {
         client.stop();
 
         assertEquals(0, errors.size());
+    }
+
+    @Test(timeout = 5000L)
+    public void address_resolution_empty() throws Exception {
+        assertThrows(StatsDClientException.class, new ThrowingRunnable() {
+                @Override
+                public void run() {
+                    new NonBlockingStatsDClientBuilder().resolve();
+                }
+            });
     }
 }

@@ -62,6 +62,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
     private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
     public static final String ORIGIN_DETECTION_ENABLED_ENV_VAR = "DD_ORIGIN_DETECTION_ENABLED";
+    public static final String DD_DOGSTATSD_URL_ENV_VAR = "DD_DOGSTATSD_URL";
 
     private static final long MIN_TIMESTAMP = 1;
 

@@ -5,6 +5,7 @@ import jnr.unixsocket.UnixSocketAddress;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
@@ -245,6 +246,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         }
 
         // Next, try various environment variables.
+        String url = System.getenv(NonBlockingStatsDClient.DD_DOGSTATSD_URL_ENV_VAR);
+        if (url != null) {
+            return getAddressLookupFromUrl(url);
+        }
+
         String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
         if (namedPipeFromEnv != null) {
             return staticNamedPipeResolution(namedPipeFromEnv);
@@ -254,6 +260,35 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         int portFromEnv = getPortFromEnvVar(port);
 
         return staticAddress(hostFromEnv, portFromEnv);
+    }
+
+    private Callable<SocketAddress> getAddressLookupFromUrl(String url) {
+        if (NamedPipeSocketAddress.isNamedPipe(url)) {
+            return staticNamedPipeResolution(url);
+        }
+
+        URI parsed;
+        try {
+            parsed = new URI(url);
+        } catch (Exception e) {
+            return null;
+        }
+
+        if (parsed.getScheme().equals("udp")) {
+            String uriHost = parsed.getHost();
+            int uriPort = parsed.getPort();
+            if (uriPort < 0) {
+                uriPort = port;
+            }
+            return staticAddress(uriHost, uriPort);
+        }
+
+        if (parsed.getScheme().equals("unix")) {
+            String uriPath = parsed.getPath();
+            return staticAddress(uriPath, 0);
+        }
+
+        return null;
     }
 
     /**
