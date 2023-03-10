@@ -295,13 +295,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
      * Create dynamic lookup for the given host name and port.
      *
      * @param hostname
-     *     the host name of the targeted StatsD server. If the environment variable
-     *     "DD_AGENT_HOST" is set, this parameter is overwritten by the environment
-     *     variable value.
+     *     the host name of the targeted StatsD server.
      * @param port
-     *     the port of the targeted StatsD server. If the environment variable
-     *     "DD_DOGSTATSD_PORT" is set, this parameter is overwritten by the environment
-     *     variable value.
+     *     the port of the targeted StatsD server.
      * @return a function to perform the lookup
      */
     public static Callable<SocketAddress> volatileAddressResolution(final String hostname, final int port) {
