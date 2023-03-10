@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -24,14 +25,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 import java.text.NumberFormat;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
+
+import org.junit.function.ThrowingRunnable;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NonBlockingStatsDClientTest {
@@ -1679,27 +1683,8 @@ public class NonBlockingStatsDClientTest {
 
         private CountDownLatch lock;
 
-        SlowStatsDNonBlockingStatsDClient(final String prefix,  final int queueSize,
-                String[] constantTags, final StatsDClientErrorHandler errorHandler,
-                Callable<SocketAddress> addressLookup, final int timeout, final int bufferSize,
-                final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
-                final int senderWorkers, boolean blocking) throws StatsDClientException {
-
-            super(new NonBlockingStatsDClientBuilder()
-                .prefix(prefix)
-                .queueSize(queueSize)
-                .constantTags(constantTags)
-                .errorHandler(errorHandler)
-                .addressLookup(addressLookup)
-                .timeout(timeout)
-                .entityID(entityID)
-                .bufferPoolSize(poolSize)
-                .blocking(blocking)
-                .senderWorkers(senderWorkers)
-                .processorWorkers(processorWorkers)
-                .maxPacketSizeBytes(maxPacketSizeBytes)
-                .originDetectionEnabled(false)
-                .resolve());
+        SlowStatsDNonBlockingStatsDClient(NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+            super(builder);
 
             lock = new CountDownLatch(1);
         }
@@ -1720,21 +1705,7 @@ public class NonBlockingStatsDClientTest {
 
         @Override
         public SlowStatsDNonBlockingStatsDClient build() throws StatsDClientException {
-            int packetSize = maxPacketSizeBytes;
-            if (packetSize == 0) {
-                packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
-                    NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
-            }
-
-            if (addressLookup != null) {
-                return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        addressLookup, timeout, socketBufferSize, packetSize, entityID, bufferPoolSize,
-                        processorWorkers, senderWorkers, blocking);
-            } else {
-                return new SlowStatsDNonBlockingStatsDClient(prefix, queueSize, constantTags, errorHandler,
-                        staticStatsDAddressResolution(hostname, port), timeout, socketBufferSize, packetSize,
-                        entityID, bufferPoolSize, processorWorkers, senderWorkers, blocking);
-            }
+            return new SlowStatsDNonBlockingStatsDClient(resolve());
         }
     }
 
@@ -1873,5 +1844,15 @@ public class NonBlockingStatsDClientTest {
         client.stop();
 
         assertEquals(0, errors.size());
+    }
+
+    @Test(timeout = 5000L)
+    public void address_resolution_empty() throws Exception {
+        assertThrows(StatsDClientException.class, new ThrowingRunnable() {
+                @Override
+                public void run() {
+                    new NonBlockingStatsDClientBuilder().resolve();
+                }
+            });
     }
 }

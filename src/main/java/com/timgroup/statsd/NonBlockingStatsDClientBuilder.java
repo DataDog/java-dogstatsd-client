@@ -5,6 +5,7 @@ import jnr.unixsocket.UnixSocketAddress;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
@@ -207,18 +208,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         }
 
         int packetSize = maxPacketSizeBytes;
-        Callable<SocketAddress> lookup = addressLookup;
-
-        if (lookup == null) {
-            String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
-            String resolvedNamedPipe = namedPipe == null ? namedPipeFromEnv : namedPipe;
-            
-            if (resolvedNamedPipe == null) {
-                lookup = staticStatsDAddressResolution(hostname, port);
-            } else {
-                lookup = staticNamedPipeResolution(resolvedNamedPipe);
-            }
-        }
+        Callable<SocketAddress> lookup = getAddressLookup();
 
         if (packetSize == 0) {
             packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
@@ -230,7 +220,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             if (telemetryHostname == null) {
                 telemetryLookup = lookup;
             } else {
-                telemetryLookup = staticStatsDAddressResolution(telemetryHostname, telemetryPort);
+                telemetryLookup = staticAddress(telemetryHostname, telemetryPort);
             }
         }
 
@@ -239,6 +229,66 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         resolved.telemetryAddressLookup = telemetryLookup;
 
         return resolved;
+    }
+
+    private Callable<SocketAddress> getAddressLookup() {
+        // First, use explicit configuration on the builder.
+        if (addressLookup != null) {
+            return addressLookup;
+        }
+
+        if (namedPipe != null) {
+            return staticNamedPipeResolution(namedPipe);
+        }
+
+        if (hostname != null) {
+            return staticAddress(hostname, port);
+        }
+
+        // Next, try various environment variables.
+        String url = System.getenv(NonBlockingStatsDClient.DD_DOGSTATSD_URL_ENV_VAR);
+        if (url != null) {
+            return getAddressLookupFromUrl(url);
+        }
+
+        String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
+        if (namedPipeFromEnv != null) {
+            return staticNamedPipeResolution(namedPipeFromEnv);
+        }
+
+        String hostFromEnv = getHostnameFromEnvVar();
+        int portFromEnv = getPortFromEnvVar(port);
+
+        return staticAddress(hostFromEnv, portFromEnv);
+    }
+
+    private Callable<SocketAddress> getAddressLookupFromUrl(String url) {
+        if (NamedPipeSocketAddress.isNamedPipe(url)) {
+            return staticNamedPipeResolution(url);
+        }
+
+        URI parsed;
+        try {
+            parsed = new URI(url);
+        } catch (Exception e) {
+            return null;
+        }
+
+        if (parsed.getScheme().equals("udp")) {
+            String uriHost = parsed.getHost();
+            int uriPort = parsed.getPort();
+            if (uriPort < 0) {
+                uriPort = port;
+            }
+            return staticAddress(uriHost, uriPort);
+        }
+
+        if (parsed.getScheme().equals("unix")) {
+            String uriPath = parsed.getPath();
+            return staticAddress(uriPath, 0);
+        }
+
+        return null;
     }
 
     /**
@@ -288,20 +338,6 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         };
     }
 
-    protected static Callable<SocketAddress> staticStatsDAddressResolution(String hostname, int port)
-            throws StatsDClientException {
-        try {
-            if (hostname == null) {
-                hostname = getHostnameFromEnvVar();
-                port = getPortFromEnvVar(port);
-            }
-
-            return staticAddressResolution(hostname, port);
-        } catch (final Exception e) {
-            throw new StatsDClientException("Failed to lookup StatsD host", e);
-        }
-    }
-
     protected static Callable<SocketAddress> staticNamedPipeResolution(String namedPipe) {
         final NamedPipeSocketAddress socketAddress = new NamedPipeSocketAddress(namedPipe);
         return new Callable<SocketAddress>() {
@@ -309,6 +345,14 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
                 return socketAddress;
             }
         };
+    }
+
+    private static Callable<SocketAddress> staticAddress(final String hostname, final int port) {
+        try {
+            return staticAddressResolution(hostname, port);
+        } catch (Exception e) {
+            throw new StatsDClientException("Failed to lookup StatsD host", e);
+        }
     }
 
     /**
