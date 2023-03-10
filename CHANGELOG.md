@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.2.1 / 2023.03.10
+
+* [FEATURE] Add support for `DD_DOGSTATSD_URL`. See [#217][]
+
 ## 4.2.0 / 2023.01.23
 
 * [FEATURE] Sending metrics with a timestamp. See [#211][]
@@ -7,7 +11,7 @@
 
 ## 4.1.0 / 2022.10.06
 
-* [FEATURE] Client-side origin detection. See[#188][]
+* [FEATURE] Client-side origin detection. See [#188][]
 * [BUGFIX] Don't report the expected InterruptedException. See [#193][]
 * [BUGFIX] Fix performance issue in the aggregator. See [#194][] (Thanks [@retronym][])
 * [BUGFIX] Clear buffers before returning them to the pool. See [#200][]
@@ -226,7 +230,8 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#200]: https://github.com/DataDog/java-dogstatsd-client/issues/200
 [#201]: https://github.com/DataDog/java-dogstatsd-client/issues/201
 [#203]: https://github.com/DataDog/java-dogstatsd-client/issues/203
-[#210]: https://github.com/DataDog/java-dogstatsd-client/issues/210
+[#211]: https://github.com/DataDog/java-dogstatsd-client/issues/211
+[#217]: https://github.com/DataDog/java-dogstatsd-client/issues/217
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
