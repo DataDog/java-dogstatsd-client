@@ -81,6 +81,7 @@ public class StatsDSender {
             try {
 
                 if (buffer != null) {
+                    buffer.clear();
                     pool.put(buffer);
                 }
 
@@ -94,7 +95,6 @@ public class StatsDSender {
                 buffer.flip();
                 final int sentBytes = clientChannel.send(buffer, address);
 
-                buffer.clear();
                 if (sizeOfBuffer != sentBytes) {
                     throw new IOException(
                             String.format("Could not send stat %s entirely to %s. Only sent %d out of %d bytes",
