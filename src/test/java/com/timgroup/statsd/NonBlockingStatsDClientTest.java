@@ -1337,4 +1337,5 @@ public class NonBlockingStatsDClientTest {
             }
         }
     }
+
 }
