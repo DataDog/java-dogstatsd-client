@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.13.1 / 2023.05.02
+
+* [BUGFIX] Clear buffers before returning them to the pool. See [#221][]
+
 ## 2.13.0 / 2021.06.09
 
 * [FEATURE] Telemetry: adding developer mode: additional metrics. See [#131][]
@@ -151,6 +155,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#144]: https://github.com/DataDog/java-dogstatsd-client/issues/144
 [#147]: https://github.com/DataDog/java-dogstatsd-client/issues/147
 [#149]: https://github.com/DataDog/java-dogstatsd-client/issues/149
+[#221]: https://github.com/DataDog/java-dogstatsd-client/issues/221
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
 [@cameronhotchkies]: https://github.com/cameronhotchkies
