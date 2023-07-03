@@ -116,8 +116,6 @@ public abstract class StatsDProcessor {
                         sendBuffer = bufferPool.borrow();
                     }
 
-                    sendBuffer.mark();
-
                     try {
                         writeBuilderToSendBuffer(sendBuffer);
                     } catch (BufferOverflowException boe) {
@@ -155,7 +153,9 @@ public abstract class StatsDProcessor {
                 buffer = CharBuffer.wrap(builder);
             }
 
+            sendBuffer.mark();
             if (utf8Encoder.encode(buffer, sendBuffer, true) == CoderResult.OVERFLOW) {
+                sendBuffer.reset();
                 throw new BufferOverflowException();
             }
         }
