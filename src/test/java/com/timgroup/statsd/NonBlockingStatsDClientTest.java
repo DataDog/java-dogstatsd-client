@@ -13,11 +13,13 @@ import org.junit.function.ThrowingRunnable;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -29,7 +31,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.isA;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -255,6 +259,45 @@ public class NonBlockingStatsDClientTest {
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mygauge:423|g")));
+    }
+
+    // Test that we don't leave partially encoded message in the
+    // buffer on overflow, when a message is too big to be encoded
+    // successfully.
+    @Test(timeout = 5000L)
+    public void sends_gauge_without_truncation() throws Exception {
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .errorHandler(errorHandler)
+            .originDetectionEnabled(false)
+            .build();
+
+        try {
+            ArrayList<String> tags = new ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                tags.add("🏷️🏷️🏷️🏷️");
+            }
+
+            client.recordGaugeValue("mygauge", 423);
+            client.recordGaugeValue("badgauge", 1, tags.toArray(new String[]{}));
+            client.recordGaugeValue("marker", 1);
+
+            server.waitForMessage("marker");
+
+            assertThat(errorHandler.getExceptions(), hasSize(1));
+            // Shouldn't be InvalidMessageException, which would mean we filtered the payload before encoding.
+            assertThat(errorHandler.getExceptions(), hasItem(isA(BufferOverflowException.class)));
+
+            assertThat(server.messagesReceived(), hasSize(2));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("mygauge:423|g")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("marker:1|g")));
+            assertThat(server.messagesReceived(), not(hasItem(startsWith("badgauge"))));
+        } finally {
+            client.stop();
+        }
     }
 
     @Test(timeout = 5000L)
