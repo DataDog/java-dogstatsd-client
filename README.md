@@ -117,6 +117,7 @@ These are both configurable should you have other needs:
 ```java
 StatsDClient client = new NonBlockingStatsDClientBuilder()
     .hostname("/var/run/datadog/dsd.socket")
+    .port(0) // Necessary for unix socket
     .maxPacketSizeBytes(16384)  // 16kB maximum custom value
     .build();
 ```
