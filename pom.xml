@@ -272,6 +272,20 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.2</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <!-- even though this isn't a true JPMS modular jar, make it play well -->
+                            <!-- with applications that want to use it as one -->
+                            <Automatic-Module-Name>com.datadoghq.dogstatsd.client</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>${checkstyle.version}</version>
                 <executions>
@@ -323,6 +337,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.7</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>
