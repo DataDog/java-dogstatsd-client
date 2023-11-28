@@ -1,5 +1,7 @@
 package com.timgroup.statsd;
 
+import java.util.Scanner;
+import jnr.constants.platform.Sock;
 import jnr.unixsocket.UnixSocketAddress;
 
 import java.net.InetAddress;
@@ -283,9 +285,12 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             return staticAddress(uriHost, uriPort);
         }
 
-        if (parsed.getScheme().equals("unix")) {
+        if (parsed.getScheme().startsWith("unix")) {
             String uriPath = parsed.getPath();
-            return staticAddress(uriPath, 0);
+            return staticUnixResolution(
+                    uriPath,
+                    UnixSocketAddressWithTransport.TransportType.fromScheme(parsed.getScheme())
+            );
         }
 
         return null;
@@ -304,7 +309,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         if (port == 0) {
             return new Callable<SocketAddress>() {
                 @Override public SocketAddress call() throws UnknownHostException {
-                    return new UnixSocketAddress(hostname);
+                    return new UnixSocketAddressWithTransport(new UnixSocketAddress(hostname), UnixSocketAddressWithTransport.TransportType.UDS);
                 }
             };
         } else {
@@ -339,6 +344,15 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
                 return socketAddress;
+            }
+        };
+    }
+
+    protected static Callable<SocketAddress> staticUnixResolution(final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
+        final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
+        return new Callable<SocketAddress>() {
+            @Override public SocketAddress call() {
+                return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
         };
     }

@@ -84,12 +84,18 @@ public class BuilderAddressTest {
         }));
 
         if (isJnrAvailable()) {
+            UnixSocketAddressWithTransport unixDsd = new UnixSocketAddressWithTransport(new UnixSocketAddress("/dsd.sock"), UnixSocketAddressWithTransport.TransportType.UDS);
+            UnixSocketAddressWithTransport unixDgramDsd = new UnixSocketAddressWithTransport(new UnixSocketAddress("/dsd.sock"), UnixSocketAddressWithTransport.TransportType.UDS_DATAGRAM);
+            UnixSocketAddressWithTransport unixStreamDsd = new UnixSocketAddressWithTransport(new UnixSocketAddress("/dsd.sock"), UnixSocketAddressWithTransport.TransportType.UDS_STREAM);
+
             params.addAll(Arrays.asList(new Object[][]{
-                { "unix:///dsd.sock", null, null, null, new UnixSocketAddress("/dsd.sock") },
-                { "unix://unused/dsd.sock", null, null, null, new UnixSocketAddress("/dsd.sock") },
-                { "unix://unused:9999/dsd.sock", null, null, null, new UnixSocketAddress("/dsd.sock") },
-                { null, "/dsd.sock", "0", null, new UnixSocketAddress("/dsd.sock") },
-                { "unix:///dsd.sock", "1.1.1.1", "9999", null, new UnixSocketAddress("/dsd.sock") },
+                { "unix:///dsd.sock", null, null, null, unixDsd },
+                { "unix://unused/dsd.sock", null, null, null, unixDsd },
+                { "unix://unused:9999/dsd.sock", null, null, null, unixDsd},
+                { null, "/dsd.sock", "0", null, unixDsd },
+                { "unix:///dsd.sock", "1.1.1.1", "9999", null, unixDsd },
+                { "unixgram:///dsd.sock", null, null, null, unixDgramDsd },
+                { "unixstream:///dsd.sock", null, null, null, unixStreamDsd },
             }));
         }
 

@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assume;
@@ -19,6 +20,14 @@ import static org.hamcrest.Matchers.equalTo;
 public class TelemetryTest {
     private static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
         @Override public void handle(final Exception ex) { /* No-op */ }
+    };
+
+    private static final StatsDClientErrorHandler LOGGING_HANDLER = new StatsDClientErrorHandler() {
+
+        Logger log = Logger.getLogger(StatsDClientErrorHandler.class.getName());
+        @Override public void handle(final Exception ex) {
+            log.warning("Got exception: " + ex);
+        }
     };
 
     // fakeProcessor store messages from the telemetry only
@@ -110,7 +119,7 @@ public class TelemetryTest {
     @BeforeClass
     public static void start() throws IOException, Exception {
         server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
-        fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
+        fakeProcessor = new FakeProcessor(LOGGING_HANDLER);
         client.telemetry.processor = fakeProcessor;
         telemetryClient.telemetry.processor = fakeProcessor;
 

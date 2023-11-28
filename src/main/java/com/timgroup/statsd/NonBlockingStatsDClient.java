@@ -18,7 +18,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -483,6 +482,19 @@ public class NonBlockingStatsDClient implements StatsDClient {
         if (address instanceof NamedPipeSocketAddress) {
             return new NamedPipeClientChannel((NamedPipeSocketAddress) address);
         }
+        if (address instanceof UnixSocketAddressWithTransport) {
+            UnixSocketAddressWithTransport unixAddr = ((UnixSocketAddressWithTransport) address);
+
+            // TODO: find a way to guess the socket type from the address when transport type is not strictly specified, currently just defaults to datagram.
+            switch (unixAddr.getTransportType()) {
+                case UDS_STREAM:
+                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, bufferSize);
+                case UDS_DATAGRAM:
+                case UDS:
+                    return new UnixDatagramClientChannel(unixAddr.getAddress(), timeout, bufferSize);
+            }
+        }
+        // We keep this for backward compatibility
         try {
             if (Class.forName("jnr.unixsocket.UnixSocketAddress").isInstance(address)) {
                 return new UnixDatagramClientChannel(address, timeout, bufferSize);

@@ -6,10 +6,10 @@ import java.nio.channels.DatagramChannel;
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 
-public class UnixSocketDummyStatsDServer extends DummyStatsDServer {
+public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     private final DatagramChannel server;
 
-    public UnixSocketDummyStatsDServer(String socketPath) throws IOException {
+    public UnixDatagramSocketDummyStatsDServer(String socketPath) throws IOException {
         server = UnixDatagramChannel.open();
         server.bind(new UnixSocketAddress(socketPath));
         this.listen();

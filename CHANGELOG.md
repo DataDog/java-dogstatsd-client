@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.3.0 / 2023.XX.XX
+
+* [FEATURE] Add support for `SOCK_STREAM` Unix sockets. See [#XXX][]
+
 ## 4.2.1 / 2023.03.10
 
 * [FEATURE] Add support for `DD_DOGSTATSD_URL`. See [#217][]

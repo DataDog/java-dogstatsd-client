@@ -1,5 +1,12 @@
 package com.timgroup.statsd;
 
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.Callable;
+import java.util.logging.Logger;
+import jnr.unixsocket.UnixSocketAddress;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -8,7 +15,10 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.File;
 import java.nio.file.Files;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
@@ -16,16 +26,30 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 
+@RunWith(Parameterized.class)
 public class UnixSocketTest implements StatsDClientErrorHandler {
+    private final String transport;
     private static File tmpFolder;
     private static NonBlockingStatsDClient client;
     private static NonBlockingStatsDClient clientAggregate;
     private static DummyStatsDServer server;
     private static File socketFile;
+
     private volatile Exception lastException = new Exception();
 
+    private static Logger log = Logger.getLogger(StatsDClientErrorHandler.class.getName());
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> parameters() {
+        return Arrays.asList(new Object[][] {{"unixstream"}, {"unixgram"}});
+    }
     public synchronized void handle(Exception exception) {
+        log.warning("Got exception: " + exception);
         lastException = exception;
+    }
+
+    public UnixSocketTest(String transport) {
+        this.transport = transport;
     }
 
     static boolean isLinux() {
@@ -62,9 +86,21 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         socketFile = new File(tmpFolder, "socket.sock");
         socketFile.deleteOnExit();
 
-        server = new UnixSocketDummyStatsDServer(socketFile.toString());
+        if (transport.equals("unixgram")) {
+            server = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
+        } else {
+            server = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
+        }
+
+        Callable<SocketAddress> addressLookup = new Callable<SocketAddress>() {
+            @Override
+            public SocketAddress call() throws Exception {
+                return new UnixSocketAddressWithTransport(new UnixSocketAddress(socketFile.getPath()), UnixSocketAddressWithTransport.TransportType.fromScheme(transport));
+            }
+        };
+
         client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .hostname(socketFile.toString())
+            .addressLookup(addressLookup)
             .port(0)
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
@@ -75,7 +111,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .build();
 
         clientAggregate = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .hostname(socketFile.toString())
+            .addressLookup(addressLookup)
             .port(0)
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
@@ -124,7 +160,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             client.gauge("mycount", 20);
             Thread.sleep(10);
         }
-        assertThat(lastException.getMessage(), containsString("Connection refused"));
+        assertThat(lastException.getMessage(), anyOf(containsString("Connection refused"), containsString("Broken pipe")));
 
         // Delete the socket file, client should throw an IOException
         lastException = new Exception();
@@ -134,11 +170,16 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         while(lastException.getMessage() == null) {
             Thread.sleep(10);
         }
-        assertThat(lastException.getMessage(), containsString("No such file or directory"));
+        assertThat(lastException.getMessage(), anyOf(containsString("No such file or directory"), containsString("Connection refused")));
 
         // Re-open the server, next send should work OK
         lastException = new Exception();
-        DummyStatsDServer server2 = new UnixSocketDummyStatsDServer(socketFile.toString());
+        DummyStatsDServer server2;
+        if (transport.equals("unixgram")) {
+            server2 = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
+        } else {
+            server2 = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
+        }
 
         client.gauge("mycount", 30);
         server2.waitForMessage();
@@ -159,16 +200,26 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
         // Freeze the server to simulate dsd being overwhelmed
         server.freeze();
-        while(lastException.getMessage() == null) {
-            client.gauge("mycount", 20);
-            Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
+        if (transport == "unixgram") {
+            while (lastException.getMessage() == null) {
+                client.gauge("mycount", 20);
+                Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
+            }
+            String excMessage = isLinux() ? "Resource temporarily unavailable" : "No buffer space available";
+            assertThat(lastException.getMessage(), containsString(excMessage));
+        } else {
+            // We can't realistically fill the buffer on a stream socket because we can't timeout in the middle of packets,
+            // so we just send a lot of packets
+            for (int i = 0; i < 100; i++) {
+                client.gauge("mycount", 20);
+            }
         }
-        String excMessage = isLinux() ? "Resource temporarily unavailable" : "No buffer space available";
-        assertThat(lastException.getMessage(), containsString(excMessage));
 
         // Make sure we recover after we resume listening
         server.clear();
         server.unfreeze();
+
+        // Now make sure we can receive gauges with 30
         while (!server.messagesReceived().contains("my.prefix.mycount:30|g")) {
             server.clear();
             client.gauge("mycount", 30);
