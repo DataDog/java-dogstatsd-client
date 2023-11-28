@@ -1,7 +1,6 @@
 package com.timgroup.statsd;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
@@ -52,31 +51,13 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         this.transport = transport;
     }
 
-    static boolean isLinux() {
-        return System.getProperty("os.name").toLowerCase().contains("linux");
-    }
-
-    static boolean isMac() {
-        return System.getProperty("os.name").toLowerCase().contains("mac");
-    }
-
-    static boolean isJnrAvailable() {
-        try {
-            Class.forName("jnr.unixsocket.UnixDatagramChannel");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
-    // Check if jnr.unixsocket is on the classpath.
-    static boolean isUdsAvailable() {
-        return (isLinux() || isMac()) && isJnrAvailable();
+    private static boolean isJnrAvailable() {
+        return TestHelpers.isJnrAvailable();
     }
 
     @BeforeClass
     public static void supportedOnly() throws IOException {
-        Assume.assumeTrue(isUdsAvailable());
+        Assume.assumeTrue(TestHelpers.isUdsAvailable());
     }
 
     @Before
@@ -205,7 +186,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
                 client.gauge("mycount", 20);
                 Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
             }
-            String excMessage = isLinux() ? "Resource temporarily unavailable" : "No buffer space available";
+            String excMessage = TestHelpers.isLinux() ? "Resource temporarily unavailable" : "No buffer space available";
             assertThat(lastException.getMessage(), containsString(excMessage));
         } else {
             // We can't realistically fill the buffer on a stream socket because we can't timeout in the middle of packets,

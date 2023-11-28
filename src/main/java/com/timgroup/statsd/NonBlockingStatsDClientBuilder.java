@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import java.util.Scanner;
-import jnr.constants.platform.Sock;
 import jnr.unixsocket.UnixSocketAddress;
 
 import java.net.InetAddress;
@@ -349,9 +347,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     }
 
     protected static Callable<SocketAddress> staticUnixResolution(final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
-        final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
+                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
                 return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
         };

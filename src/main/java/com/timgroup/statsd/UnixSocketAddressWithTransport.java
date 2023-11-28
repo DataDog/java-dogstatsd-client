@@ -7,7 +7,7 @@ import jnr.unixsocket.UnixSocketChannel;
 
 public class UnixSocketAddressWithTransport extends SocketAddress {
 
-    private final UnixSocketAddress address;
+    private final SocketAddress address;
     private final TransportType transportType;
 
     public enum TransportType {
@@ -38,7 +38,7 @@ public class UnixSocketAddressWithTransport extends SocketAddress {
         }
     }
 
-    public UnixSocketAddressWithTransport(UnixSocketAddress address, TransportType transportType) {
+    public UnixSocketAddressWithTransport(SocketAddress address, TransportType transportType) {
         this.address = address;
         this.transportType = transportType;
     }
@@ -56,7 +56,7 @@ public class UnixSocketAddressWithTransport extends SocketAddress {
         return Objects.hash(address, transportType);
     }
 
-    UnixSocketAddress getAddress() {
+    SocketAddress getAddress() {
         return address;
     }
 

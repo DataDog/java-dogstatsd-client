@@ -385,7 +385,7 @@ public class TelemetryTest {
 
     @Test(timeout = 5000L)
     public void telemetry_droppedData() throws Exception {
-        Assume.assumeTrue(UnixSocketTest.isUdsAvailable());
+        Assume.assumeTrue(TestHelpers.isUdsAvailable());
 
         // fails to send any data on the network, producing packets dropped
         NonBlockingStatsDClient clientError = new NonBlockingStatsDClientBuilder()

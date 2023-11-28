@@ -9,13 +9,10 @@ import java.util.Collection;
 
 import jnr.unixsocket.UnixSocketAddress;
 
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.runners.MethodSorters;
-import org.junit.function.ThrowingRunnable;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;

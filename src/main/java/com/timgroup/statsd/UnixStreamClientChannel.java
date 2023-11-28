@@ -22,9 +22,9 @@ public class UnixStreamClientChannel implements ClientChannel {
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(UnixSocketAddress address, int timeout, int bufferSize) throws IOException {
+    UnixStreamClientChannel(SocketAddress address, int timeout, int bufferSize) throws IOException {
         this.delegate = null;
-        this.address = address;
+        this.address = (UnixSocketAddress) address;
         this.timeout = timeout;
         this.bufferSize = bufferSize;
     }
