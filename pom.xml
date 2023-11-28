@@ -159,6 +159,27 @@
                 </dependency>
             </dependencies>
         </profile>
+        <profile>
+            <id>new-jdks</id>
+            <activation>
+                <jdk>[16.0,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.19</version>
+                        <configuration>
+                            <!-- Fix for "java.lang.reflect.InaccessibleObjectException: Unable to make field private final java.util.Map java.util.Collections$UnmodifiableMap.m accessible: module java.base does not "opens java.util" to unnamed module @75eeccf5" -->
+                            <argLine>
+                                --add-opens=java.base/java.util=ALL-UNNAMED
+                            </argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
     <dependencies>
@@ -215,6 +236,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
+                <!-- Can't use 3.4.1 as that needs Maven 3.2.5 -->
                 <version>3.0.0-M2</version>
                 <executions>
                     <execution>
@@ -225,7 +247,7 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>[1.7.0-0,1.9.0-0),[9.0.0,13.0.14]</version>
+                                    <version>[1.7.0-0,1.9.0-0),[9.0,18.0-0)</version>
                                 </requireJavaVersion>
                             </rules>
                         </configuration>
@@ -323,6 +345,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.1.1</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>
