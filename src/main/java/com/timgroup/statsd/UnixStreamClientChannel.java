@@ -1,14 +1,18 @@
 package com.timgroup.statsd;
 
+import jnr.unixsocket.UnixSocketAddress;
+import jnr.unixsocket.UnixSocketChannel;
+import jnr.unixsocket.UnixSocketOptions;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
-import jnr.unixsocket.UnixSocketAddress;
-import jnr.unixsocket.UnixSocketChannel;
-import jnr.unixsocket.UnixSocketOptions;
 
+/**
+ * A ClientChannel for Unix domain sockets.
+ */
 public class UnixStreamClientChannel implements ClientChannel {
     private final UnixSocketAddress address;
     private final int timeout;
@@ -61,19 +65,26 @@ public class UnixStreamClientChannel implements ClientChannel {
         return size;
     }
 
+    /**
+     * Writes all bytes from the given buffer to the channel.
+     * @param bb buffer to write
+     * @param canReturnOnTimeout if true, we return if the channel is blocking and we haven't written anything yet
+     * @return number of bytes written
+     * @throws IOException if the channel is closed or an error occurs
+     */
     public int writeAll(ByteBuffer bb, boolean canReturnOnTimeout) throws IOException {
         int remaining = bb.remaining();
         int written = 0;
         while (remaining > 0) {
-            int n = delegate.write(bb);
+            int read = delegate.write(bb);
 
             // If we haven't written anything yet, we can still return
-            if (n == 0 && canReturnOnTimeout && written == 0) {
+            if (read == 0 && canReturnOnTimeout && written == 0) {
                 return written;
             }
 
-            remaining -= n;
-            written += n;
+            remaining -= read;
+            written += read;
         }
         return written;
     }

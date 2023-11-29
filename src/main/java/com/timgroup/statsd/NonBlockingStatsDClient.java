@@ -485,13 +485,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
         if (address instanceof UnixSocketAddressWithTransport) {
             UnixSocketAddressWithTransport unixAddr = ((UnixSocketAddressWithTransport) address);
 
-            // TODO: find a way to guess the socket type from the address when transport type is not strictly specified, currently just defaults to datagram.
+            // TODO: find a way to guess the socket type from the address when transport type is not strictly specified,
+            // currently just defaults to datagram.
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
                     return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, bufferSize);
                 case UDS_DATAGRAM:
                 case UDS:
                     return new UnixDatagramClientChannel(unixAddr.getAddress(), timeout, bufferSize);
+                default:
+                    throw new IllegalArgumentException("Unsupported transport type: " + unixAddr.getTransportType());
             }
         }
         // We keep this for backward compatibility

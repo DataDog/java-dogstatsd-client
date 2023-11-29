@@ -1,9 +1,10 @@
 package com.timgroup.statsd;
 
-import java.net.SocketAddress;
-import java.util.Objects;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
+
+import java.net.SocketAddress;
+import java.util.Objects;
 
 public class UnixSocketAddressWithTransport extends SocketAddress {
 
@@ -33,6 +34,8 @@ public class UnixSocketAddressWithTransport extends SocketAddress {
                     return UDS_DATAGRAM;
                 case "unix":
                     return UDS;
+                default:
+                    break;
             }
             throw new IllegalArgumentException("Unknown scheme: " + scheme);
         }
@@ -44,10 +47,14 @@ public class UnixSocketAddressWithTransport extends SocketAddress {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        UnixSocketAddressWithTransport that = (UnixSocketAddressWithTransport) o;
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (other == null || getClass() != other.getClass()) {
+            return false;
+        }
+        UnixSocketAddressWithTransport that = (UnixSocketAddressWithTransport) other;
         return Objects.equals(address, that.address) && transportType == that.transportType;
     }
 

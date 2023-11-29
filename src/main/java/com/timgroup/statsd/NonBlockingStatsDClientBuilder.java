@@ -307,7 +307,10 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         if (port == 0) {
             return new Callable<SocketAddress>() {
                 @Override public SocketAddress call() throws UnknownHostException {
-                    return new UnixSocketAddressWithTransport(new UnixSocketAddress(hostname), UnixSocketAddressWithTransport.TransportType.UDS);
+                    return new UnixSocketAddressWithTransport(
+                            new UnixSocketAddress(hostname),
+                            UnixSocketAddressWithTransport.TransportType.UDS
+                    );
                 }
             };
         } else {
@@ -346,7 +349,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         };
     }
 
-    protected static Callable<SocketAddress> staticUnixResolution(final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
+    protected static Callable<SocketAddress> staticUnixResolution(
+            final String path,
+            final UnixSocketAddressWithTransport.TransportType transportType) {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
                 final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
