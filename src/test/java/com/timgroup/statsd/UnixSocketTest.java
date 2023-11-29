@@ -129,6 +129,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
     @Test(timeout = 10000L)
     public void resist_dsd_restart() throws Exception {
+        // Send one metric, check that it works.
         client.gauge("mycount", 10);
         server.waitForMessage();
         assertThat(server.messagesReceived(), contains("my.prefix.mycount:10|g"));
@@ -141,6 +142,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             client.gauge("mycount", 20);
             Thread.sleep(10);
         }
+        // Depending on the state of the client at that point we might get different messages.
         assertThat(lastException.getMessage(), anyOf(containsString("Connection refused"), containsString("Broken pipe")));
 
         // Delete the socket file, client should throw an IOException
@@ -151,6 +153,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         while(lastException.getMessage() == null) {
             Thread.sleep(10);
         }
+        // Depending on the state of the client at that point we might get different messages.
         assertThat(lastException.getMessage(), anyOf(containsString("No such file or directory"), containsString("Connection refused")));
 
         // Re-open the server, next send should work OK
@@ -160,13 +163,18 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         } else {
             server2 = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
         }
-        // Reset the exception now that the server is there and listening. (otherwise the client could still generate exceptions)
-        lastException = new Exception();
 
         client.gauge("mycount", 30);
         server2.waitForMessage();
 
-        assertThat(server2.messagesReceived(), hasItem("my.prefix.mycount:30|g"));
+        // Reset the exception now that the server is there and listening. (otherwise the client could still generate exceptions)
+        lastException = new Exception();
+
+        // Check that we get no further exceptions
+        client.gauge("mycount", 40);
+        server2.waitForMessage();
+
+        assertThat(server2.messagesReceived(), hasItem("my.prefix.mycount:40|g"));
         server2.clear();
         assertThat(lastException.getMessage(), nullValue());
         server2.close();
