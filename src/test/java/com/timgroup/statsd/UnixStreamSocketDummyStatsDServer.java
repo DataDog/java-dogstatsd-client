@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +50,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
 
     }
 
-    private boolean readPacket(UnixSocketChannel channel, ByteBuffer packet) throws IOException {
+    private boolean readPacket(SocketChannel channel, ByteBuffer packet) throws IOException {
         try {
             ByteBuffer delimiterBuffer = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
             int read = channel.read(delimiterBuffer);

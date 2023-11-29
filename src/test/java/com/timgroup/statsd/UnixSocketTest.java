@@ -38,7 +38,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
     private static Logger log = Logger.getLogger(StatsDClientErrorHandler.class.getName());
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {{"unixstream"}, {"unixgram"}});
     }
@@ -154,13 +154,14 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         assertThat(lastException.getMessage(), anyOf(containsString("No such file or directory"), containsString("Connection refused")));
 
         // Re-open the server, next send should work OK
-        lastException = new Exception();
         DummyStatsDServer server2;
         if (transport.equals("unixgram")) {
             server2 = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
         } else {
             server2 = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
         }
+        // Reset the exception now that the server is there and listening. (otherwise the client could still generate exceptions)
+        lastException = new Exception();
 
         client.gauge("mycount", 30);
         server2.waitForMessage();
