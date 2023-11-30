@@ -15,6 +15,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.scm.id>github</project.scm.id>
         <java.version>1.6</java.version>
+        <!-- 3.1.0 is last version to support Java 7 -->
+        <maven-wrapper-plugin.version>3.1.0</maven-wrapper-plugin.version>
+        <!-- 2.22.2 is last version to support Java 7 -->
+        <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
         <!-- Note: using project checkstyle with AOSP style
         find the default google java checkstyle config here -
         <checkstyle.config.location>google_checks.xml</checkstyle.config.location>
@@ -135,7 +139,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>2.19</version>
+                        <version>${maven-surefire-plugin.version}</version>
                         <configuration>
                             <classpathDependencyExcludes>
                                 <classpathDependencyExclude>com.github.jnr:jnr-unixsocket</classpathDependencyExclude>
@@ -169,7 +173,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>2.19</version>
+                        <version>${maven-surefire-plugin.version}</version>
                         <configuration>
                             <!-- Fix for "java.lang.reflect.InaccessibleObjectException: Unable to make field private final java.util.Map java.util.Collections$UnmodifiableMap.m accessible: module java.base does not "opens java.util" to unnamed module @75eeccf5" -->
                             <argLine>
@@ -227,17 +231,22 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
+        <pluginManagement>
+            <plugins>
+
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19</version>
+                <version>${maven-surefire-plugin.version}</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <!-- Can't use 3.4.1 as that needs Maven 3.2.5 -->
-                <version>3.0.0-M2</version>
+                <!-- 3.0.0-M3 is max version that supports Java 7 -->
+                <version>3.0.0-M3</version>
                 <executions>
                     <execution>
                         <id>validate</id>
@@ -349,6 +358,11 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-wrapper-plugin</artifactId>
+                <version>${maven-wrapper-plugin.version}</version>
             </plugin>
         </plugins>
     </build>
