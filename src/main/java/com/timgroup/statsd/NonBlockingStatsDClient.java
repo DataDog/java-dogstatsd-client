@@ -485,8 +485,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         if (address instanceof UnixSocketAddressWithTransport) {
             UnixSocketAddressWithTransport unixAddr = ((UnixSocketAddressWithTransport) address);
 
-            // TODO: find a way to guess the socket type from the address when transport type is not strictly specified,
-            // currently just defaults to datagram.
+            // TODO: Maybe introduce a `UnixClientChannel` that can handle both stream and datagram sockets? This would
+            // Allow us to support `unix://` for both kind of sockets like in go.
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
                     return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, bufferSize);

@@ -1,8 +1,5 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixSocketAddress;
-import jnr.unixsocket.UnixSocketChannel;
-
 import java.net.SocketAddress;
 import java.util.Objects;
 
