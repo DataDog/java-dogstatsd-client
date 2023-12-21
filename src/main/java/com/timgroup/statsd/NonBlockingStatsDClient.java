@@ -481,7 +481,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return tagString(tags, constantTagsRendered, builder);
     }
 
-    ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize) throws Exception {
+    ClientChannel createByteChannel(
+            Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize)
+            throws Exception {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
             return new NamedPipeClientChannel((NamedPipeSocketAddress) address);

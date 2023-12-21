@@ -42,7 +42,7 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     @Override
-    synchronized public int write(ByteBuffer src) throws IOException {
+    public synchronized int write(ByteBuffer src) throws IOException {
         connectIfNeeded();
 
         int size = src.remaining();
