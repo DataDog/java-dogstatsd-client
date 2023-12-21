@@ -26,6 +26,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         server.socket().bind(new UnixSocketAddress(socketPath));
         this.listen();
     }
+
     @Override
     protected boolean isOpen() {
         return server.isOpen();
@@ -53,6 +54,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     private boolean readPacket(SocketChannel channel, ByteBuffer packet) throws IOException {
         try {
             ByteBuffer delimiterBuffer = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
+
             int read = channel.read(delimiterBuffer);
             delimiterBuffer.flip();
             if (read <= 0) {

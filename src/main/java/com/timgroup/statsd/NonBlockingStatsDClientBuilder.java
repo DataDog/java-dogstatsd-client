@@ -34,6 +34,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
     public int aggregationShards = StatsDAggregator.DEFAULT_SHARDS;
     public boolean originDetectionEnabled = NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION;
+    public int connectionTimeout = NonBlockingStatsDClient.SOCKET_CONNECT_TIMEOUT_MS;
 
     public Callable<SocketAddress> addressLookup;
     public Callable<SocketAddress> telemetryAddressLookup;
@@ -68,6 +69,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder timeout(int val) {
         timeout = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder connectionTimeout(int val) {
+        connectionTimeout = val;
         return this;
     }
 

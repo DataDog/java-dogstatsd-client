@@ -85,6 +85,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .port(0)
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .connectionTimeout(1)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
@@ -96,6 +97,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .port(0)
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .connectionTimeout(1)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
@@ -217,5 +219,25 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         }
         assertThat(server.messagesReceived(), hasItem("my.prefix.mycount:30|g"));
         server.clear();
+    }
+
+    @Test(timeout = 10000L)
+    public void testConnectionTimeout() throws InterruptedException {
+        if (transport != "unixstream") {
+            // Connection timeout is not supported for unixgram
+            return;
+        }
+
+        // Delay the `accept()` on the server
+        server.freeze();
+        client.gauge("mycount", 10);
+        Thread.sleep(10);
+        server.unfreeze();
+
+        server.waitForMessage();
+        assertThat(server.messagesReceived(), contains("my.prefix.mycount:10|g"));
+        server.clear();
+        assertThat(lastException.getMessage(), nullValue());
+
     }
 }

@@ -16,7 +16,9 @@ import java.nio.channels.SocketChannel;
 public class UnixStreamClientChannel implements ClientChannel {
     private final UnixSocketAddress address;
     private final int timeout;
+    private final int connectionTimeout;
     private final int bufferSize;
+
 
     private SocketChannel delegate;
     private final ByteBuffer delimiterBuffer = ByteBuffer.allocateDirect(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
@@ -26,10 +28,11 @@ public class UnixStreamClientChannel implements ClientChannel {
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(SocketAddress address, int timeout, int bufferSize) throws IOException {
+    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize) throws IOException {
         this.delegate = null;
         this.address = (UnixSocketAddress) address;
         this.timeout = timeout;
+        this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
     }
 
@@ -39,10 +42,8 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     @Override
-    public int write(ByteBuffer src) throws IOException {
-        if (delegate == null || !delegate.isConnected()) {
-            connect();
-        }
+    synchronized public int write(ByteBuffer src) throws IOException {
+        connectIfNeeded();
 
         int size = src.remaining();
         if (size == 0) {
@@ -53,12 +54,12 @@ public class UnixStreamClientChannel implements ClientChannel {
         delimiterBuffer.flip();
 
         try {
-            if (writeAll(delimiterBuffer, true) > 0) {
-                writeAll(src, false);
+            long deadline = System.currentTimeMillis() + timeout;
+            if (writeAll(delimiterBuffer, true, deadline) > 0) {
+                writeAll(src, false, deadline);
             }
         } catch (IOException e) {
-            delegate.close();
-            delegate = null;
+            disconnect();
             throw e;
         }
 
@@ -69,10 +70,11 @@ public class UnixStreamClientChannel implements ClientChannel {
      * Writes all bytes from the given buffer to the channel.
      * @param bb buffer to write
      * @param canReturnOnTimeout if true, we return if the channel is blocking and we haven't written anything yet
+     * @param deadline deadline for the write
      * @return number of bytes written
      * @throws IOException if the channel is closed or an error occurs
      */
-    public int writeAll(ByteBuffer bb, boolean canReturnOnTimeout) throws IOException {
+    public int writeAll(ByteBuffer bb, boolean canReturnOnTimeout, long deadline) throws IOException {
         int remaining = bb.remaining();
         int written = 0;
         while (remaining > 0) {
@@ -85,26 +87,65 @@ public class UnixStreamClientChannel implements ClientChannel {
 
             remaining -= read;
             written += read;
+
+            if (deadline > 0 && System.currentTimeMillis() > deadline) {
+                throw new IOException("Write timed out");
+            }
         }
         return written;
+    }
+
+    private void connectIfNeeded() throws IOException {
+        if (delegate == null) {
+            connect();
+        }
+    }
+
+    private void disconnect() throws IOException {
+        if (delegate != null) {
+            delegate.close();
+            delegate = null;
+        }
     }
 
     private void connect() throws IOException {
         if (this.delegate != null) {
             try {
-                this.delegate.close();
-                this.delegate = null;
+                disconnect();
             } catch (IOException e) {
                 // ignore to be sure we don't stay with a broken delegate forever.
             }
         }
-        this.delegate = UnixSocketChannel.open(address);
+
+        UnixSocketChannel delegate = UnixSocketChannel.create();
+
+        long deadline = System.currentTimeMillis() + connectionTimeout;
+        if (connectionTimeout > 0) {
+            // Set connect timeout, this should work at least on linux
+            // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
+            // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
+            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
+        }
+        delegate.connect(address);
+        while (!delegate.finishConnect()) {
+            // wait for connection to be established
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                throw new IOException("Interrupted while waiting for connection", e);
+            }
+            if (connectionTimeout > 0 && System.currentTimeMillis() > deadline) {
+                throw new IOException("Connection timed out");
+            }
+        }
+
         if (timeout > 0) {
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
         }
         if (bufferSize > 0) {
             delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
         }
+        this.delegate = delegate;
     }
 
     @Override
