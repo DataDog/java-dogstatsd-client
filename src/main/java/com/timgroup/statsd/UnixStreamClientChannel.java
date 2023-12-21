@@ -150,10 +150,7 @@ public class UnixStreamClientChannel implements ClientChannel {
 
     @Override
     public void close() throws IOException {
-        // closing the file also closes the channel
-        if (delegate != null) {
-            delegate.close();
-        }
+        disconnect();
     }
 
     @Override
