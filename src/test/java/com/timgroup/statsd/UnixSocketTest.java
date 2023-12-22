@@ -85,7 +85,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .port(0)
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
-            .connectionTimeout(1)
+            .connectionTimeout(100)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
@@ -97,7 +97,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .port(0)
             .queueSize(1)
             .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
-            .connectionTimeout(1)
+            .connectionTimeout(100)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
@@ -231,7 +231,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         // Delay the `accept()` on the server
         server.freeze();
         client.gauge("mycount", 10);
-        Thread.sleep(10);
+        // The connection timeout in the test is set to 100ms.
+        Thread.sleep(300);
         server.unfreeze();
 
         server.waitForMessage();
