@@ -54,7 +54,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         delimiterBuffer.flip();
 
         try {
-            long deadline = System.currentTimeMillis() + timeout;
+            long deadline = System.nanoTime() + timeout * 1_000_000L;
             if (writeAll(delimiterBuffer, true, deadline) > 0) {
                 writeAll(src, false, deadline);
             }
@@ -88,7 +88,7 @@ public class UnixStreamClientChannel implements ClientChannel {
             remaining -= read;
             written += read;
 
-            if (deadline > 0 && System.currentTimeMillis() > deadline) {
+            if (deadline > 0 && System.nanoTime() > deadline) {
                 throw new IOException("Write timed out");
             }
         }
@@ -141,6 +141,8 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         if (timeout > 0) {
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+        } else {
+            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, 0);
         }
         if (bufferSize > 0) {
             delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
