@@ -1,13 +1,16 @@
 package com.timgroup.statsd;
 
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelector;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.unixsocket.UnixServerSocketChannel;
@@ -16,7 +19,7 @@ import jnr.unixsocket.UnixSocketChannel;
 
 public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     private final UnixServerSocketChannel server;
-    private final List<UnixSocketChannel> channels = new ArrayList<>();
+    private final ConcurrentLinkedQueue<UnixSocketChannel> channels = new ConcurrentLinkedQueue<>();
 
     private final Logger logger = Logger.getLogger(UnixStreamSocketDummyStatsDServer.class.getName());
 
@@ -24,6 +27,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         server = UnixServerSocketChannel.open();
         server.configureBlocking(false);
         server.socket().bind(new UnixSocketAddress(socketPath));
+        this.accept();
         this.listen();
     }
 
@@ -32,19 +36,42 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         return server.isOpen();
     }
 
+    protected void accept() {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final ByteBuffer packet = ByteBuffer.allocate(1500);
+
+                while(isOpen()) {
+                    if (freeze) {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                        }
+                    } else {
+                        try {
+                            UnixSocketChannel clientChannel = server.accept();
+                            if (clientChannel != null) {
+                                clientChannel.configureBlocking(true);
+                                try {
+                                    logger.info("Accepted connection from " + clientChannel.getRemoteSocketAddress());
+                                } catch (Exception e) {
+                                    logger.warning("Failed to get remote socket address");
+                                }
+                                channels.add(clientChannel);
+                            }
+                        } catch (IOException e) {
+                        }
+                    }
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+    }
+
     @Override
     protected void receive(ByteBuffer packet) throws IOException {
-        UnixSocketChannel clientChannel = server.accept();
-        if (clientChannel != null) {
-            clientChannel.configureBlocking(false);
-            try {
-                logger.info("Accepted connection from " + clientChannel.getRemoteSocketAddress());
-            } catch (Exception e) {
-                logger.warning("Failed to get remote socket address");
-            }
-            channels.add(clientChannel);
-        }
-
         for (UnixSocketChannel channel : channels) {
             if (channel.isConnected()) {
                 if (readPacket(channel, packet)) {
@@ -52,7 +79,6 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                 }
             }
         }
-
     }
 
     private boolean readPacket(SocketChannel channel, ByteBuffer packet) throws IOException {
