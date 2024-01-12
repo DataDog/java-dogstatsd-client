@@ -37,7 +37,11 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         UnixSocketChannel clientChannel = server.accept();
         if (clientChannel != null) {
             clientChannel.configureBlocking(false);
-            logger.info("Accepted connection from " + clientChannel.getRemoteSocketAddress());
+            try {
+                logger.info("Accepted connection from " + clientChannel.getRemoteSocketAddress());
+            } catch (Exception e) {
+                logger.warning("Failed to get remote socket address");
+            }
             channels.add(clientChannel);
         }
 
@@ -68,8 +72,12 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
             }
 
             packet.limit(packetSize);
+            long deadline = System.nanoTime() + 1_000L * 1_000_000L;
             while (packet.hasRemaining()) {
                 read = channel.read(packet);
+                if (deadline < System.nanoTime()) {
+                    channel.close();
+                }
             }
             return true;
         } catch (IOException e) {

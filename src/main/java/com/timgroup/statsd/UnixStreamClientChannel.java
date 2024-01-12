@@ -46,6 +46,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         connectIfNeeded();
 
         int size = src.remaining();
+        int written = 0;
         if (size == 0) {
             return 0;
         }
@@ -55,12 +56,19 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         try {
             long deadline = System.nanoTime() + timeout * 1_000_000L;
-            if (writeAll(delimiterBuffer, true, deadline) > 0) {
-                writeAll(src, false, deadline);
+            written = writeAll(delimiterBuffer, true, deadline);
+            if (written > 0) {
+                written += writeAll(src, false, deadline);
             }
         } catch (IOException e) {
+            // If we get an exception, it's unrecoverable, we close the channel and try to reconnect
             disconnect();
             throw e;
+        }
+
+        // If we haven't written anything, we have a timeout
+        if (written == 0) {
+            throw new IOException("Write timed out");
         }
 
         return size;
@@ -119,7 +127,7 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         UnixSocketChannel delegate = UnixSocketChannel.create();
 
-        long deadline = System.currentTimeMillis() + connectionTimeout;
+        long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux
             // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
@@ -134,7 +142,7 @@ public class UnixStreamClientChannel implements ClientChannel {
             } catch (InterruptedException e) {
                 throw new IOException("Interrupted while waiting for connection", e);
             }
-            if (connectionTimeout > 0 && System.currentTimeMillis() > deadline) {
+            if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                 throw new IOException("Connection timed out");
             }
         }
