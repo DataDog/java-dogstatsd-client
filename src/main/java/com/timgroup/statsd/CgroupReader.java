@@ -76,6 +76,8 @@ class CgroupReader {
          * not running in a container or running is private cgroup namespace, we
          * fallback to the cgroup controller inode. The agent (7.51+) will use it to get
          * the container ID.
+         * In Host cgroup namespace, the container ID should be found. If it is not
+         * found, it means that the application is running on a host/vm.
          * 
          */
         if ((containerID == null || containerID.equals("")) && !isHostCgroupNamespace(CGROUP_NS_PATH)) {
@@ -85,7 +87,7 @@ class CgroupReader {
     }
 
     /**
-     * Parses `path` (=/proc/self/cgroup) and returns the container ID if available.
+     * Returns the content of `path` (=/proc/self/cgroup).
      * 
      * @throws IOException if /proc/self/cgroup is readable and still an I/O error
      *                     occurs reading from the stream.
@@ -100,7 +102,9 @@ class CgroupReader {
     }
 
     /**
-     * Parses a Cgroup file content and returns the corresponding container ID.
+     * Parses a Cgroup file (=/proc/self/cgroup) content and returns the
+     * corresponding container ID. It can be found only if the container
+     * is running in host cgroup namespace.
      * 
      * @param cgroupsContent Cgroup file content
      */
@@ -165,6 +169,10 @@ class CgroupReader {
             }
             Path path = Paths.get(cgroupMountPath.toString(), controller, cgroupNodePath);
             long inode = inodeForPath(path);
+            /*
+             * Inode 0 is not a valid inode. Inode 1 is a bad block inode and inode 2 is the
+             * root of a filesystem. We can safely ignore them.
+             */
             if (inode > 2) {
                 return "in-" + inode;
             }
@@ -188,7 +196,7 @@ class CgroupReader {
             if (tokens.length != 3) {
                 continue;
             }
-            if (CGROUPV1_BASE_CONTROLLER.equals(tokens[1]) || tokens[1].isEmpty()) {
+            if (CGROUPV1_BASE_CONTROLLER.equals(tokens[1]) || CGROUPV2_BASE_CONTROLLER.equals(tokens[1])) {
                 res.put(tokens[1], tokens[2]);
             }
         }
