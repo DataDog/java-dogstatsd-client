@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
+
 abstract class DummyStatsDServer implements Closeable {
     private final List<String> messagesReceived = new ArrayList<String>();
     private AtomicInteger packetsReceived = new AtomicInteger(0);
@@ -20,7 +22,7 @@ abstract class DummyStatsDServer implements Closeable {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                final ByteBuffer packet = ByteBuffer.allocate(1500);
+                final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
 
                 while(isOpen()) {
                     if (freeze) {

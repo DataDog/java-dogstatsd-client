@@ -17,6 +17,8 @@ import jnr.unixsocket.UnixServerSocketChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 
+import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
+
 public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     private final UnixServerSocketChannel server;
     private final ConcurrentLinkedQueue<UnixSocketChannel> channels = new ConcurrentLinkedQueue<>();
@@ -40,7 +42,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                final ByteBuffer packet = ByteBuffer.allocate(1500);
+                final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
 
                 while(isOpen()) {
                     if (freeze) {
