@@ -14,8 +14,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * A reader class that retrieves the current container ID parsed from a the
- * cgroup file.
+ * A reader class that retrieves the current container ID or the cgroup controller
+ * inode parsed from the cgroup file.
  *
  */
 class CgroupReader {
