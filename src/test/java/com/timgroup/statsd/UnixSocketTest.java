@@ -25,7 +25,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 
-public class UnixDatagramSocketTest implements StatsDClientErrorHandler {
+public class UnixSocketTest implements StatsDClientErrorHandler {
     private static File tmpFolder;
     private static NonBlockingStatsDClient client;
     private static NonBlockingStatsDClient clientAggregate;
@@ -55,36 +55,27 @@ public class UnixDatagramSocketTest implements StatsDClientErrorHandler {
 
         server = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
 
-        Callable<SocketAddress> addressLookup = new Callable<SocketAddress>() {
-            @Override
-            public SocketAddress call() throws Exception {
-                return new UnixSocketAddressWithTransport(new UnixSocketAddress(socketFile.getPath()), UnixSocketAddressWithTransport.TransportType.UDS_DATAGRAM);
-            }
-        };
-
         client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-                .addressLookup(addressLookup)
-                .port(0)
-                .queueSize(1)
-                .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
-                .connectionTimeout(100)
-                .socketBufferSize(1024 * 1024)
-                .enableAggregation(false)
-                .errorHandler(this)
-                .originDetectionEnabled(false)
-                .build();
+            .hostname(socketFile.toString())
+            .port(0)
+            .queueSize(1)
+            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .socketBufferSize(1024 * 1024)
+            .enableAggregation(false)
+            .errorHandler(this)
+            .originDetectionEnabled(false)
+            .build();
 
         clientAggregate = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-                .addressLookup(addressLookup)
-                .port(0)
-                .queueSize(1)
-                .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
-                .connectionTimeout(100)
-                .socketBufferSize(1024 * 1024)
-                .enableAggregation(false)
-                .errorHandler(this)
-                .originDetectionEnabled(false)
-                .build();
+            .hostname(socketFile.toString())
+            .port(0)
+            .queueSize(1)
+            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .socketBufferSize(1024 * 1024)
+            .enableAggregation(false)
+            .errorHandler(this)
+            .originDetectionEnabled(false)
+            .build();
     }
 
     @After
@@ -127,7 +118,7 @@ public class UnixDatagramSocketTest implements StatsDClientErrorHandler {
             Thread.sleep(10);
         }
         // Depending on the state of the client at that point we might get different messages.
-        assertThat(lastException.getMessage(), anyOf(containsString("Connection refused"), containsString("Broken pipe")));
+        assertThat(lastException.getMessage(), containsString("Connection refused"));
 
         // Delete the socket file, client should throw an IOException
         lastException = new Exception();
@@ -141,11 +132,11 @@ public class UnixDatagramSocketTest implements StatsDClientErrorHandler {
         assertThat(lastException.getMessage(), containsString("No such file or directory"));
 
         // Re-open the server, next send should work OK
-        DummyStatsDServer server2;
-        server2 = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
         lastException = new Exception();
+        DummyStatsDServer server2 = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
 
         client.gauge("mycount", 30);
+
         server2.waitForMessage();
         assertThat(server2.messagesReceived(), hasItem("my.prefix.mycount:30|g"));
 
@@ -164,7 +155,6 @@ public class UnixDatagramSocketTest implements StatsDClientErrorHandler {
 
         // Freeze the server to simulate dsd being overwhelmed
         server.freeze();
-
         while (lastException.getMessage() == null) {
             client.gauge("mycount", 20);
             Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
