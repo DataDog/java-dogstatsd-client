@@ -1,8 +1,17 @@
 package com.timgroup.statsd;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -119,5 +128,72 @@ public class CgroupReaderTest {
         .toString();
 
         assertThat(CgroupReader.parse(linux44), equalTo("cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411"));
+    }
+
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
+
+    @Before
+    public void assumeNotWindows() {
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
+    }
+
+    @Test
+    public void testWithExistingCgroupV1Inode() throws IOException {
+
+        folder.create();
+        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
+        Path controllerDir = cgroupMountPath.resolve("memory");
+        Path cgroupPath = controllerDir.resolve("docker");
+        Path nodePath = cgroupPath.resolve("3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860");
+        Files.createDirectories(nodePath);
+
+        long inode = (long) Files.getAttribute(nodePath, "unix:ino");
+
+        String cgroupContent = "myfile\5:memory:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860\n";
+        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath, cgroupContent);
+
+        assertEquals("in-" + inode, inodeResult);
+    }
+
+    @Test
+    public void testWithExistingCgroupV2Inode() throws IOException {
+
+        folder.create();
+        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
+        Files.createDirectories(cgroupMountPath);
+
+        long inodeNumber = (long) Files.getAttribute(cgroupMountPath, "unix:ino");
+        String cgroupContent = "0::/\n";
+        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath, cgroupContent);
+
+        assertEquals("in-" + inodeNumber, inodeResult);
+    }
+
+    @Test
+    public void testWithNonExistentCgroupNodePath() throws IOException {
+
+        folder.create();
+        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
+
+        String cgroupContent = "memory:/nonexistentpath\n";
+        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath,
+                cgroupContent);
+
+        assertNull(inodeResult);
+
+    }
+
+    @Test
+    public void testWithEmptyCgroupContent() throws IOException {
+
+        folder.create();
+        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
+
+        String cgroupContent = "";
+        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath,
+                cgroupContent);
+
+        assertNull(inodeResult);
     }
 }
