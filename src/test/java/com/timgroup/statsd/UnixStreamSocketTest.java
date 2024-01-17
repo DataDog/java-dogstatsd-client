@@ -51,15 +51,8 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
         server = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
 
-        Callable<SocketAddress> addressLookup = new Callable<SocketAddress>() {
-            @Override
-            public SocketAddress call() throws Exception {
-                return new UnixSocketAddressWithTransport(new UnixSocketAddress(socketFile.getPath()), UnixSocketAddressWithTransport.TransportType.UDS_STREAM);
-            }
-        };
-
         client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .addressLookup(addressLookup)
+            .socket(socketFile.getPath(), UnixSocketAddressWithTransport.TransportType.UDS_STREAM)
             .port(0)
             .queueSize(1)
             .timeout(500)  // non-zero timeout to ensure exception triggered if socket buffer full.
@@ -71,7 +64,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
             .build();
 
         clientAggregate = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .addressLookup(addressLookup)
+            .socket(socketFile.getPath(), UnixSocketAddressWithTransport.TransportType.UDS_STREAM)
             .port(0)
             .queueSize(1)
             .timeout(500)  // non-zero timeout to ensure exception triggered if socket buffer full.

@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import jnr.constants.platform.Sock;
 import jnr.unixsocket.UnixSocketAddress;
 
 import java.net.InetAddress;
@@ -129,6 +130,25 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder namedPipe(String val) {
         namedPipe = val;
+        return this;
+    }
+
+    private Callable<SocketAddress> socketLookup(final String path, final UnixSocketAddressWithTransport.TransportType transport) {
+        return new Callable<SocketAddress>() {
+            @Override
+            public SocketAddress call() throws Exception {
+                return new UnixSocketAddressWithTransport(new UnixSocketAddress(path), transport);
+            }
+        };
+    }
+
+    public NonBlockingStatsDClientBuilder socket(final String path, final UnixSocketAddressWithTransport.TransportType transport) {
+        addressLookup = socketLookup(path, transport);
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder telemetrySocket(final String path, final UnixSocketAddressWithTransport.TransportType transport) {
+        telemetryAddressLookup = socketLookup(path, transport);
         return this;
     }
 

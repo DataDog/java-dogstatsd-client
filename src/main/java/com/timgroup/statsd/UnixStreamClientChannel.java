@@ -134,16 +134,12 @@ public class UnixStreamClientChannel implements ClientChannel {
             // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
-        delegate.connect(address);
-        while (!delegate.finishConnect()) {
-            // wait for connection to be established
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                throw new IOException("Interrupted while waiting for connection", e);
-            }
+        if (!delegate.connect(address)) {
             if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                 throw new IOException("Connection timed out");
+            }
+            if (!delegate.finishConnect()) {
+                throw new IOException("Connection failed");
             }
         }
 
