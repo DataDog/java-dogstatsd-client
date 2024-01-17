@@ -62,7 +62,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
             .addressLookup(addressLookup)
             .port(0)
             .queueSize(1)
-            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .timeout(500)  // non-zero timeout to ensure exception triggered if socket buffer full.
             .connectionTimeout(500)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
@@ -74,7 +74,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
             .addressLookup(addressLookup)
             .port(0)
             .queueSize(1)
-            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .timeout(500)  // non-zero timeout to ensure exception triggered if socket buffer full.
             .connectionTimeout(500)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
@@ -164,7 +164,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
         while (lastException.getMessage() == null) {
             client.gauge("mycount", 20);
-            Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
+
         }
         String excMessage = "Write timed out";
         assertThat(lastException.getMessage(), containsString(excMessage));

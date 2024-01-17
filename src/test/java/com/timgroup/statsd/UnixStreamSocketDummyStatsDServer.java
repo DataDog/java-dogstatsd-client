@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import com.sun.xml.internal.ws.api.message.Packet;
 import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -22,14 +23,14 @@ import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET
 public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     private final UnixServerSocketChannel server;
     private final ConcurrentLinkedQueue<UnixSocketChannel> channels = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<Packet> packets = new ConcurrentLinkedQueue<>();
 
     private final Logger logger = Logger.getLogger(UnixStreamSocketDummyStatsDServer.class.getName());
 
     public UnixStreamSocketDummyStatsDServer(String socketPath) throws IOException {
         server = UnixServerSocketChannel.open();
-        server.configureBlocking(false);
+        server.configureBlocking(true);
         server.socket().bind(new UnixSocketAddress(socketPath));
-        this.accept();
         this.listen();
     }
 
@@ -38,20 +39,23 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         return server.isOpen();
     }
 
-    protected void accept() {
+    @Override
+    protected void receive(ByteBuffer packet) throws IOException {
+        // This is unused because we re-implement listen() to fit our needs
+    }
+
+    @Override
+    protected void listen() {
+        logger.info("Listening on " + server.getLocalSocketAddress());
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
-
                 while(isOpen()) {
-                    if (freeze) {
+                    if (sleepIfFrozen()) {
+                        continue;
+                    }
                         try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
-                        }
-                    } else {
-                        try {
+                            logger.info("Waiting for connection");
                             UnixSocketChannel clientChannel = server.accept();
                             if (clientChannel != null) {
                                 clientChannel.configureBlocking(true);
@@ -61,10 +65,10 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                                     logger.warning("Failed to get remote socket address");
                                 }
                                 channels.add(clientChannel);
+                                readChannel(clientChannel);
                             }
                         } catch (IOException e) {
                         }
-                    }
                 }
             }
         });
@@ -72,22 +76,43 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         thread.start();
     }
 
-    @Override
-    protected void receive(ByteBuffer packet) throws IOException {
-        for (UnixSocketChannel channel : channels) {
-            if (channel.isConnected()) {
-                if (readPacket(channel, packet)) {
-                    return;
+    public void readChannel(final UnixSocketChannel clientChannel) {
+            logger.info("Reading from " + clientChannel);
+            Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
+
+                while(clientChannel.isOpen()) {
+                    if (sleepIfFrozen()) {
+                        continue;
+                    }
+                    ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
+                    // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
+                    if (readPacket(clientChannel, packet)) {
+                        handlePacket(packet);
+                    } else {
+                        try {
+                            clientChannel.close();
+                        } catch (IOException e) {
+                            logger.warning("Failed to close channel: " + e);
+                        }
+                    }
+
                 }
+                logger.info("Disconnected from " + clientChannel);
             }
-        }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
-    private boolean readPacket(SocketChannel channel, ByteBuffer packet) throws IOException {
+    private boolean readPacket(SocketChannel channel, ByteBuffer packet) {
         try {
             ByteBuffer delimiterBuffer = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
 
             int read = channel.read(delimiterBuffer);
+
             delimiterBuffer.flip();
             if (read <= 0) {
                 // There was nothing to read
@@ -100,16 +125,11 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
             }
 
             packet.limit(packetSize);
-            long deadline = System.nanoTime() + 1_000L * 1_000_000L;
-            while (packet.hasRemaining()) {
-                read = channel.read(packet);
-                if (deadline < System.nanoTime()) {
-                    channel.close();
-                }
+            while (packet.hasRemaining() && channel.isConnected()) {
+                channel.read(packet);
             }
             return true;
         } catch (IOException e) {
-            channel.close();
             return false;
         }
     }

@@ -35,12 +35,7 @@ abstract class DummyStatsDServer implements Closeable {
                             ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
                                                        // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
                             receive(packet);
-                            packetsReceived.addAndGet(1);
-
-                            packet.flip();
-                            for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
-                                addMessage(msg);
-                            }
+                            handlePacket(packet);
                         } catch (IOException e) {
                         }
                     }
@@ -49,6 +44,25 @@ abstract class DummyStatsDServer implements Closeable {
         });
         thread.setDaemon(true);
         thread.start();
+    }
+
+    protected boolean sleepIfFrozen() {
+        if (freeze) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+            }
+        }
+        return freeze;
+    }
+
+    protected void handlePacket(ByteBuffer packet) {
+        packetsReceived.addAndGet(1);
+
+        packet.flip();
+        for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
+            addMessage(msg);
+        }
     }
 
     public void waitForMessage() {
