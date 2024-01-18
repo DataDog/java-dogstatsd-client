@@ -113,8 +113,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         assertThat(lastException.getMessage(), containsString("Connection refused"));
 
         // Delete the socket file, client should throw an IOException
-        lastException = new Exception();
         socketFile.delete();
+        lastException = new Exception();
 
         client.gauge("mycount", 21);
         while(lastException.getMessage() == null) {
