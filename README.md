@@ -23,21 +23,12 @@ The client jar is distributed via Maven central, and can be downloaded [from Mav
 
 ### Unix Domain Socket support
 
-As an alternative to UDP, Agent v6 can receive metrics via a UNIX Socket (on Linux only). This library supports transmission via this protocol. To use it, pass the socket path as a hostname, and `0` as port
-or use the `socket()` method of the builder.
+As an alternative to UDP, Agent v6 can receive metrics via a UNIX Socket (on Linux only). This library supports transmission via this protocol. To use it
+use the `address()` method of the builder and pass the path to the socket with the `unix://` prefix:
 
 ```java
 StatsDClient client = new NonBlockingStatsDClientBuilder()
-    .hostname("/var/run/datadog/dsd.socket")
-    .port(0) // Necessary for unix socket
-    .build();
-```
-
-or
-
-```java
-StatsDClient client = new NonBlockingStatsDClientBuilder()
-    .socket("/var/run/datadog/dsd.socket")
+    .address("unix:///var/run/datadog/dsd.socket")
     .build();
 ```
 
@@ -47,7 +38,7 @@ By default, all exceptions are ignored, mimicking UDP behaviour. When using Unix
 - If DogStatsD's reception buffer were to fill up and the non blocking client is used, the send times out after 100ms and throw either a `java.io.IOException: No buffer space available` or a `java.io.IOException: Resource temporarily unavailable`.
 
 The default UDS transport is using `SOCK_DATAGRAM` sockets. We also have experimental support for `SOCK_STREAM` sockets which can
-be enabled by using the `socket()` method of the builder. This is not recommended for production use at this time.
+be enabled by using the `unixstream://` instead of `unix://`. This is not recommended for production use at this time.
 
 ## Configuration
 

@@ -133,22 +133,13 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
-    private Callable<SocketAddress> socketLookup(final String path, final UnixSocketAddressWithTransport.TransportType transport) {
-        return new Callable<SocketAddress>() {
-            @Override
-            public SocketAddress call() throws Exception {
-                return new UnixSocketAddressWithTransport(new UnixSocketAddress(path), transport);
-            }
-        };
-    }
-
-    public NonBlockingStatsDClientBuilder socket(final String path, final UnixSocketAddressWithTransport.TransportType transport) {
-        addressLookup = socketLookup(path, transport);
+    public NonBlockingStatsDClientBuilder address(String address) {
+        addressLookup = getAddressLookupFromUrl(address);
         return this;
     }
 
-    public NonBlockingStatsDClientBuilder telemetrySocket(final String path, final UnixSocketAddressWithTransport.TransportType transport) {
-        telemetryAddressLookup = socketLookup(path, transport);
+    public NonBlockingStatsDClientBuilder telemetryAddress(String address) {
+        telemetryAddressLookup = getAddressLookupFromUrl(address);
         return this;
     }
 

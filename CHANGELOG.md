@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 4.3.0 / 2023.XX.XX
+## 4.3.0 / 2024.XX.XX
 
 * [FEATURE] Add support for `SOCK_STREAM` Unix sockets. See [#228][]
 
