@@ -1,11 +1,6 @@
 package com.timgroup.statsd;
 
-import java.net.SocketAddress;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.concurrent.Callable;
 import java.util.logging.Logger;
-import jnr.unixsocket.UnixSocketAddress;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -14,10 +9,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.File;
 import java.nio.file.Files;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;

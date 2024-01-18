@@ -1,9 +1,6 @@
 package com.timgroup.statsd;
 
-import java.net.SocketAddress;
-import java.util.concurrent.Callable;
 import java.util.logging.Logger;
-import jnr.unixsocket.UnixSocketAddress;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;

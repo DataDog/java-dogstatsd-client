@@ -1,10 +1,8 @@
 package com.timgroup.statsd;
 
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
-import java.nio.charset.StandardCharsets;
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 

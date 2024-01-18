@@ -1,19 +1,12 @@
 package com.timgroup.statsd;
 
-import com.sun.xml.internal.ws.api.message.Packet;
 import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.spi.AbstractSelector;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
-import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.unixsocket.UnixServerSocketChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
@@ -23,7 +16,6 @@ import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET
 public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     private final UnixServerSocketChannel server;
     private final ConcurrentLinkedQueue<UnixSocketChannel> channels = new ConcurrentLinkedQueue<>();
-    private final ConcurrentLinkedQueue<Packet> packets = new ConcurrentLinkedQueue<>();
 
     private final Logger logger = Logger.getLogger(UnixStreamSocketDummyStatsDServer.class.getName());
 
