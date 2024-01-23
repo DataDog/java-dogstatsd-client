@@ -9,13 +9,10 @@ import java.util.Collection;
 
 import jnr.unixsocket.UnixSocketAddress;
 
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.runners.MethodSorters;
-import org.junit.function.ThrowingRunnable;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,15 +37,6 @@ public class BuilderAddressTest {
         this.port = port;
         this.pipe = pipe;
         this.expected = expected;
-    }
-
-    static boolean isJnrAvailable() {
-        try {
-            Class.forName("jnr.unixsocket.UnixDatagramChannel");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
     }
 
     static final private int defaultPort = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
@@ -83,17 +71,36 @@ public class BuilderAddressTest {
             { null, "1.1.1.1", "9999", "foo", new NamedPipeSocketAddress("\\\\.\\pipe\\foo") },
         }));
 
-        if (isJnrAvailable()) {
+        if (TestHelpers.isJnrAvailable()) {
+            // Here we use FakeUnixSocketAddress instead of UnixSocketAddress to make sure we can always run the tests without jnr-unixsock.
+
+            UnixSocketAddressWithTransport unixDsd = new UnixSocketAddressWithTransport(new FakeUnixSocketAddress("/dsd.sock"), UnixSocketAddressWithTransport.TransportType.UDS);
+            UnixSocketAddressWithTransport unixDgramDsd = new UnixSocketAddressWithTransport(new FakeUnixSocketAddress("/dsd.sock"), UnixSocketAddressWithTransport.TransportType.UDS_DATAGRAM);
+            UnixSocketAddressWithTransport unixStreamDsd = new UnixSocketAddressWithTransport(new FakeUnixSocketAddress("/dsd.sock"), UnixSocketAddressWithTransport.TransportType.UDS_STREAM);
+
             params.addAll(Arrays.asList(new Object[][]{
-                { "unix:///dsd.sock", null, null, null, new UnixSocketAddress("/dsd.sock") },
-                { "unix://unused/dsd.sock", null, null, null, new UnixSocketAddress("/dsd.sock") },
-                { "unix://unused:9999/dsd.sock", null, null, null, new UnixSocketAddress("/dsd.sock") },
-                { null, "/dsd.sock", "0", null, new UnixSocketAddress("/dsd.sock") },
-                { "unix:///dsd.sock", "1.1.1.1", "9999", null, new UnixSocketAddress("/dsd.sock") },
+                { "unix:///dsd.sock", null, null, null, unixDsd },
+                { "unix://unused/dsd.sock", null, null, null, unixDsd },
+                { "unix://unused:9999/dsd.sock", null, null, null, unixDsd},
+                { null, "/dsd.sock", "0", null, unixDsd },
+                { "unix:///dsd.sock", "1.1.1.1", "9999", null, unixDsd },
+                { "unixgram:///dsd.sock", null, null, null, unixDgramDsd },
+                { "unixstream:///dsd.sock", null, null, null, unixStreamDsd },
             }));
         }
 
         return params;
+    }
+
+    static class FakeUnixSocketAddress extends SocketAddress {
+        final  String path;
+        public FakeUnixSocketAddress(String path) {
+            this.path = path;
+        }
+
+        public String getPath() {
+            return path;
+        }
     }
 
     @Before
@@ -118,7 +125,17 @@ public class BuilderAddressTest {
 
         // Default configuration matches env vars
         b = new NonBlockingStatsDClientBuilder().resolve();
-        assertEquals(expected, b.addressLookup.call());
+        SocketAddress actual = b.addressLookup.call();
+
+        // Make it possible to run this code even if we don't have jnr-unixsocket.
+        if (expected instanceof UnixSocketAddressWithTransport) {
+            UnixSocketAddressWithTransport a = (UnixSocketAddressWithTransport)actual;
+            UnixSocketAddressWithTransport e = (UnixSocketAddressWithTransport)expected;
+            assertEquals(((FakeUnixSocketAddress)e.getAddress()).getPath(), ((UnixSocketAddress)a.getAddress()).path());
+            assertEquals(e.getTransportType(), a.getTransportType());
+        } else {
+            assertEquals(expected, actual);
+        }
 
         // Explicit configuration is used regardless of environment variables.
         b = new NonBlockingStatsDClientBuilder().hostname("2.2.2.2").resolve();

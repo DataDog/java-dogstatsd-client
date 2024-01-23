@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
+
 abstract class DummyStatsDServer implements Closeable {
     private final List<String> messagesReceived = new ArrayList<String>();
     private AtomicInteger packetsReceived = new AtomicInteger(0);
@@ -20,7 +22,7 @@ abstract class DummyStatsDServer implements Closeable {
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
-                final ByteBuffer packet = ByteBuffer.allocate(1500);
+                final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
 
                 while(isOpen()) {
                     if (freeze) {
@@ -33,12 +35,7 @@ abstract class DummyStatsDServer implements Closeable {
                             ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
                                                        // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
                             receive(packet);
-                            packetsReceived.addAndGet(1);
-
-                            packet.flip();
-                            for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
-                                addMessage(msg);
-                            }
+                            handlePacket(packet);
                         } catch (IOException e) {
                         }
                     }
@@ -47,6 +44,25 @@ abstract class DummyStatsDServer implements Closeable {
         });
         thread.setDaemon(true);
         thread.start();
+    }
+
+    protected boolean sleepIfFrozen() {
+        if (freeze) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+            }
+        }
+        return freeze;
+    }
+
+    protected void handlePacket(ByteBuffer packet) {
+        packetsReceived.addAndGet(1);
+
+        packet.flip();
+        for (String msg : StandardCharsets.UTF_8.decode(packet).toString().split("\n")) {
+            addMessage(msg);
+        }
     }
 
     public void waitForMessage() {

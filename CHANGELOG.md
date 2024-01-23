@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.3.0 / 2024.XX.XX
+
+* [FEATURE] Add support for `SOCK_STREAM` Unix sockets. See [#228][]
+
 ## 4.2.1 / 2023.03.10
 
 * [FEATURE] Add support for `DD_DOGSTATSD_URL`. See [#217][]
@@ -232,6 +236,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#203]: https://github.com/DataDog/java-dogstatsd-client/issues/203
 [#211]: https://github.com/DataDog/java-dogstatsd-client/issues/211
 [#217]: https://github.com/DataDog/java-dogstatsd-client/issues/217
+[#228]: https://github.com/DataDog/java-dogstatsd-client/pull/228
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz

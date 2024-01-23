@@ -6,20 +6,22 @@ import java.nio.channels.DatagramChannel;
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 
-public class UnixSocketDummyStatsDServer extends DummyStatsDServer {
+import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
+
+public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     private final DatagramChannel server;
 
-    public UnixSocketDummyStatsDServer(String socketPath) throws IOException {
+    public UnixDatagramSocketDummyStatsDServer(String socketPath) throws IOException {
         server = UnixDatagramChannel.open();
         server.bind(new UnixSocketAddress(socketPath));
         this.listen();
     }
+
     @Override
     protected boolean isOpen() {
         return server.isOpen();
     }
 
-    @Override
     protected void receive(ByteBuffer packet) throws IOException {
         server.receive(packet);
     }

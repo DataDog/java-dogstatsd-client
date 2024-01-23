@@ -18,7 +18,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -99,6 +98,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     public static final boolean DEFAULT_ENABLE_AGGREGATION = true;
     public static final boolean DEFAULT_ENABLE_ORIGIN_DETECTION = true;
+    public static final int SOCKET_CONNECT_TIMEOUT_MS = 1000;
 
     public static final String CLIENT_TAG = "client:java";
     public static final String CLIENT_VERSION_TAG = "client_version:";
@@ -241,6 +241,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
      *     The client tries to read the container ID by parsing the file /proc/self/cgroup.
      *     This is not supported on Windows.
      *     The client prioritizes the value passed via or entityID or DD_ENTITY_ID (if set) over the container ID.
+     * @param connectionTimeout
+     *     the timeout in milliseconds for connecting to the StatsD server. Applies to unix sockets only.
+     *     It is also used to detect if a connection is still alive and re-establish a new one if needed.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -250,7 +253,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
             final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory customThreadFactory,
-            String containerID, final boolean originDetectionEnabled)
+            String containerID, final boolean originDetectionEnabled, final int connectionTimeout)
             throws StatsDClientException {
 
         if ((prefix != null) && (!prefix.isEmpty())) {
@@ -297,7 +300,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         try {
-            clientChannel = createByteChannel(addressLookup, timeout, bufferSize);
+            clientChannel = createByteChannel(addressLookup, timeout, connectionTimeout, bufferSize);
 
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
@@ -316,7 +319,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, bufferSize);
+                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, bufferSize);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
@@ -377,7 +380,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
             (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
             builder.aggregationShards, builder.threadFactory, builder.containerID,
-            builder.originDetectionEnabled);
+            builder.originDetectionEnabled, builder.connectionTimeout);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
@@ -478,11 +481,29 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return tagString(tags, constantTagsRendered, builder);
     }
 
-    ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int bufferSize) throws Exception {
+    ClientChannel createByteChannel(
+            Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize)
+            throws Exception {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
             return new NamedPipeClientChannel((NamedPipeSocketAddress) address);
         }
+        if (address instanceof UnixSocketAddressWithTransport) {
+            UnixSocketAddressWithTransport unixAddr = ((UnixSocketAddressWithTransport) address);
+
+            // TODO: Maybe introduce a `UnixClientChannel` that can handle both stream and datagram sockets? This would
+            // Allow us to support `unix://` for both kind of sockets like in go.
+            switch (unixAddr.getTransportType()) {
+                case UDS_STREAM:
+                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, bufferSize);
+                case UDS_DATAGRAM:
+                case UDS:
+                    return new UnixDatagramClientChannel(unixAddr.getAddress(), timeout, bufferSize);
+                default:
+                    throw new IllegalArgumentException("Unsupported transport type: " + unixAddr.getTransportType());
+            }
+        }
+        // We keep this for backward compatibility
         try {
             if (Class.forName("jnr.unixsocket.UnixSocketAddress").isInstance(address)) {
                 return new UnixDatagramClientChannel(address, timeout, bufferSize);

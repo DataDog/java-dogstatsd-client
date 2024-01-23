@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import jnr.constants.platform.Sock;
 import jnr.unixsocket.UnixSocketAddress;
 
 import java.net.InetAddress;
@@ -34,6 +35,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
     public int aggregationShards = StatsDAggregator.DEFAULT_SHARDS;
     public boolean originDetectionEnabled = NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION;
+    public int connectionTimeout = NonBlockingStatsDClient.SOCKET_CONNECT_TIMEOUT_MS;
 
     public Callable<SocketAddress> addressLookup;
     public Callable<SocketAddress> telemetryAddressLookup;
@@ -68,6 +70,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder timeout(int val) {
         timeout = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder connectionTimeout(int val) {
+        connectionTimeout = val;
         return this;
     }
 
@@ -123,6 +130,16 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder namedPipe(String val) {
         namedPipe = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder address(String address) {
+        addressLookup = getAddressLookupFromUrl(address);
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder telemetryAddress(String address) {
+        telemetryAddressLookup = getAddressLookupFromUrl(address);
         return this;
     }
 
@@ -283,9 +300,12 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             return staticAddress(uriHost, uriPort);
         }
 
-        if (parsed.getScheme().equals("unix")) {
+        if (parsed.getScheme().startsWith("unix")) {
             String uriPath = parsed.getPath();
-            return staticAddress(uriPath, 0);
+            return staticUnixResolution(
+                    uriPath,
+                    UnixSocketAddressWithTransport.TransportType.fromScheme(parsed.getScheme())
+            );
         }
 
         return null;
@@ -304,7 +324,10 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         if (port == 0) {
             return new Callable<SocketAddress>() {
                 @Override public SocketAddress call() throws UnknownHostException {
-                    return new UnixSocketAddress(hostname);
+                    return new UnixSocketAddressWithTransport(
+                            new UnixSocketAddress(hostname),
+                            UnixSocketAddressWithTransport.TransportType.UDS
+                    );
                 }
             };
         } else {
@@ -339,6 +362,17 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
                 return socketAddress;
+            }
+        };
+    }
+
+    protected static Callable<SocketAddress> staticUnixResolution(
+            final String path,
+            final UnixSocketAddressWithTransport.TransportType transportType) {
+        return new Callable<SocketAddress>() {
+            @Override public SocketAddress call() {
+                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
+                return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
         };
     }

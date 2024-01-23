@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.File;
 import java.nio.file.Files;
 
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
@@ -17,7 +18,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 
-public class UnixSocketTest implements StatsDClientErrorHandler {
+public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     private static File tmpFolder;
     private static NonBlockingStatsDClient client;
     private static NonBlockingStatsDClient clientAggregate;
@@ -45,13 +46,14 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         socketFile = new File(tmpFolder, "socket.sock");
         socketFile.deleteOnExit();
 
-        server = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
+        server = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
 
         client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .hostname(socketFile.toString())
+            .address("unixstream://" + socketFile.getPath())
             .port(0)
             .queueSize(1)
-            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .timeout(500)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .connectionTimeout(500)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
@@ -59,10 +61,11 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             .build();
 
         clientAggregate = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .hostname(socketFile.toString())
+            .address("unixstream://" + socketFile.getPath())
             .port(0)
             .queueSize(1)
-            .timeout(1)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .timeout(500)  // non-zero timeout to ensure exception triggered if socket buffer full.
+            .connectionTimeout(500)
             .socketBufferSize(1024 * 1024)
             .enableAggregation(false)
             .errorHandler(this)
@@ -109,11 +112,12 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             client.gauge("mycount", 20);
             Thread.sleep(10);
         }
-        assertThat(lastException.getMessage(), containsString("Connection refused"));
+        // Depending on the state of the client at that point we might get different messages.
+        assertThat(lastException.getMessage(), anyOf(containsString("Connection refused"), containsString("Broken pipe")));
 
         // Delete the socket file, client should throw an IOException
-        socketFile.delete();
         lastException = new Exception();
+        socketFile.delete();
 
         client.gauge("mycount", 21);
         while(lastException.getMessage() == null) {
@@ -122,11 +126,12 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         assertThat(lastException.getMessage(), containsString("No such file or directory"));
 
         // Re-open the server, next send should work OK
+        DummyStatsDServer server2;
+        server2 = new UnixStreamSocketDummyStatsDServer(socketFile.toString());
+
         lastException = new Exception();
-        DummyStatsDServer server2 = new UnixDatagramSocketDummyStatsDServer(socketFile.toString());
 
         client.gauge("mycount", 30);
-
         server2.waitForMessage();
         assertThat(server2.messagesReceived(), hasItem("my.prefix.mycount:30|g"));
 
@@ -145,11 +150,12 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
         // Freeze the server to simulate dsd being overwhelmed
         server.freeze();
+
         while (lastException.getMessage() == null) {
             client.gauge("mycount", 20);
-            Thread.sleep(10);  // We need to fill the buffer, setting a shorter sleep
+
         }
-        String excMessage = TestHelpers.isLinux() ? "Resource temporarily unavailable" : "No buffer space available";
+        String excMessage = "Write timed out";
         assertThat(lastException.getMessage(), containsString(excMessage));
 
         // Make sure we recover after we resume listening
