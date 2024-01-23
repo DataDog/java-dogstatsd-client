@@ -109,7 +109,6 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
             client.gauge("mycount", 20);
             Thread.sleep(10);
         }
-        // Depending on the state of the client at that point we might get different messages.
         assertThat(lastException.getMessage(), containsString("Connection refused"));
 
         // Delete the socket file, client should throw an IOException
@@ -120,7 +119,6 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         while(lastException.getMessage() == null) {
             Thread.sleep(10);
         }
-        // Depending on the state of the client at that point we might get different messages.
         assertThat(lastException.getMessage(), containsString("No such file or directory"));
 
         // Re-open the server, next send should work OK
