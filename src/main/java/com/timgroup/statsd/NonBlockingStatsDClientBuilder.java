@@ -194,6 +194,18 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     }
 
     /**
+     * {@link DirectStatsDClient} factory method.
+     * 
+     * <p>It is an experimental extension of {@link StatsDClient} that allows for direct access to some dogstatsd features.
+     * It is not recommended to use this client in production.
+     * @return the built DirectStatsDClient.
+     * @see DirectStatsDClient
+     */
+    public DirectStatsDClient buildDirectStatsDClient() throws StatsDClientException {
+        return new NonBlockingDirectStatsDClient(resolve());
+    }
+
+    /**
      * Creates a copy of this builder with any implicit elements resolved.
      * @return the resolved copy of the builder.
      */
@@ -212,7 +224,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         if (lookup == null) {
             String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
             String resolvedNamedPipe = namedPipe == null ? namedPipeFromEnv : namedPipe;
-            
+
             if (resolvedNamedPipe == null) {
                 lookup = staticStatsDAddressResolution(hostname, port);
             } else {

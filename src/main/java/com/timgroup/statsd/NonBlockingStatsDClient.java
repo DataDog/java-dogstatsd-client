@@ -18,8 +18,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-
 
 /**
  * A simple StatsD client implementation facilitating metrics recording.
@@ -160,7 +158,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return formatter.get().format(value);
     }
 
-    private final String prefix;
+    final String prefix;
     private final ClientChannel clientChannel;
     private final ClientChannel telemetryClientChannel;
     private final StatsDClientErrorHandler handler;
@@ -243,7 +241,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    private NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
+    NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
             final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
             final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
@@ -532,7 +530,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
 
-    private boolean sendMetric(final Message message) {
+    boolean sendMetric(final Message message) {
         return send(message);
     }
 
