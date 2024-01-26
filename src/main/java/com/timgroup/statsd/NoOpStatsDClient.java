@@ -7,7 +7,10 @@ package com.timgroup.statsd;
  * @author Tom Denley
  *
  */
-public final class NoOpStatsDClient implements StatsDClient {
+public class NoOpStatsDClient implements StatsDClient {
+
+    NoOpStatsDClient() {}
+
     @Override public void stop() { }
 
     @Override public void close() { }
