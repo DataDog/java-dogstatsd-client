@@ -69,7 +69,7 @@ public class Telemetry {
         }
 
         @Override
-        public final void writeTo(StringBuilder builder, String containerID) {
+        public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
             builder.append(aspect)
                 .append(':')
                 .append(this.value)
@@ -82,6 +82,7 @@ public class Telemetry {
             }
 
             builder.append('\n');  // already has the statsd separator baked-in
+            return false;
         }
     }
 

@@ -54,10 +54,13 @@ public abstract class Message implements Comparable<Message> {
      * Write this message to the provided {@link StringBuilder}. Will
      * be called from the sender threads.
      *
-     * @param builder
-     *     StringBuilder the text representation will be written to.
+     * @param builder     StringBuilder the text representation will be written to.
+     * @param capacity    The capacity of the send buffer.
+     * @param containerID The container ID to be appended to the message.
+     * @return boolean indicating whether the message was partially written to the builder.
+     *     If true, the method will be called again with the same arguments to continue writing.
      */
-    abstract void writeTo(StringBuilder builder, String containerID);
+    abstract boolean writeTo(StringBuilder builder, int capacity, String containerID);
 
     /**
      * Aggregate message.

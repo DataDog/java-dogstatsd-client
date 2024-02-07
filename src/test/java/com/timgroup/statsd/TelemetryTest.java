@@ -70,7 +70,7 @@ public class TelemetryTest {
             ArrayList<String> stringMessages = new ArrayList<>(messages.size());
             for(Message m : messages) {
                 sb.setLength(0);
-                m.writeTo(sb, this.containerID);
+                m.writeTo(sb, Integer.MAX_VALUE, this.containerID);
                 stringMessages.add(sb.toString());
             }
             return stringMessages;

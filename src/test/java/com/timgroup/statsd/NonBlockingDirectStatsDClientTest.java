@@ -19,6 +19,7 @@ import static org.hamcrest.Matchers.hasItem;
 public class NonBlockingDirectStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17254;
+    private static final int MAX_PACKET_SIZE = 64;
     private static DirectStatsDClient client;
     private static DummyStatsDServer server;
 
@@ -34,6 +35,7 @@ public class NonBlockingDirectStatsDClientTest {
                 .port(STATSD_SERVER_PORT)
                 .enableTelemetry(false)
                 .originDetectionEnabled(false)
+                .maxPacketSizeBytes(MAX_PACKET_SIZE)
                 .buildDirectStatsDClient();
     }
 
@@ -53,8 +55,7 @@ public class NonBlockingDirectStatsDClientTest {
 
 
     @Test(timeout = 5000L)
-    public void sends_multivalued_distribution_to_statsd() throws Exception {
-
+    public void sends_multivalued_distribution_to_statsd() {
         client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, Double.NaN);
         server.waitForMessage("my.prefix");
 
@@ -62,9 +63,7 @@ public class NonBlockingDirectStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
-    public void sends_double_multivalued_distribution_to_statsd() throws Exception {
-
-
+    public void sends_double_multivalued_distribution_to_statsd() {
         client.recordDistributionValues("mydistribution", new double[] { 0.423D, 0.234D }, Double.NaN);
         server.waitForMessage("my.prefix");
 
@@ -72,9 +71,7 @@ public class NonBlockingDirectStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
-    public void sends_multivalued_distribution_to_statsd_with_tags() throws Exception {
-
-
+    public void sends_multivalued_distribution_to_statsd_with_tags() {
         client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, Double.NaN, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
@@ -82,9 +79,7 @@ public class NonBlockingDirectStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
-    public void sends_multivalued_distribution_to_statsd_with_sampling_rate() throws Exception {
-
-
+    public void sends_multivalued_distribution_to_statsd_with_sampling_rate() {
         client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, 1);
         server.waitForMessage("my.prefix");
 
@@ -92,13 +87,23 @@ public class NonBlockingDirectStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
-    public void sends_multivalued_distribution_to_statsd_with_tags_and_sampling_rate() throws Exception {
-
-
+    public void sends_multivalued_distribution_to_statsd_with_tags_and_sampling_rate() {
         client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@1.000000|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_too_long_multivalued_distribution_to_statsd() {
+        long[] values = {423L, 234L, 456L, 512L};
+        client.recordDistributionValues("mydistribution", values, 1, "foo:bar", "baz");
+
+        server.waitForMessage("my.prefix");
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234:456|d|@1.000000|#baz,foo:bar")));
+
+        server.waitForMessage("my.prefix");
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:512|d|@1.000000|#baz,foo:bar")));
     }
 
 }
