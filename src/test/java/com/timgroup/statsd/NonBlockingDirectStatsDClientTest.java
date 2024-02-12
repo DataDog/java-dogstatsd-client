@@ -18,7 +18,7 @@ import static org.hamcrest.Matchers.hasItem;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NonBlockingDirectStatsDClientTest {
 
-    private static final int STATSD_SERVER_PORT = 17254;
+    private static final int STATSD_SERVER_PORT = 17256;
     private static final int MAX_PACKET_SIZE = 64;
     private static DirectStatsDClient client;
     private static DummyStatsDServer server;
