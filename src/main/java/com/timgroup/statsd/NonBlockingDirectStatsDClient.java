@@ -1,5 +1,7 @@
 package com.timgroup.statsd;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements DirectStatsDClient {
 
     public NonBlockingDirectStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
@@ -61,10 +63,11 @@ final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implem
 
         private int metadataSize(StringBuilder builder, String containerID) {
             if (metadataSize == -1) {
-                int previousLength = builder.length();
+                final int previousLength = builder.length();
+                final int previousEncodedLength = builder.toString().getBytes(UTF_8).length;
                 writeHeadMetadata(builder);
                 writeTailMetadata(builder, containerID);
-                metadataSize = builder.length() - previousLength;
+                metadataSize = builder.toString().getBytes(UTF_8).length - previousEncodedLength;
                 builder.setLength(previousLength);
             }
             return metadataSize;
