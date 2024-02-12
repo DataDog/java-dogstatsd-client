@@ -64,10 +64,10 @@ final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implem
         private int metadataSize(StringBuilder builder, String containerID) {
             if (metadataSize == -1) {
                 final int previousLength = builder.length();
-                final int previousEncodedLength = builder.toString().getBytes(UTF_8).length;
+                final int previousEncodedLength = Utf8.encodedLength(builder);
                 writeHeadMetadata(builder);
                 writeTailMetadata(builder, containerID);
-                metadataSize = builder.toString().getBytes(UTF_8).length - previousEncodedLength;
+                metadataSize = Utf8.encodedLength(builder) - previousEncodedLength;
                 builder.setLength(previousLength);
             }
             return metadataSize;
