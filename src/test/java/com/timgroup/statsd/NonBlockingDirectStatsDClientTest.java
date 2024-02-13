@@ -96,14 +96,20 @@ public class NonBlockingDirectStatsDClientTest {
 
     @Test(timeout = 5000L)
     public void sends_too_long_multivalued_distribution_to_statsd() {
-        long[] values = {423L, 234L, 456L, 512L};
+        long[] values = {423L, 234L, 456L, 512L, 345L, 898L, 959876543123L, 667L};
         client.recordDistributionValues("mydistribution", values, 1, "foo:bar", "baz");
 
         server.waitForMessage("my.prefix");
         assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234:456|d|@1.000000|#baz,foo:bar")));
 
         server.waitForMessage("my.prefix");
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:512|d|@1.000000|#baz,foo:bar")));
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:512:345:898|d|@1.000000|#baz,foo:bar")));
+
+        server.waitForMessage("my.prefix");
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:959876543123|d|@1.000000|#baz,foo:bar")));
+
+        server.waitForMessage("my.prefix");
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:667|d|@1.000000|#baz,foo:bar")));
     }
 
 }

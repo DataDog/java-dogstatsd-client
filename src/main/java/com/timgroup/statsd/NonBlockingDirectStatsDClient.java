@@ -94,6 +94,10 @@ final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implem
         }
 
         private boolean writeValuesTo(StringBuilder builder, int remainingCapacity) {
+            if (offset >= lengthOfValues()) {
+                return false;
+            }
+
             int maxLength = builder.length() + remainingCapacity;
 
             // Add at least one value
@@ -107,7 +111,7 @@ final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implem
                 writeValueTo(builder, i);
                 if (builder.length() > maxLength) {
                     builder.setLength(previousLength);
-                    offset += i;
+                    offset = i;
                     return true;
                 }
                 previousLength = builder.length();
