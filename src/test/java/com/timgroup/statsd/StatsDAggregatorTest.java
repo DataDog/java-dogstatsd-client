@@ -56,7 +56,9 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected void writeTo(StringBuilder builder, String containerID){}
+        protected boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+            return false;
+        }
     }
 
     public static class FakeAlphaMessage extends AlphaNumericMessage {
@@ -65,7 +67,9 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected void writeTo(StringBuilder builder, String containerID){}
+        protected boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+            return false;
+        }
     }
 
 
@@ -268,8 +272,8 @@ public class StatsDAggregatorTest {
         for (int i = 0; i < numMessages; i++) {
             fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, tags[i % numTags]) {
                 @Override
-                void writeTo(StringBuilder builder, String containerID) {
-
+                boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+                    return false;
                 }
 
                 @Override

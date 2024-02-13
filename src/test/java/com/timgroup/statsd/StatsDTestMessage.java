@@ -9,7 +9,7 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
     }
 
     @Override
-    public final void writeTo(StringBuilder builder, String containerID) {
+    public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
         builder.append("test.").append(aspect).append(':');
         writeValue(builder);
         builder.append('|').append(type);
@@ -22,6 +22,7 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
         }
 
         builder.append('\n');
+        return false;
     }
 
     protected void writeValue(StringBuilder builder) {

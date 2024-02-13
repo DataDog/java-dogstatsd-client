@@ -161,7 +161,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return formatter.get().format(value);
     }
 
-    private final String prefix;
+    final String prefix;
     private final ClientChannel clientChannel;
     private final ClientChannel telemetryClientChannel;
     private final StatsDClientErrorHandler handler;
@@ -247,7 +247,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @throws StatsDClientException
      *     if the client could not be started
      */
-    private NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
+    NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
             final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
             final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
@@ -526,7 +526,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         @Override
-        public final void writeTo(StringBuilder builder, String containerID) {
+        public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
             builder.append(prefix).append(aspect).append(':');
             writeValue(builder);
             builder.append('|').append(type);
@@ -542,6 +542,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
 
             builder.append('\n');
+            return false;
         }
 
         @Override
@@ -554,7 +555,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
 
-    private boolean sendMetric(final Message message) {
+    boolean sendMetric(final Message message) {
         return send(message);
     }
 
@@ -1145,7 +1146,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordEvent(final Event event, final String... eventTags) {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "") {
-            @Override public void writeTo(StringBuilder builder, String containerID) {
+            @Override public boolean writeTo(StringBuilder builder, int capacity, String containerID) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
                 builder.append(Message.Type.EVENT.toString())
@@ -1168,6 +1169,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
 
                 builder.append('\n');
+                return false;
             }
         });
         this.telemetry.incrEventsSent(1);
@@ -1200,13 +1202,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "") {
-            @Override public void writeTo(StringBuilder sb, String containerID) {
+            @Override
+            public boolean writeTo(StringBuilder sb, int capacity, String containerID) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
                 sb.append(Message.Type.SERVICE_CHECK.toString())
-                    .append("|")
-                    .append(sc.getName())
-                    .append("|")
-                    .append(sc.getStatus());
+                        .append("|")
+                        .append(sc.getName())
+                        .append("|")
+                        .append(sc.getStatus());
                 if (sc.getTimestamp() > 0) {
                     sb.append("|d:").append(sc.getTimestamp());
                 }
@@ -1222,6 +1225,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
 
                 sb.append('\n');
+                return false;
             }
         });
         this.telemetry.incrServiceChecksSent(1);
@@ -1286,7 +1290,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append(getValue());
             }
 
-            @Override protected final void writeTo(StringBuilder builder, String containerID) {
+            @Override
+            protected final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
                 builder.append(prefix).append(aspect).append(':');
                 writeValue(builder);
                 builder.append('|').append(type);
@@ -1296,6 +1301,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
 
                 builder.append('\n');
+                return false;
             }
         });
     }

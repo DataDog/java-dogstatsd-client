@@ -103,26 +103,30 @@ public abstract class StatsDProcessor {
                         continue;
                     }
 
-                    builder.setLength(0);
-                    message.writeTo(builder, containerID);
-                    int lowerBoundSize = builder.length();
+                    boolean partialWrite;
+                    do {
+                        builder.setLength(0);
+                        partialWrite = message.writeTo(builder, sendBuffer.capacity(), containerID);
+                        int lowerBoundSize = builder.length();
 
-                    if (sendBuffer.capacity() < lowerBoundSize) {
-                        throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
-                    }
+                        if (sendBuffer.capacity() < lowerBoundSize) {
+                            throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
+                        }
 
-                    if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
-                        outboundQueue.put(sendBuffer);
-                        sendBuffer = bufferPool.borrow();
-                    }
+                        if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
+                            outboundQueue.put(sendBuffer);
+                            sendBuffer = bufferPool.borrow();
+                        }
 
-                    try {
-                        writeBuilderToSendBuffer(sendBuffer);
-                    } catch (BufferOverflowException boe) {
-                        outboundQueue.put(sendBuffer);
-                        sendBuffer = bufferPool.borrow();
-                        writeBuilderToSendBuffer(sendBuffer);
+                        try {
+                            writeBuilderToSendBuffer(sendBuffer);
+                        } catch (BufferOverflowException boe) {
+                            outboundQueue.put(sendBuffer);
+                            sendBuffer = bufferPool.borrow();
+                            writeBuilderToSendBuffer(sendBuffer);
+                        }
                     }
+                    while (partialWrite);
 
                     if (!haveMessages()) {
                         outboundQueue.put(sendBuffer);

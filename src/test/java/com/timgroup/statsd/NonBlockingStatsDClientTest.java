@@ -1556,8 +1556,8 @@ public class NonBlockingStatsDClientTest {
             }
 
             @Override
-            void writeTo(StringBuilder builder, String containerID) {
-
+            boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+                return false;
             }
         }
         AlphaNumericMessage alphaNum1 = new TestAlphaNumericMessage("my.count", Message.Type.COUNT, "value", new String[] {"tag"});
