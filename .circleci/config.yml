@@ -59,6 +59,7 @@ jobs:
       version: 2023.04.1
     steps:
       - checkout
+      - run: java -version
       - run: |
           choco install maven
       - run: |
