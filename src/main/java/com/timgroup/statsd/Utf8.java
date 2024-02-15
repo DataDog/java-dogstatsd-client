@@ -17,6 +17,8 @@ package com.timgroup.statsd;
 import static java.lang.Character.MAX_SURROGATE;
 import static java.lang.Character.MIN_SURROGATE;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * This class is a partial copy of the {@code com.google.common.base.Utf8}
  * <a href="https://github.com/google/guava/blob/v33.0.0/guava/src/com/google/common/base/Utf8.java">class</a>
@@ -24,6 +26,8 @@ import static java.lang.Character.MIN_SURROGATE;
  * It is copied here to avoid a dependency on Guava.
  */
 final class Utf8 {
+
+    private static final int UTF8_REPLACEMENT_LENGTH = StandardCharsets.UTF_8.newEncoder().replacement().length;
 
     private Utf8() {
     }
@@ -79,16 +83,14 @@ final class Utf8 {
                 if (MIN_SURROGATE <= character && character <= MAX_SURROGATE) {
                     // Check that we have a well-formed surrogate pair.
                     if (Character.codePointAt(sequence, index) == character) {
-                        throw new IllegalArgumentException(unpairedSurrogateMsg(index));
+                        // Bad input so deduct char length and account for the replacement characters
+                        utf8Length += -2 + UTF8_REPLACEMENT_LENGTH - 1;
+                    } else {
+                        index++;
                     }
-                    index++;
                 }
             }
         }
         return utf8Length;
-    }
-
-    private static String unpairedSurrogateMsg(int index) {
-        return "Unpaired surrogate at index " + index;
     }
 }
