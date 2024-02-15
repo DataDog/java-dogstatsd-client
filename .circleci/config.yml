@@ -52,9 +52,14 @@ jobs:
 #    <<: *default_steps
 
   windows-openjdk12:
-    executor: win/default
+    executor:
+      # https://github.com/CircleCI-Public/windows-orb/blob/v2.4.1/src/executors/default.yml
+      name: win/default
+      # https://circleci.com/developer/machine/image/windows-server-2019
+      version: 2023.04.1
     steps:
       - checkout
+      - run: java -version
       - run: |
           choco install maven
       - run: |
