@@ -17,7 +17,7 @@ public class Utf8Test {
 
     @Test
     public void should_handle_malformed_inputs() throws CharacterCodingException {
-        String malformedInput = "foo" + MIN_SURROGATE + "bar";
+        String malformedInput = "🍻☀️😎🏖️" + MIN_SURROGATE + "🍻☀️😎🏖️";
 
         CharsetEncoder utf8Encoder = StandardCharsets.UTF_8.newEncoder()
                 .onMalformedInput(CodingErrorAction.REPLACE)
