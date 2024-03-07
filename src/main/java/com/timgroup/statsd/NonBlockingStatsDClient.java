@@ -565,6 +565,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             this.telemetry.incrMetricsSent(1, message.getType());
         } else {
             this.telemetry.incrPacketDroppedQueue(1);
+            this.telemetry.incrPacketDroppedByName(message.aspect);
         }
 
         return success;

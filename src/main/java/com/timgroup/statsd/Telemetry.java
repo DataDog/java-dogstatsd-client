@@ -5,6 +5,8 @@ import com.timgroup.statsd.Message;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 public class Telemetry {
 
@@ -27,6 +29,7 @@ public class Telemetry {
     protected final AtomicInteger aggregatedGaugeContexts = new AtomicInteger(0);
     protected final AtomicInteger aggregatedCountContexts = new AtomicInteger(0);
     protected final AtomicInteger aggregatedSetContexts = new AtomicInteger(0);
+    protected HashMap<String, Integer> packetsDroppedByName = new HashMap<>();
 
     protected final String metricsSentMetric = "datadog.dogstatsd.client.metrics";
     protected final String metricsByTypeSentMetric = "datadog.dogstatsd.client.metrics_by_type";
@@ -39,6 +42,7 @@ public class Telemetry {
     protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
     protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
     protected final String aggregatedContextsByTypeMetric = "datadog.dogstatsd.client.aggregated_context_by_type";
+    protected final String packetsDroppedByNameMetric = "datadog.dogstatsd.client.packets_dropped_by_name";
 
     protected String tags;
     protected StringBuilder tagBuilder = new StringBuilder();
@@ -171,6 +175,35 @@ public class Telemetry {
                     getTelemetryTags(tags, Message.Type.COUNT)));
         processor.send(new TelemetryMessage(this.aggregatedContextsByTypeMetric, this.aggregatedSetContexts.getAndSet(0),
                     getTelemetryTags(tags, Message.Type.SET)));
+
+
+        final HashMap<String, Integer> dropped;
+        synchronized (this) {
+            dropped = packetsDroppedByName;
+            packetsDroppedByName = new HashMap<>(dropped.size());
+        }
+
+        final ArrayList<String> droppedNames = new ArrayList<>(dropped.keySet());
+        droppedNames.sort(new java.util.Comparator<String>() {
+            final public int compare(String a, String b) {
+                Integer i = dropped.get(a);
+                int k = i == null ? 0 : i;
+
+                Integer j = dropped.get(b);
+                int l = j == null ? 0 : j;
+
+                return l - k;
+            }
+        });
+
+        int limit = 20;
+        for (String name : droppedNames) {
+            Integer v = dropped.get(name);
+            processor.send(new TelemetryMessage(this.packetsDroppedByNameMetric, v == null ? 0 : v, getTelemetryTags(tags, "metric_name:", name)));
+            if (--limit == 0) {
+                break;
+            }
+        }
     }
 
     protected String getTelemetryTags(String tags, Message.Type type) {
@@ -197,6 +230,14 @@ public class Telemetry {
                 break;
         }
 
+        return tagBuilder.toString();
+    }
+
+    private String getTelemetryTags(String tags, String k, String v) {
+        tagBuilder.setLength(0);
+        tagBuilder.append(tags);
+        tagBuilder.append(k);
+        tagBuilder.append(v);
         return tagBuilder.toString();
     }
 
@@ -289,6 +330,15 @@ public class Telemetry {
 
     public void incrPacketDroppedQueue(final int value) {
         this.packetsDroppedQueue.addAndGet(value);
+    }
+
+    synchronized public void incrPacketDroppedByName(final String aspect) {
+        final Integer v = packetsDroppedByName.get(aspect);
+        if (v == null) {
+            packetsDroppedByName.put(aspect, 1);
+        } else {
+            packetsDroppedByName.put(aspect, 1 + v);
+        }
     }
 
     public void incrAggregatedContexts(final int value) {
