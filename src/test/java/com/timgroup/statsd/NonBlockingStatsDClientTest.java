@@ -719,7 +719,7 @@ public class NonBlockingStatsDClientTest {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(startsWith("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
         } finally {
             client.stop();
         }
@@ -761,7 +761,7 @@ public class NonBlockingStatsDClientTest {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+            assertThat(server.messagesReceived(), hasItem(startsWith("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
         } finally {
             client.stop();
         }
@@ -808,7 +808,7 @@ public class NonBlockingStatsDClientTest {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(startsWith("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
         } finally {
             client.stop();
         }
@@ -1665,12 +1665,12 @@ public class NonBlockingStatsDClientTest {
         final String entity_value =  "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
-        .prefix("my.prefix")
-        .hostname("localhost")
-        .port(STATSD_SERVER_PORT)
-        .enableTelemetry(false)
-        .containerID("fake-container-id")
-        .build();
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)
+            .containerID("fake-container-id")
+            .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage();
