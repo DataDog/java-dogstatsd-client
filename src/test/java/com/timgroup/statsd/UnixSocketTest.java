@@ -135,6 +135,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
         server2.close();
     }
 
+    
     @Test(timeout = 10000L)
     public void resist_dsd_timeout() throws Exception {
         client.gauge("mycount", 10);
