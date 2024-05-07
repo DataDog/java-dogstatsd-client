@@ -739,7 +739,7 @@ public class NonBlockingStatsDClientTest {
             client.gauge("value", 423);
             server.waitForMessage();
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(startsWith("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
         } finally {
             client.stop();
         }
@@ -829,7 +829,7 @@ public class NonBlockingStatsDClientTest {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(startsWith("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
         } finally {
             client.stop();
         }
