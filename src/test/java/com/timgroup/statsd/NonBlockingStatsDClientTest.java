@@ -835,7 +835,6 @@ public class NonBlockingStatsDClientTest {
         }
     }
 
-
     @Test(timeout = 5000L)
     public void init_client_from_env_vars() throws Exception {
         final String entity_value =  "foo-entity";
