@@ -837,7 +837,7 @@ public class NonBlockingStatsDClientTest {
 
     @Test(timeout = 5000L)
     public void init_client_from_env_vars() throws Exception {
-        final String entity_value =  "foo-entity";
+        final String entity_value = "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, Integer.toString(STATSD_SERVER_PORT));
         environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
@@ -1661,7 +1661,7 @@ public class NonBlockingStatsDClientTest {
 
     @Test(timeout = 5000L)
     public void test_entity_id_and_container_id() throws Exception {
-        final String entity_value =  "foo-entity";
+        final String entity_value = "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
