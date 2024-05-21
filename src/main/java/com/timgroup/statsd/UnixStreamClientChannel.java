@@ -136,9 +136,11 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
         if (!delegate.connect(address)) {
             if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                delegate.close();
                 throw new IOException("Connection timed out");
             }
             if (!delegate.finishConnect()) {
+                delegate.close();
                 throw new IOException("Connection failed");
             }
         }
