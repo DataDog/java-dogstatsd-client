@@ -160,11 +160,7 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         this.delegate = delegate;
     }
-
-    static private void closeSafe(UnixSocketChannel channel) {
-
-    }
-
+    
     @Override
     public void close() throws IOException {
         disconnect();
