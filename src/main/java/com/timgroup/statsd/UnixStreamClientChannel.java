@@ -138,11 +138,9 @@ public class UnixStreamClientChannel implements ClientChannel {
         try {
             if (!delegate.connect(address)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                    closeSafe(delegate);
                     throw new IOException("Connection timed out");
                 }
                 if (!delegate.finishConnect()) {
-                    closeSafe(delegate);
                     throw new IOException("Connection failed");
                 }
             }
@@ -152,7 +150,11 @@ public class UnixStreamClientChannel implements ClientChannel {
                 delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
         } catch (Exception e) {
-            closeSafe(delegate);
+            try {
+                delegate.close();
+            } catch (IOException __) {
+                // ignore
+            }
             throw e;
         }
 
@@ -161,11 +163,7 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     static private void closeSafe(UnixSocketChannel channel) {
-        try {
-            channel.close();
-        } catch (IOException e) {
-            // ignore
-        }
+
     }
 
     @Override
