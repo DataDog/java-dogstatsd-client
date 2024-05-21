@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import java.net.SocketOption;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import jnr.unixsocket.UnixSocketOptions;
@@ -134,26 +135,37 @@ public class UnixStreamClientChannel implements ClientChannel {
             // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
-        if (!delegate.connect(address)) {
-            if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                delegate.close();
-                throw new IOException("Connection timed out");
+        try {
+            if (!delegate.connect(address)) {
+                if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                    closeSafe(delegate);
+                    throw new IOException("Connection timed out");
+                }
+                if (!delegate.finishConnect()) {
+                    closeSafe(delegate);
+                    throw new IOException("Connection failed");
+                }
             }
-            if (!delegate.finishConnect()) {
-                delegate.close();
-                throw new IOException("Connection failed");
+
+            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
+            if (bufferSize > 0) {
+                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
+        } catch (Exception e) {
+            closeSafe(delegate);
+            throw e;
         }
 
-        if (timeout > 0) {
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
-        } else {
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, 0);
-        }
-        if (bufferSize > 0) {
-            delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-        }
+
         this.delegate = delegate;
+    }
+
+    static private void closeSafe(UnixSocketChannel channel) {
+        try {
+            channel.close();
+        } catch (IOException e) {
+            // ignore
+        }
     }
 
     @Override
