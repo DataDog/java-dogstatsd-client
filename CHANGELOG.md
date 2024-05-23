@@ -1,6 +1,10 @@
 # CHANGELOG
 
-## 4.X.Y / 2024.XX.XX
+## 4.4.0 / 2024.05.24
+
+* [FEATURE] Added new API to send multiple samples at once. See [#235]
+* [BUGFIX] When using `SOCK_STREAM` Unix sockets we now correctly close the socket. See [#243][]
+* [IMPROVEMENT] Various performance optimizations. See [#241][]
 
 ## 4.3.0 / 2024.01.24
 
@@ -238,7 +242,10 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#203]: https://github.com/DataDog/java-dogstatsd-client/issues/203
 [#211]: https://github.com/DataDog/java-dogstatsd-client/issues/211
 [#217]: https://github.com/DataDog/java-dogstatsd-client/issues/217
-[#228]: https://github.com/DataDog/java-dogstatsd-client/pull/228
+[#228]: https://github.com/DataDog/java-dogstatsd-client/issues/228
+[#235]: https://github.com/DataDog/java-dogstatsd-client/issues/235
+[#241]: https://github.com/DataDog/java-dogstatsd-client/issues/241
+[#243]: https://github.com/DataDog/java-dogstatsd-client/issues/243
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
