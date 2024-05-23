@@ -2,7 +2,7 @@
 
 ## 4.4.0 / 2024.05.24
 
-* [FEATURE] Added new API to send multiple samples at once. See [#235]
+* [FEATURE] Added new API to send multiple samples at once. See [#235][]
 * [BUGFIX] When using `SOCK_STREAM` Unix sockets we now correctly close the socket. See [#243][]
 * [IMPROVEMENT] Various performance optimizations. See [#241][]
 
