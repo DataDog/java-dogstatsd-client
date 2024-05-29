@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.4.1 / 2024.05.29
+
+* [BUGFIX] Restore public constructor for `NoOpStatsDClient`. See #[247][]
+
 ## 4.4.0 / 2024.05.24
 
 * [FEATURE] Added new API to send multiple samples at once. See [#235][]
@@ -244,6 +248,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#228]: https://github.com/DataDog/java-dogstatsd-client/issues/228
 [#235]: https://github.com/DataDog/java-dogstatsd-client/issues/235
 [#243]: https://github.com/DataDog/java-dogstatsd-client/issues/243
+[#247]: https://github.com/DataDog/java-dogstatsd-client/issues/247
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
