@@ -1,8 +1,6 @@
 package com.timgroup.statsd;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements DirectStatsDClient {
+class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements DirectStatsDClient {
 
     public NonBlockingDirectStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
         super(builder);
@@ -10,23 +8,15 @@ final class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implem
 
     @Override
     public void recordDistributionValues(String aspect, double[] values, double sampleRate, String... tags) {
-        if ((Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) && values != null && values.length > 0) {
-            if (values.length == 1) {
-                recordDistributionValue(aspect, values[0], sampleRate, tags);
-            } else {
-                sendMetric(new DoublesStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, tags));
-            }
+        if (values != null && values.length > 0) {
+            sendMetric(new DoublesStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, tags));
         }
     }
 
     @Override
     public void recordDistributionValues(String aspect, long[] values, double sampleRate, String... tags) {
-        if ((Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) && values != null && values.length > 0) {
-            if (values.length == 1) {
-                recordDistributionValue(aspect, values[0], sampleRate, tags);
-            } else {
-                sendMetric(new LongsStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, tags));
-            }
+        if (values != null && values.length > 0) {
+            sendMetric(new LongsStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, tags));
         }
     }
 
