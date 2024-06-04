@@ -9,8 +9,6 @@ package com.timgroup.statsd;
  */
 public class NoOpStatsDClient implements StatsDClient {
 
-    NoOpStatsDClient() {}
-
     @Override public void stop() { }
 
     @Override public void close() { }
