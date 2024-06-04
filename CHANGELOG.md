@@ -2,11 +2,11 @@
 
 ## 4.4.2 / 2024.06.03
 
-* [BUGFIX] Fix sampling and visibility issues with new direct client. See #[249][]
+* [BUGFIX] Fix sampling and visibility issues with new direct client. See [#249][]
 
 ## 4.4.1 / 2024.05.29
 
-* [BUGFIX] Restore public constructor for `NoOpStatsDClient`. See #[247][]
+* [BUGFIX] Restore public constructor for `NoOpStatsDClient`. See [#247][]
 
 ## 4.4.0 / 2024.05.24
 
