@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.4.2 / 2024.06.03
+
+* [BUGFIX] Fix sampling and visibility issues with new direct client. See #[249][]
+
 ## 4.4.1 / 2024.05.29
 
 * [BUGFIX] Restore public constructor for `NoOpStatsDClient`. See #[247][]
@@ -249,6 +253,8 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#235]: https://github.com/DataDog/java-dogstatsd-client/issues/235
 [#243]: https://github.com/DataDog/java-dogstatsd-client/issues/243
 [#247]: https://github.com/DataDog/java-dogstatsd-client/issues/247
+[#249]: https://github.com/DataDog/java-dogstatsd-client/issues/249
+
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
