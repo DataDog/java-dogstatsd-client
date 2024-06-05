@@ -714,12 +714,13 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -734,12 +735,13 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage();
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -756,12 +758,13 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags(constantTags)
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags + "|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -802,13 +805,14 @@ public class NonBlockingStatsDClientTest {
             .constantTags(null)
             .errorHandler(null)
             .entityID(entity_value+"-arg")
+            .containerID("fake-container-id")
             .build();
 
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -824,12 +828,13 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .entityID(entity_value+"-arg")
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg|c:fake-container-id")));
         } finally {
             client.stop();
         }
