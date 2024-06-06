@@ -714,12 +714,13 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -734,12 +735,13 @@ public class NonBlockingStatsDClientTest {
             .hostname("localhost")
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage();
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -756,12 +758,13 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .constantTags(constantTags)
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags)));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity," + constantTags + "|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -802,13 +805,14 @@ public class NonBlockingStatsDClientTest {
             .constantTags(null)
             .errorHandler(null)
             .entityID(entity_value+"-arg")
+            .containerID("fake-container-id")
             .build();
 
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg|c:fake-container-id")));
         } finally {
             client.stop();
         }
@@ -824,21 +828,21 @@ public class NonBlockingStatsDClientTest {
             .port(STATSD_SERVER_PORT)
             .queueSize(Integer.MAX_VALUE)
             .entityID(entity_value+"-arg")
+            .containerID("fake-container-id")
             .build();
         try {
             client.gauge("value", 423);
             server.waitForMessage("my.prefix");
 
-            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg")));
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity-arg|c:fake-container-id")));
         } finally {
             client.stop();
         }
     }
 
-
     @Test(timeout = 5000L)
     public void init_client_from_env_vars() throws Exception {
-        final String entity_value =  "foo-entity";
+        final String entity_value = "foo-entity";
         environmentVariables.set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, Integer.toString(STATSD_SERVER_PORT));
         environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
         final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
@@ -1661,6 +1665,27 @@ public class NonBlockingStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void test_entity_id_and_container_id() throws Exception {
+        final String entity_value = "foo-entity";
+        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .port(STATSD_SERVER_PORT)
+            .enableTelemetry(false)
+            .containerID("fake-container-id")
+            .build();
+        try {
+            client.gauge("value", 423);
+            server.waitForMessage();
+
+            assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.value:423|g|#dd.internal.entity_id:foo-entity|c:fake-container-id")));
+        } finally {
+            client.stop();
+        }
+    }
+
+    @Test(timeout = 5000L)
     public void origin_detection_env_false() throws Exception {
         environmentVariables.set(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR, "false");
 
@@ -1673,7 +1698,7 @@ public class NonBlockingStatsDClientTest {
             .enableTelemetry(false)
             .build();
 
-        assertFalse(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION, false));
+        assertFalse(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
         environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
     }
 
@@ -1690,7 +1715,7 @@ public class NonBlockingStatsDClientTest {
             .enableTelemetry(false)
             .build();
 
-        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION, false));
+        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
         environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
     }
 
@@ -1705,7 +1730,7 @@ public class NonBlockingStatsDClientTest {
             .enableTelemetry(false)
             .build();
 
-        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION, false));
+        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
     }
 
     @Test(timeout = 5000L)
@@ -1719,7 +1744,7 @@ public class NonBlockingStatsDClientTest {
             .enableTelemetry(false)
             .build();
 
-        assertFalse(client.isOriginDetectionEnabled(null, false, false));
+        assertFalse(client.isOriginDetectionEnabled(null, false));
     }
 
     private static class SlowStatsDNonBlockingStatsDClient extends NonBlockingStatsDClient {

@@ -276,7 +276,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
             }
             // Support "dd.internal.entity_id" internal tag.
-            final boolean hasEntityID = updateTagsWithEntityID(costantPreTags, entityID);
+            updateTagsWithEntityID(costantPreTags, entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
@@ -291,12 +291,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
             costantPreTags = null;
             // Origin detection
-            if (hasEntityID) {
-                containerID = null;
-            } else {
-                boolean originEnabled = isOriginDetectionEnabled(containerID, originDetectionEnabled, hasEntityID);
-                containerID = getContainerID(containerID, originEnabled);
-            }
+            boolean originEnabled = isOriginDetectionEnabled(containerID, originDetectionEnabled);
+            containerID = getContainerID(containerID, originEnabled);
         }
 
         try {
@@ -1310,10 +1306,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
-    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled, boolean hasEntityID) {
-        if (!originDetectionEnabled || hasEntityID || (containerID != null && !containerID.isEmpty())) {
+    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled) {
+        if (!originDetectionEnabled || (containerID != null && !containerID.isEmpty())) {
             // origin detection is explicitly disabled
-            // or DD_ENTITY_ID was found
             // or a user-defined container ID was provided
             return false;
         }
