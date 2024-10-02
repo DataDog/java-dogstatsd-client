@@ -175,4 +175,9 @@ public class UnixStreamClientChannel implements ClientChannel {
     public String toString() {
         return "[" + getTransportType() + "] " + address;
     }
+
+    @Override
+    public int getMaxPacketSizeBytes() {
+        return NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
+    }
 }
