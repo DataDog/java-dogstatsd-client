@@ -174,7 +174,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected final StatsDSender statsDSender;
     protected StatsDSender telemetryStatsDSender;
     protected final Telemetry telemetry;
-
+    private final int maxPacketSizeBytes;
     private final boolean blocking;
 
     /**
@@ -268,6 +268,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         this.blocking = blocking;
+        this.maxPacketSizeBytes = maxPacketSizeBytes;
+
         {
             List<String> costantPreTags = new ArrayList<>();
             if (constantTags != null) {
@@ -300,7 +302,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
-            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
+            statsDProcessor = createProcessor(queueSize, handler, getPacketSize(clientChannel), poolSize,
                     processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
 
             Properties properties = new Properties();
@@ -318,7 +320,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, bufferSize);
 
                 // similar settings, but a single worker and non-blocking.
-                telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
+                telemetryStatsDProcessor = createProcessor(queueSize, handler, getPacketSize(telemetryClientChannel),
                         poolSize, 1, false, 0, aggregationShards, threadFactory, containerID);
             }
 
@@ -1339,5 +1341,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         return null;
+    }
+
+    private int getPacketSize(ClientChannel chan) {
+        return maxPacketSizeBytes > 0 ? maxPacketSizeBytes : chan.getMaxPacketSizeBytes();
     }
 }

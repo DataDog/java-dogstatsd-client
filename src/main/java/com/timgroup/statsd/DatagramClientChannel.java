@@ -52,4 +52,9 @@ class DatagramClientChannel implements ClientChannel {
     public String toString() {
         return "[" + getTransportType() + "] " + address;
     }
+
+    @Override
+    public int getMaxPacketSizeBytes() {
+        return NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
+    }
 }

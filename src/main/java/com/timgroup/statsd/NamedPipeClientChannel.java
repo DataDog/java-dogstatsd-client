@@ -48,4 +48,9 @@ class NamedPipeClientChannel implements ClientChannel {
     public String toString() {
         return pipe;
     }
+
+    @Override
+    public int getMaxPacketSizeBytes() {
+        return NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
+    }
 }
