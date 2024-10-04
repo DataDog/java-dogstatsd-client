@@ -1,7 +1,6 @@
 # Java DogStatsD Client
 
 [![CircleCI Build Status](https://circleci.com/gh/DataDog/java-dogstatsd-client/tree/master.svg?style=svg)](https://circleci.com/gh/DataDog/java-dogstatsd-client)
-[![Travis Build Status](https://travis-ci.com/DataDog/java-dogstatsd-client.svg?branch=master)](https://travis-ci.com/DataDog/java-dogstatsd-client)
 
 A DogStatsD client library implemented in Java. Allows for Java applications to easily communicate with the DataDog Agent. The library supports Java 1.7+.
 
@@ -17,7 +16,7 @@ The client jar is distributed via Maven central, and can be downloaded [from Mav
 <dependency>
     <groupId>com.datadoghq</groupId>
     <artifactId>java-dogstatsd-client</artifactId>
-    <version>4.2.1</version>
+    <version>4.4.3</version>
 </dependency>
 ```
 

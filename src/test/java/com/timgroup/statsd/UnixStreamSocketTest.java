@@ -173,4 +173,27 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         assertThat(server.messagesReceived(), hasItem("my.prefix.mycount:30|g"));
         server.clear();
     }
+
+    @Test(timeout = 5000L)
+    public void stream_uds_has_uds_buffer_size() throws Exception {
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .address("unixstream:///foo")
+            .containerID("fake-container-id")
+            .build();
+
+        assertEquals(client.statsDProcessor.bufferPool.getBufferSize(), NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
+    }
+
+    @Test(timeout = 5000L)
+    public void max_packet_size_override() throws Exception {
+        final NonBlockingStatsDClient client = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .address("unixstream:///foo")
+            .containerID("fake-container-id")
+            .maxPacketSizeBytes(576)
+            .build();
+
+        assertEquals(client.statsDProcessor.bufferPool.getBufferSize(), 576);
+    }
 }

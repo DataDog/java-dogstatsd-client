@@ -174,7 +174,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected final StatsDSender statsDSender;
     protected StatsDSender telemetryStatsDSender;
     protected final Telemetry telemetry;
-
+    private final int maxPacketSizeBytes;
     private final boolean blocking;
 
     /**
@@ -268,6 +268,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         this.blocking = blocking;
+        this.maxPacketSizeBytes = maxPacketSizeBytes;
+
         {
             List<String> costantPreTags = new ArrayList<>();
             if (constantTags != null) {
@@ -276,7 +278,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 }
             }
             // Support "dd.internal.entity_id" internal tag.
-            final boolean hasEntityID = updateTagsWithEntityID(costantPreTags, entityID);
+            updateTagsWithEntityID(costantPreTags, entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
@@ -291,12 +293,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
             costantPreTags = null;
             // Origin detection
-            if (hasEntityID) {
-                containerID = null;
-            } else {
-                boolean originEnabled = isOriginDetectionEnabled(containerID, originDetectionEnabled, hasEntityID);
-                containerID = getContainerID(containerID, originEnabled);
-            }
+            boolean originEnabled = isOriginDetectionEnabled(containerID, originDetectionEnabled);
+            containerID = getContainerID(containerID, originEnabled);
         }
 
         try {
@@ -304,7 +302,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
-            statsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes, poolSize,
+            statsDProcessor = createProcessor(queueSize, handler, getPacketSize(clientChannel), poolSize,
                     processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
 
             Properties properties = new Properties();
@@ -322,7 +320,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, bufferSize);
 
                 // similar settings, but a single worker and non-blocking.
-                telemetryStatsDProcessor = createProcessor(queueSize, handler, maxPacketSizeBytes,
+                telemetryStatsDProcessor = createProcessor(queueSize, handler, getPacketSize(telemetryClientChannel),
                         poolSize, 1, false, 0, aggregationShards, threadFactory, containerID);
             }
 
@@ -1310,10 +1308,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
-    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled, boolean hasEntityID) {
-        if (!originDetectionEnabled || hasEntityID || (containerID != null && !containerID.isEmpty())) {
+    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled) {
+        if (!originDetectionEnabled || (containerID != null && !containerID.isEmpty())) {
             // origin detection is explicitly disabled
-            // or DD_ENTITY_ID was found
             // or a user-defined container ID was provided
             return false;
         }
@@ -1344,5 +1341,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         return null;
+    }
+
+    private int getPacketSize(ClientChannel chan) {
+        return maxPacketSizeBytes > 0 ? maxPacketSizeBytes : chan.getMaxPacketSizeBytes();
     }
 }

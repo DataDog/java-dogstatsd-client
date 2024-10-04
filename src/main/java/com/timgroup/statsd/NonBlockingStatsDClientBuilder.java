@@ -236,13 +236,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             throw new UnsupportedOperationException("clone");
         }
 
-        int packetSize = maxPacketSizeBytes;
         Callable<SocketAddress> lookup = getAddressLookup();
-
-        if (packetSize == 0) {
-            packetSize = (port == 0) ? NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES :
-                NonBlockingStatsDClient.DEFAULT_UDP_MAX_PACKET_SIZE_BYTES;
-        }
 
         Callable<SocketAddress> telemetryLookup = telemetryAddressLookup;
         if (telemetryLookup == null) {
@@ -253,7 +247,6 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             }
         }
 
-        resolved.maxPacketSizeBytes = packetSize;
         resolved.addressLookup = lookup;
         resolved.telemetryAddressLookup = telemetryLookup;
 
