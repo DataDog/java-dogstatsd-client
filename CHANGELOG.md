@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.4.3 / 2024.10.04
+
+* [BUGFIX] Use correct buffer size for unix sockets. See [#256][]
+
 ## 4.4.2 / 2024.06.03
 
 * [BUGFIX] Fix sampling and visibility issues with new direct client. See [#249][]
@@ -254,6 +258,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#243]: https://github.com/DataDog/java-dogstatsd-client/issues/243
 [#247]: https://github.com/DataDog/java-dogstatsd-client/issues/247
 [#249]: https://github.com/DataDog/java-dogstatsd-client/issues/249
+[#256]: https://github.com/DataDog/java-dogstatsd-client/issues/256
 
 
 [@PatrickAuld]: https://github.com/PatrickAuld
