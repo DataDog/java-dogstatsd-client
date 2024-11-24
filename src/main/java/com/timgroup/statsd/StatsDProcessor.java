@@ -4,11 +4,7 @@ import com.timgroup.statsd.Message;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -47,10 +43,6 @@ public abstract class StatsDProcessor {
 
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
-        protected CharBuffer buffer = CharBuffer.wrap(builder);
-        protected final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPLACE)
-                .onUnmappableCharacter(CodingErrorAction.REPLACE);
 
         public final void run() {
             try {
@@ -148,20 +140,7 @@ public abstract class StatsDProcessor {
         abstract Message getMessage() throws InterruptedException;
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
-
-            int length = builder.length();
-            // use existing charbuffer if possible, otherwise re-wrap
-            if (length <= buffer.capacity()) {
-                buffer.limit(length).position(0);
-            } else {
-                buffer = CharBuffer.wrap(builder);
-            }
-
-            sendBuffer.mark();
-            if (utf8Encoder.encode(buffer, sendBuffer, true) == CoderResult.OVERFLOW) {
-                sendBuffer.reset();
-                throw new BufferOverflowException();
-            }
+            sendBuffer.put(builder.toString().getBytes(MESSAGE_CHARSET));
         }
     }
 
