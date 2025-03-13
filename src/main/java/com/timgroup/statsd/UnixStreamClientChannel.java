@@ -14,7 +14,7 @@ import java.nio.channels.SocketChannel;
  * A ClientChannel for Unix domain sockets.
  */
 public class UnixStreamClientChannel implements ClientChannel {
-    private final UnixSocketAddress address;
+    private final SocketAddress address;
     private final int timeout;
     private final int connectionTimeout;
     private final int bufferSize;
@@ -30,7 +30,7 @@ public class UnixStreamClientChannel implements ClientChannel {
      */
     UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize) throws IOException {
         this.delegate = null;
-        this.address = (UnixSocketAddress) address;
+        this.address = address;
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
@@ -125,39 +125,66 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
         }
 
-        UnixSocketChannel delegate = UnixSocketChannel.create();
-
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
-        if (connectionTimeout > 0) {
-            // Set connect timeout, this should work at least on linux
-            // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
-            // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
-        }
-        try {
-            if (!delegate.connect(address)) {
-                if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                    throw new IOException("Connection timed out");
-                }
-                if (!delegate.finishConnect()) {
-                    throw new IOException("Connection failed");
-                }
+        // use Java 16's native Unix domain socket support for compatible versions
+        if (ClientChannelUtils.isJavaVersionAtLeast(16)) {
+            SocketChannel delegate = SocketChannel.open();
+            if (connectionTimeout > 0) {
+                delegate.socket().setSoTimeout(connectionTimeout);
             }
-
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
-            if (bufferSize > 0) {
-                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-            }
-        } catch (Exception e) {
             try {
-                delegate.close();
-            } catch (IOException __) {
-                // ignore
+                delegate.configureBlocking(false);
+                if (!delegate.connect(address)) {
+                    if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                        throw new IOException("Connection timed out");
+                    }
+                    if (!delegate.finishConnect()) {
+                        throw new IOException("Connection failed");
+                    }
+                }
+                delegate.configureBlocking(true);
+                delegate.socket().setSoTimeout(Math.max(timeout, 0));
+                if (bufferSize > 0) {
+                    delegate.socket().setSendBufferSize(bufferSize);
+                }
+            } catch (Exception e) {
+                try {
+                    delegate.close();
+                } catch (IOException __) {
+                    // ignore
+                }
+                throw e;
             }
-            throw e;
+        } else {
+            UnixSocketChannel delegate = UnixSocketChannel.create();
+            if (connectionTimeout > 0) {
+                // Set connect timeout, this should work at least on linux
+                // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
+                // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
+                delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
+            }
+            try {
+                if (!delegate.connect((UnixSocketAddress) address)) {
+                    if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                        throw new IOException("Connection timed out");
+                    }
+                    if (!delegate.finishConnect()) {
+                        throw new IOException("Connection failed");
+                    }
+                }
+                delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
+                if (bufferSize > 0) {
+                    delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                }
+            } catch (Exception e) {
+                try {
+                    delegate.close();
+                } catch (IOException __) {
+                    // ignore
+                }
+                throw e;
+            }
         }
-
-
         this.delegate = delegate;
     }
     
