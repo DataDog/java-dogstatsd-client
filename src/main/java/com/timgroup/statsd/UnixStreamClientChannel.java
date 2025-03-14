@@ -19,7 +19,6 @@ public class UnixStreamClientChannel implements ClientChannel {
     private final int connectionTimeout;
     private final int bufferSize;
 
-
     private SocketChannel delegate;
     private final ByteBuffer delimiterBuffer = ByteBuffer.allocateDirect(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
 
@@ -74,6 +73,113 @@ public class UnixStreamClientChannel implements ClientChannel {
         return size;
     }
 
+    private void connectIfNeeded() throws IOException {
+        if (delegate == null) {
+            connect();
+        }
+    }
+
+    private void disconnect() throws IOException {
+        if (delegate != null) {
+            delegate.close();
+            delegate = null;
+        }
+    }
+
+    private void connect() throws IOException {
+        if (this.delegate != null) {
+            try {
+                disconnect();
+            } catch (IOException e) {
+                // ignore to be sure we don't stay with a broken delegate forever.
+            }
+        }
+
+        long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+        // use Java 16's native Unix domain socket support for compatible versions
+        if (ClientChannelUtils.hasNativeUDSSupport()) {
+            connectJdkSocket(deadline);
+        } else {
+            connectJnrSocket(deadline);
+        }
+    }
+
+    private void connectJdkSocket(long deadline) throws IOException {
+        String socketPath = address.toString();
+        if (socketPath.startsWith("file://") || socketPath.startsWith("unix://")) {
+            socketPath = socketPath.substring(7);
+        }
+        
+        try {
+            // Use reflection to avoid compile-time dependency on Java 16+ classes
+            Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+            Object udsAddress = udsAddressClass.getMethod("of", String.class).invoke(null, socketPath);
+            
+            SocketChannel delegate = SocketChannel.open();
+            if (connectionTimeout > 0) {
+                delegate.socket().setSoTimeout(connectionTimeout);
+            }
+            
+            try {
+                delegate.configureBlocking(false);
+                if (!delegate.connect((SocketAddress) udsAddress)) {
+                    if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                        throw new IOException("Connection timed out");
+                    }
+                    if (!delegate.finishConnect()) {
+                        throw new IOException("Connection failed");
+                    }
+                }
+                delegate.configureBlocking(true);
+                delegate.socket().setSoTimeout(Math.max(timeout, 0));
+                if (bufferSize > 0) {
+                    delegate.socket().setSendBufferSize(bufferSize);
+                }
+                this.delegate = delegate;
+            } catch (Exception e) {
+                try {
+                    delegate.close();
+                } catch (IOException __) {
+                    // ignore
+                }
+                throw new IOException("Failed to connect to Unix Domain Socket: " + socketPath, e);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IOException("Failed to create UnixDomainSocketAddress: Java 16+ required", e);
+        }
+    }
+
+    private void connectJnrSocket(long deadline) throws IOException {
+        UnixSocketChannel delegate = UnixSocketChannel.create();
+        if (connectionTimeout > 0) {
+            // Set connect timeout, this should work at least on linux
+            // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
+            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
+        }
+        try {
+            if (!delegate.connect((UnixSocketAddress) address)) {
+                if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                    throw new IOException("Connection timed out");
+                }
+                if (!delegate.finishConnect()) {
+                    throw new IOException("Connection failed");
+                }
+            }
+            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
+            if (bufferSize > 0) {
+                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+            }
+            this.delegate = delegate;
+        } catch (Exception e) {
+            try {
+                delegate.close();
+            } catch (IOException __) {
+                // ignore
+            }
+            throw e;
+        }
+    }
+
     /**
      * Writes all bytes from the given buffer to the channel.
      * @param bb buffer to write
@@ -101,91 +207,6 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
         }
         return written;
-    }
-
-    private void connectIfNeeded() throws IOException {
-        if (delegate == null) {
-            connect();
-        }
-    }
-
-    private void disconnect() throws IOException {
-        if (delegate != null) {
-            delegate.close();
-            delegate = null;
-        }
-    }
-
-    private void connect() throws IOException {
-        if (this.delegate != null) {
-            try {
-                disconnect();
-            } catch (IOException e) {
-                // ignore to be sure we don't stay with a broken delegate forever.
-            }
-        }
-
-        long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
-        // use Java 16's native Unix domain socket support for compatible versions
-        if (ClientChannelUtils.isJavaVersionAtLeast(16)) {
-            SocketChannel delegate = SocketChannel.open();
-            if (connectionTimeout > 0) {
-                delegate.socket().setSoTimeout(connectionTimeout);
-            }
-            try {
-                delegate.configureBlocking(false);
-                if (!delegate.connect(address)) {
-                    if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                        throw new IOException("Connection timed out");
-                    }
-                    if (!delegate.finishConnect()) {
-                        throw new IOException("Connection failed");
-                    }
-                }
-                delegate.configureBlocking(true);
-                delegate.socket().setSoTimeout(Math.max(timeout, 0));
-                if (bufferSize > 0) {
-                    delegate.socket().setSendBufferSize(bufferSize);
-                }
-            } catch (Exception e) {
-                try {
-                    delegate.close();
-                } catch (IOException __) {
-                    // ignore
-                }
-                throw e;
-            }
-        } else {
-            UnixSocketChannel delegate = UnixSocketChannel.create();
-            if (connectionTimeout > 0) {
-                // Set connect timeout, this should work at least on linux
-                // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
-                // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
-                delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
-            }
-            try {
-                if (!delegate.connect((UnixSocketAddress) address)) {
-                    if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                        throw new IOException("Connection timed out");
-                    }
-                    if (!delegate.finishConnect()) {
-                        throw new IOException("Connection failed");
-                    }
-                }
-                delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
-                if (bufferSize > 0) {
-                    delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
-                }
-            } catch (Exception e) {
-                try {
-                    delegate.close();
-                } catch (IOException __) {
-                    // ignore
-                }
-                throw e;
-            }
-        }
-        this.delegate = delegate;
     }
     
     @Override
