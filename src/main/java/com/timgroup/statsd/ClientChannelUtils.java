@@ -7,6 +7,7 @@ import java.util.List;
 // https://github.com/DataDog/dd-trace-java/blob/master/internal-api/src/main/java/datadog/trace/api/Platform.java
 public class ClientChannelUtils {
     private static final Version JAVA_VERSION = parseJavaVersion(System.getProperty("java.version"));
+    private static final int NATIVE_UDS_MIN_VERSION = 16;  // Java 16+ has native Unix Domain Socket support
 
     private static Version parseJavaVersion(String javaVersion) {
         // Remove pre-release part, usually -ea
@@ -102,5 +103,9 @@ public class ClientChannelUtils {
 
     public static boolean isJavaVersionAtLeast(int major, int minor, int update) {
         return JAVA_VERSION.isAtLeast(major, minor, update);
+    }
+
+    public static boolean hasNativeUDSSupport() {
+        return isJavaVersionAtLeast(NATIVE_UDS_MIN_VERSION);
     }
 }
