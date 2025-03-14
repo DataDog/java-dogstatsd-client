@@ -96,8 +96,8 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
 
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
-        // use Java 16's native Unix domain socket support for compatible versions
-        if (ClientChannelUtils.hasNativeUDSSupport()) {
+        // Use native JDK Unix domain socket support for compatible versions (Java 16+). Fall back to JNR support otherwise.
+        if (ClientChannelUtils.hasNativeUdsSupport()) {
             connectJdkSocket(deadline);
         } else {
             connectJnrSocket(deadline);
@@ -105,9 +105,15 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     private void connectJdkSocket(long deadline) throws IOException {
-        String socketPath = address.toString();
-        if (socketPath.startsWith("file://") || socketPath.startsWith("unix://")) {
-            socketPath = socketPath.substring(7);
+        String socketPath;
+        if (address instanceof UnixSocketAddress) {
+            UnixSocketAddress unixAddr = (UnixSocketAddress) address;
+            socketPath = unixAddr.path();
+        } else {
+            socketPath = address.toString();
+            if (socketPath.startsWith("file://") || socketPath.startsWith("unix://")) {
+                socketPath = socketPath.substring(7);
+            }
         }
         
         try {

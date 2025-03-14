@@ -22,7 +22,7 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
     }
 
     private static DatagramChannel createChannel(SocketAddress address) throws IOException {
-        if (ClientChannelUtils.hasNativeUDSSupport()) {
+        if (ClientChannelUtils.hasNativeUdsSupport()) {
             return DatagramChannel.open();
         } else {
             return UnixDatagramChannel.open();
@@ -30,7 +30,7 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
     }
 
     private void configureChannel(int timeout, int bufferSize) throws IOException {
-        if (ClientChannelUtils.hasNativeUDSSupport()) {
+        if (ClientChannelUtils.hasNativeUdsSupport()) {
             if (timeout > 0) {
                 delegate.socket().setSoTimeout(timeout);
             }
@@ -38,12 +38,11 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
                 delegate.socket().setSendBufferSize(bufferSize);
             }
         } else {
-            UnixDatagramChannel unixChannel = (UnixDatagramChannel) delegate;
             if (timeout > 0) {
-                unixChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+                delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
             }
             if (bufferSize > 0) {
-                unixChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
         }
     }

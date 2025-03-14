@@ -3,7 +3,7 @@ package com.timgroup.statsd;
 import java.util.ArrayList;
 import java.util.List;
 
-// logic copied over from dd-trace-java Platform class. See:
+// Logic copied from dd-trace-java Platform class. See:
 // https://github.com/DataDog/dd-trace-java/blob/master/internal-api/src/main/java/datadog/trace/api/Platform.java
 public class ClientChannelUtils {
     private static final Version JAVA_VERSION = parseJavaVersion(System.getProperty("java.version"));
@@ -61,7 +61,9 @@ public class ClientChannelUtils {
     }
 
     static final class Version {
-        public final int major, minor, update;
+        public final int major;
+        public final int minor;
+        public final int update;
 
         public Version(int major, int minor, int update) {
             this.major = major;
@@ -105,7 +107,7 @@ public class ClientChannelUtils {
         return JAVA_VERSION.isAtLeast(major, minor, update);
     }
 
-    public static boolean hasNativeUDSSupport() {
+    public static boolean hasNativeUdsSupport() {
         return isJavaVersionAtLeast(NATIVE_UDS_MIN_VERSION);
     }
 }
