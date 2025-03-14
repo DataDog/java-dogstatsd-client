@@ -17,8 +17,20 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
      * @throws IOException if socket options cannot be set
      */
     UnixDatagramClientChannel(SocketAddress address, int timeout, int bufferSize) throws IOException {
-        super(ClientChannelUtils.isJavaVersionAtLeast(16) ? DatagramChannel.open() : UnixDatagramChannel.open(), address);
-        if (ClientChannelUtils.isJavaVersionAtLeast(16)) {
+        super(createChannel(address), address);
+        configureChannel(timeout, bufferSize);
+    }
+
+    private static DatagramChannel createChannel(SocketAddress address) throws IOException {
+        if (ClientChannelUtils.hasNativeUDSSupport()) {
+            return DatagramChannel.open();
+        } else {
+            return UnixDatagramChannel.open();
+        }
+    }
+
+    private void configureChannel(int timeout, int bufferSize) throws IOException {
+        if (ClientChannelUtils.hasNativeUDSSupport()) {
             if (timeout > 0) {
                 delegate.socket().setSoTimeout(timeout);
             }
@@ -26,13 +38,12 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
                 delegate.socket().setSendBufferSize(bufferSize);
             }
         } else {
-            // Set send timeout, to handle the case where the transmission buffer is full
-            // If no timeout is set, the send becomes blocking
+            UnixDatagramChannel unixChannel = (UnixDatagramChannel) delegate;
             if (timeout > 0) {
-                delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+                unixChannel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
             }
             if (bufferSize > 0) {
-                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                unixChannel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
         }
     }
