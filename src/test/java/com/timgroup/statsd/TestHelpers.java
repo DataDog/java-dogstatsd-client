@@ -20,16 +20,7 @@ public class TestHelpers
         }
     }
 
-    static boolean isJdkUdsAvailable() {
-        try {
-            Class.forName("java.nio.channels.DatagramChannel");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
     static boolean isUdsAvailable() {
-        return (isLinux() || isMac()) && (isJdkUdsAvailable() || isJnrAvailable());
+        return (isLinux() || isMac()) && isJnrAvailable();
     }
 }

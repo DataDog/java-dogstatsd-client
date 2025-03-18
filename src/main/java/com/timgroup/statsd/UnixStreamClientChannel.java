@@ -9,6 +9,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
+import java.lang.reflect.Method;
 
 /**
  * A ClientChannel for Unix domain sockets.
@@ -105,16 +106,7 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     private void connectJdkSocket(long deadline) throws IOException {
-        String socketPath;
-        if (address instanceof UnixSocketAddress) {
-            UnixSocketAddress unixAddr = (UnixSocketAddress) address;
-            socketPath = unixAddr.path();
-        } else {
-            socketPath = address.toString();
-            if (socketPath.startsWith("file://") || socketPath.startsWith("unix://")) {
-                socketPath = socketPath.substring(7);
-            }
-        }
+        String socketPath = address.toString();
         
         try {
             // Use reflection to avoid compile-time dependency on Java 16+ classes
@@ -128,7 +120,8 @@ public class UnixStreamClientChannel implements ClientChannel {
             
             try {
                 delegate.configureBlocking(false);
-                if (!delegate.connect((SocketAddress) udsAddress)) {
+                // Use reflection to call the UDS specific connect method
+                if (!delegate.connect(udsAddress)) {
                     if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                         throw new IOException("Connection timed out");
                     }
