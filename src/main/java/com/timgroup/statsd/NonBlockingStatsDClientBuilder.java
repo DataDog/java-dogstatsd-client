@@ -329,10 +329,27 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         if (port == 0) {
             return new Callable<SocketAddress>() {
                 @Override public SocketAddress call() throws UnknownHostException {
-                    return new UnixSocketAddressWithTransport(
-                            new UnixSocketAddress(hostname),
-                            UnixSocketAddressWithTransport.TransportType.UDS
-                    );
+                    if (VersionUtils.hasNativeUdsSupport()) {
+                        try {
+                            Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                            SocketAddress udsAddress = (SocketAddress) 
+                                udsAddressClass.getMethod("of", String.class).invoke(null, hostname);
+                            System.out.println("================UnixSocketAddressWithTransport returned with: " + udsAddress);
+                            return new UnixSocketAddressWithTransport(
+                                udsAddress, 
+                                UnixSocketAddressWithTransport.TransportType.UDS
+                            );
+                        } catch (Exception e) {
+                            throw new UnknownHostException("Failed to create UnixDomainSocketAddress: " + e.getMessage());
+                        }
+                    } else {
+                        SocketAddress jnrAddress = new UnixSocketAddress(hostname);
+                        System.out.println("================UnixSocketAddressWithTransport returned with: " + jnrAddress);
+                        return new UnixSocketAddressWithTransport(
+                                jnrAddress,
+                                UnixSocketAddressWithTransport.TransportType.UDS
+                        );
+                    }
                 }
             };
         } else {
@@ -374,12 +391,29 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     protected static Callable<SocketAddress> staticUnixResolution(
             final String path,
             final UnixSocketAddressWithTransport.TransportType transportType) {
-        return new Callable<SocketAddress>() {
-            @Override public SocketAddress call() {
-                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
-                return new UnixSocketAddressWithTransport(socketAddress, transportType);
+        if (VersionUtils.hasNativeUdsSupport()) {
+            try {
+                Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                final SocketAddress udsAddress = (SocketAddress) udsAddressClass.getMethod("of", String.class).invoke(null, path);
+                System.out.println("================new Callable<SocketAddress> returned with udsAddress: " + udsAddress);
+                return new Callable<SocketAddress>() {
+                    @Override public SocketAddress call() {
+                        System.out.println("================UnixSocketAddressWithTransport returned with: " + udsAddress);
+                        return new UnixSocketAddressWithTransport(udsAddress, transportType);
+                    }
+                };
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create UnixDomainSocketAddress: " + e.getMessage(), e);
             }
-        };
+        } else {
+            return new Callable<SocketAddress>() {
+                @Override public SocketAddress call() {
+                    final UnixSocketAddress jnrAddress = new UnixSocketAddress(path);
+                    System.out.println("================UnixSocketAddressWithTransport returned with: " + jnrAddress);
+                    return new UnixSocketAddressWithTransport(jnrAddress, transportType);
+                }
+            };
+        }
     }
 
     private static Callable<SocketAddress> staticAddress(final String hostname, final int port) {

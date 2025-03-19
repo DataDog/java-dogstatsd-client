@@ -34,6 +34,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
+        System.out.println("================Created UnixStreamClientChannel with address: " + address);
     }
 
     @Override
@@ -98,7 +99,7 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
         // Use native JDK Unix domain socket support for compatible versions (Java 16+). Fall back to JNR support otherwise.
-        if (ClientChannelUtils.hasNativeUdsSupport()) {
+        if (VersionUtils.hasNativeUdsSupport()) {
             connectJdkSocket(deadline);
         } else {
             connectJnrSocket(deadline);
@@ -106,10 +107,8 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     private void connectJdkSocket(long deadline) throws IOException {
-        String socketPath = address.toString();
-        
+        String socketPath = address.toString();        
         try {
-            // Use reflection to avoid compile-time dependency on Java 16+ classes
             Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
             Object udsAddress = udsAddressClass.getMethod("of", String.class).invoke(null, socketPath);
             
@@ -118,32 +117,34 @@ public class UnixStreamClientChannel implements ClientChannel {
                 delegate.socket().setSoTimeout(connectionTimeout);
             }
             
-            try {
-                delegate.configureBlocking(false);
-                if (!delegate.connect((SocketAddress) udsAddress)) {
-                    if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                        throw new IOException("Connection timed out");
-                    }
-                    if (!delegate.finishConnect()) {
-                        throw new IOException("Connection failed");
-                    }
+            delegate.configureBlocking(false);
+            System.out.println("================Attempting to connect delegate to: " + udsAddress);
+            if (!delegate.connect((SocketAddress) udsAddress)) {
+                System.out.println("================Initial connect returned false, checking deadline");
+                if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                    throw new IOException("Connection timed out");
                 }
-                delegate.configureBlocking(true);
-                delegate.socket().setSoTimeout(Math.max(timeout, 0));
-                if (bufferSize > 0) {
-                    delegate.socket().setSendBufferSize(bufferSize);
+                System.out.println("================Finishing connection");
+                if (!delegate.finishConnect()) {
+                    throw new IOException("Connection failed");
                 }
-                this.delegate = delegate;
-            } catch (Exception e) {
-                try {
-                    delegate.close();
-                } catch (IOException __) {
-                    // ignore
-                }
-                throw new IOException("Failed to connect to Unix Domain Socket: " + socketPath, e);
             }
-        } catch (ReflectiveOperationException e) {
-            throw new IOException("Failed to create UnixDomainSocketAddress: Java 16+ required", e);
+            System.out.println("================Connection successful");
+            delegate.configureBlocking(true);
+            delegate.socket().setSoTimeout(Math.max(timeout, 0));
+            if (bufferSize > 0) {
+                delegate.socket().setSendBufferSize(bufferSize);
+            }
+            this.delegate = delegate;
+            System.out.println("================Set up complete.");
+        } catch (Exception e) {
+            System.out.println("================Failed to connect to UDS at: " + socketPath);
+            try {
+                delegate.close();
+            } catch (IOException __) {
+                // ignore
+            }
+            throw new IOException("Failed to connect to Unix Domain Socket: " + socketPath, e);
         }
     }
 
@@ -155,6 +156,7 @@ public class UnixStreamClientChannel implements ClientChannel {
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
         try {
+            System.out.println("================Attempting to connect delegate to: " + address);
             if (!delegate.connect((UnixSocketAddress) address)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                     throw new IOException("Connection timed out");
@@ -163,11 +165,13 @@ public class UnixStreamClientChannel implements ClientChannel {
                     throw new IOException("Connection failed");
                 }
             }
+            System.out.println("================Connection successful");
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
             if (bufferSize > 0) {
                 delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
             this.delegate = delegate;
+            System.out.println("================Set up complete.");
         } catch (Exception e) {
             try {
                 delegate.close();

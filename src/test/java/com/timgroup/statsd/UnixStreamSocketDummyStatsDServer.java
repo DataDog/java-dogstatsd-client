@@ -23,6 +23,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         server = UnixServerSocketChannel.open();
         server.configureBlocking(true);
         server.socket().bind(new UnixSocketAddress(socketPath));
+        System.out.println("================Server bound to " + socketPath);
         this.listen();
     }
 
@@ -39,6 +40,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     @Override
     protected void listen() {
         logger.info("Listening on " + server.getLocalSocketAddress());
+        System.out.println("================Server listening on " + server.getLocalSocketAddress());
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -48,7 +50,9 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                     }
                         try {
                             logger.info("Waiting for connection");
+                            System.out.println("================Server waiting for connection");
                             UnixSocketChannel clientChannel = server.accept();
+                            System.out.println("================Server accepted connection");
                             if (clientChannel != null) {
                                 clientChannel.configureBlocking(true);
                                 try {
@@ -60,6 +64,7 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                                 readChannel(clientChannel);
                             }
                         } catch (IOException e) {
+                            System.out.println("================Server caught IOException: " + e);
                         }
                 }
             }

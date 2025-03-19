@@ -22,7 +22,7 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
     }
 
     private static DatagramChannel createChannel(SocketAddress address) throws IOException {
-        if (ClientChannelUtils.hasNativeUdsSupport()) {
+        if (VersionUtils.hasNativeUdsSupport()) {
             return DatagramChannel.open();
         } else {
             return UnixDatagramChannel.open();
@@ -30,7 +30,7 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
     }
 
     private void configureChannel(int timeout, int bufferSize) throws IOException {
-        if (ClientChannelUtils.hasNativeUdsSupport()) {
+        if (VersionUtils.hasNativeUdsSupport()) {
             if (timeout > 0) {
                 delegate.socket().setSoTimeout(timeout);
             }
