@@ -11,7 +11,7 @@ import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET
 
 public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     private final DatagramChannel server;
-    private volatile boolean running = true;
+    private volatile boolean serverRunning = true;
 
     public UnixDatagramSocketDummyStatsDServer(String socketPath) throws IOException {
         if (ClientChannelUtils.hasNativeUdsSupport()) {
@@ -35,7 +35,7 @@ public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
 
     @Override
     protected boolean isOpen() {
-        return running && server.isOpen();
+        return serverRunning && server.isOpen();
     }
 
     protected void receive(ByteBuffer packet) throws IOException {
@@ -44,12 +44,12 @@ public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
 
     @Override
     public void close() throws IOException {
-        running = false;  // Signal the listening thread to stop
+        serverRunning = false;
         try {
             // Give the listening thread a chance to stop
-            Thread.sleep(50);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
-            // Ignore
+            // ignore
         }
         try {
             server.close();

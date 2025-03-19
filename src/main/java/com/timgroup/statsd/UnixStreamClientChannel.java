@@ -5,11 +5,11 @@ import jnr.unixsocket.UnixSocketChannel;
 import jnr.unixsocket.UnixSocketOptions;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
-import java.lang.reflect.Method;
 
 /**
  * A ClientChannel for Unix domain sockets.
