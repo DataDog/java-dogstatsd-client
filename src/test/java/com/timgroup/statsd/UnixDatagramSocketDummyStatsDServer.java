@@ -3,6 +3,7 @@ package com.timgroup.statsd;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.net.SocketAddress;
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 
@@ -13,8 +14,22 @@ public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     private volatile boolean running = true;
 
     public UnixDatagramSocketDummyStatsDServer(String socketPath) throws IOException {
-        server = UnixDatagramChannel.open();
-        server.bind(new UnixSocketAddress(socketPath));
+        if (ClientChannelUtils.hasNativeUdsSupport()) {
+            try {
+                Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                Object udsAddress = udsAddressClass.getMethod("of", String.class).invoke(null, socketPath);
+
+                DatagramChannel nativeServer = DatagramChannel.open();
+                nativeServer.bind((SocketAddress) udsAddress);
+                this.server = nativeServer;
+            } catch (ReflectiveOperationException e) {
+                throw new IOException(e);
+            }
+        } else {
+            UnixDatagramChannel jnrServer = UnixDatagramChannel.open();
+            jnrServer.bind(new UnixSocketAddress(socketPath));
+            this.server = jnrServer;
+        }
         this.listen();
     }
 

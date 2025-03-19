@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
 import jnr.unixsocket.UnixServerSocketChannel;
@@ -14,21 +16,37 @@ import jnr.unixsocket.UnixSocketChannel;
 import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
 
 public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
-    private final UnixServerSocketChannel server;
-    private final ConcurrentLinkedQueue<UnixSocketChannel> channels = new ConcurrentLinkedQueue<>();
+    private final Object server; // Object is either ServerSocketChannel or UnixServerSocketChannel
+    private final ConcurrentLinkedQueue<SocketChannel> channels = new ConcurrentLinkedQueue<>();
+    private final boolean useNativeUds;
 
     private final Logger logger = Logger.getLogger(UnixStreamSocketDummyStatsDServer.class.getName());
 
     public UnixStreamSocketDummyStatsDServer(String socketPath) throws IOException {
-        server = UnixServerSocketChannel.open();
-        server.configureBlocking(true);
-        server.socket().bind(new UnixSocketAddress(socketPath));
+        this.useNativeUds = ClientChannelUtils.hasNativeUdsSupport();
+        if (useNativeUds) {
+            try {
+                Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                Object udsAddress = udsAddressClass.getMethod("of", String.class).invoke(null, socketPath);
+                
+                ServerSocketChannel nativeServer = ServerSocketChannel.open();
+                nativeServer.bind((SocketAddress) udsAddress);
+                this.server = nativeServer;
+            } catch (ReflectiveOperationException e) {
+                throw new IOException(e);
+            }
+        } else {
+            UnixServerSocketChannel jnrServer = UnixServerSocketChannel.open();
+            jnrServer.configureBlocking(true);
+            jnrServer.socket().bind(new UnixSocketAddress(socketPath));
+            this.server = jnrServer;
+        }
         this.listen();
     }
 
     @Override
     protected boolean isOpen() {
-        return server.isOpen();
+        return useNativeUds ? ((ServerSocketChannel)server).isOpen() : ((UnixServerSocketChannel)server).isOpen();
     }
 
     @Override
@@ -38,7 +56,12 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
 
     @Override
     protected void listen() {
-        logger.info("Listening on " + server.getLocalSocketAddress());
+        try {
+            String localAddressMessage = useNativeUds ? "Listening on " + ((ServerSocketChannel)server).getLocalAddress() : "Listening on " + ((UnixServerSocketChannel)server).getLocalSocketAddress();
+            logger.info(localAddressMessage);
+        } catch (Exception e) {
+            logger.warning("Failed to get local address: " + e);
+        }
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -46,21 +69,20 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                     if (sleepIfFrozen()) {
                         continue;
                     }
-                        try {
-                            logger.info("Waiting for connection");
-                            UnixSocketChannel clientChannel = server.accept();
-                            if (clientChannel != null) {
-                                clientChannel.configureBlocking(true);
-                                try {
-                                    logger.info("Accepted connection from " + clientChannel.getRemoteSocketAddress());
-                                } catch (Exception e) {
-                                    logger.warning("Failed to get remote socket address");
-                                }
-                                channels.add(clientChannel);
-                                readChannel(clientChannel);
-                            }
-                        } catch (IOException e) {
+                    try {
+                        logger.info("Waiting for connection");
+                        SocketChannel clientChannel = null;
+                        clientChannel = useNativeUds ? ((ServerSocketChannel)server).accept() : ((UnixServerSocketChannel)server).accept();
+                        if (clientChannel != null) {
+                            clientChannel.configureBlocking(true);
+                            String connectionMessage = useNativeUds ? "Accepted connection from " + clientChannel.getRemoteAddress() : "Accepted connection from " + ((UnixSocketChannel)clientChannel).getRemoteSocketAddress();
+                            logger.info(connectionMessage);
+                            channels.add(clientChannel);
+                            readChannel(clientChannel);
                         }
+                    } catch (Exception e) {
+                        // ignore
+                    }
                 }
             }
         });
@@ -68,9 +90,9 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
         thread.start();
     }
 
-    public void readChannel(final UnixSocketChannel clientChannel) {
-            logger.info("Reading from " + clientChannel);
-            Thread thread = new Thread(new Runnable() {
+    public void readChannel(final SocketChannel clientChannel) {
+        logger.info("Reading from " + clientChannel);
+        Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
@@ -90,7 +112,6 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                             logger.warning("Failed to close channel: " + e);
                         }
                     }
-
                 }
                 logger.info("Disconnected from " + clientChannel);
             }
@@ -128,13 +149,16 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
 
     public void close() throws IOException {
         try {
-            server.close();
-            for (UnixSocketChannel channel : channels) {
+            if (useNativeUds) {
+                ((ServerSocketChannel)server).close();
+            } else {
+                ((UnixServerSocketChannel)server).close();
+            }
+            for (SocketChannel channel : channels) {
                 channel.close();
             }
         } catch (Exception e) {
             //ignore
         }
     }
-
 }

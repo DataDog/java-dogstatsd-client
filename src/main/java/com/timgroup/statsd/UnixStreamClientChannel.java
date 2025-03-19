@@ -120,8 +120,7 @@ public class UnixStreamClientChannel implements ClientChannel {
             
             try {
                 delegate.configureBlocking(false);
-                // Use reflection to call the UDS specific connect method
-                if (!delegate.connect(udsAddress)) {
+                if (!delegate.connect((SocketAddress) udsAddress)) {
                     if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                         throw new IOException("Connection timed out");
                     }

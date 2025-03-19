@@ -376,6 +376,15 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             final UnixSocketAddressWithTransport.TransportType transportType) {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
+                if (ClientChannelUtils.hasNativeUdsSupport()) {
+                    try {
+                        Class<?> udsAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                        Object udsAddress = udsAddressClass.getMethod("of", String.class).invoke(null, path);
+                        return new UnixSocketAddressWithTransport((SocketAddress) udsAddress, transportType);
+                    } catch (ReflectiveOperationException e) {
+                        // Fall back to JNR implementation
+                    }
+                }
                 final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
                 return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
