@@ -1,5 +1,10 @@
 package com.timgroup.statsd;
 
+import jnr.constants.platform.Sock;
+import jnr.unixsocket.UnixSocketAddress;
+
+import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -521,9 +526,21 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     protected static Callable<SocketAddress> staticUnixResolution(
             final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
         return new Callable<SocketAddress>() {
-            @Override
-            public SocketAddress call() {
-                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
+            @Override public SocketAddress call() {
+                SocketAddress socketAddress;
+                // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
+                if (VersionUtils.isJavaVersionAtLeast(16)) {
+                    try {
+                        // Use reflection to avoid compiling Java 16+ classes in incompatible versions
+                        Class<?> unixDomainSocketAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                        Method ofMethod = unixDomainSocketAddressClass.getMethod("of", String.class);
+                        socketAddress = (SocketAddress) ofMethod.invoke(null, path);
+                    } catch (Exception e) {
+                        throw new StatsDClientException("Failed to create UnixSocketAddress for native UDS implementation", e);
+                    }
+                } else {
+                    socketAddress = new UnixSocketAddress(path);
+                }
                 return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
         };

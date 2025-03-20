@@ -1,7 +1,9 @@
 package com.timgroup.statsd;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
@@ -11,7 +13,7 @@ import jnr.unixsocket.UnixSocketOptions;
 
 /** A ClientChannel for Unix domain sockets. */
 public class UnixStreamClientChannel implements ClientChannel {
-    private final UnixSocketAddress address;
+    private final SocketAddress address;
     private final int timeout;
     private final int connectionTimeout;
     private final int bufferSize;
@@ -29,7 +31,7 @@ public class UnixStreamClientChannel implements ClientChannel {
             SocketAddress address, int timeout, int connectionTimeout, int bufferSize)
             throws IOException {
         this.delegate = null;
-        this.address = (UnixSocketAddress) address;
+        this.address = address;
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
@@ -127,40 +129,86 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
         }
 
-        UnixSocketChannel delegate = UnixSocketChannel.create();
-
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+        // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
+        if (VersionUtils.isJavaVersionAtLeast(16)) {
+            try {
+                // Use reflection to avoid compiling Java 16+ classes in incompatible versions
+                Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
+                Object unixProtocol = Enum.valueOf((Class<Enum>) protocolFamilyClass, "UNIX");
+                Method openMethod = SocketChannel.class.getMethod("open", protocolFamilyClass);
+                SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
+                
+                if (connectionTimeout > 0) {
+                    channel.socket().setSoTimeout(connectionTimeout);
+                }
+                try {
+                    if (!channel.connect(address)) {
+                        if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                            throw new IOException("Connection timed out");
+                        }
+                        if (!channel.finishConnect()) {
+                            throw new IOException("Connection failed");
+                        }
+                    }
+                    channel.socket().setSoTimeout(Math.max(timeout, 0));
+                    if (bufferSize > 0) {
+                        channel.socket().setSendBufferSize(bufferSize);
+                    }
+                } catch (Exception e) {
+                    try {
+                        channel.close();
+                    } catch (IOException __) {
+                         // ignore
+                    }
+                    throw e;
+                }
+                
+                this.delegate = channel;
+            } catch (Exception e) {
+                throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
+            }
+        }
+        UnixSocketChannel channel = UnixSocketChannel.create();
+        
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux
             // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
-            // We'd have better timeout support if we used Java 16's native Unix domain socket
-            // support (JEP 380)
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
+            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
+
         try {
-            if (!delegate.connect(address)) {
+            // address should be of type UnixSocketAddress
+            UnixSocketAddress unixAddress;
+            if (address instanceof UnixSocketAddress) {
+                unixAddress = (UnixSocketAddress) address;
+            } else {
+                unixAddress = new UnixSocketAddress(address.toString());
+            }
+            
+            if (!channel.connect(unixAddress)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                     throw new IOException("Connection timed out");
                 }
-                if (!delegate.finishConnect()) {
+                if (!channel.finishConnect()) {
                     throw new IOException("Connection failed");
                 }
             }
 
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
+            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
             if (bufferSize > 0) {
-                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
         } catch (Exception e) {
             try {
-                delegate.close();
+                channel.close();
             } catch (IOException __) {
                 // ignore
             }
             throw e;
         }
 
-        this.delegate = delegate;
+        this.delegate = channel;
     }
 
     @Override
