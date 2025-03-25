@@ -162,6 +162,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                 }
                 
                 this.delegate = channel;
+                return;
             } catch (Exception e) {
                 throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
             }
