@@ -41,9 +41,14 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
                 if (bufferSize > 0) {
                     channel.socket().setSendBufferSize(bufferSize);
                 }
+
+                // Connect the channel to the socketaddress
+                Method connectMethod = DatagramChannel.class.getMethod("connect", SocketAddress.class);
+                connectMethod.invoke(channel, address);
+
                 return channel;
             } catch (Exception e) {
-                throw new IOException("Failed to create UnixDatagramClientChannel for native UDS implementation", e);
+                throw new IOException("Failed to create UnixDatagramClientChannel for native UDS implementation for version " + System.getProperty("java.version"), e);
             }
         }
         UnixDatagramChannel channel = UnixDatagramChannel.open();
