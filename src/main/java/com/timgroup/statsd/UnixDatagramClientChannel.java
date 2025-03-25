@@ -48,7 +48,10 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
 
                 return channel;
             } catch (Exception e) {
-                throw new IOException("Failed to create UnixDatagramClientChannel for native UDS implementation for version " + System.getProperty("java.version"), e);
+                throw new IOException(
+                    "Failed to create UnixDatagramClientChannel for native UDS implementation for version " 
+                    + System.getProperty("java.version"), 
+                    e);
             }
         }
         UnixDatagramChannel channel = UnixDatagramChannel.open();
