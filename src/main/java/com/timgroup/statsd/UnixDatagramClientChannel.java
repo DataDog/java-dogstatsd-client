@@ -30,7 +30,9 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
                 // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                 Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
                 Object unixProtocol = Enum.valueOf((Class<Enum>) protocolFamilyClass, "UNIX");
+                // Explicitly set StandardProtocolFamily.UNIX so that the socket uses the UDS protocol
                 Method openMethod = DatagramChannel.class.getMethod("open", protocolFamilyClass);
+                // Open the socketchannel with the UDS protocol
                 DatagramChannel channel = (DatagramChannel) openMethod.invoke(null, unixProtocol);
                 
                 if (timeout > 0) {
