@@ -534,6 +534,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
                         // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                         Class<?> unixDomainSocketAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
                         Method ofMethod = unixDomainSocketAddressClass.getMethod("of", String.class);
+                        // return type SocketAddress instead of UnixSocketAddress for compatibility with the native SocketChannels in Unix*ClientChannel.java
                         socketAddress = (SocketAddress) ofMethod.invoke(null, path);
                     } catch (Exception e) {
                         throw new StatsDClientException("Failed to create UnixSocketAddress for native UDS implementation", e);

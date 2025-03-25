@@ -136,13 +136,16 @@ public class UnixStreamClientChannel implements ClientChannel {
                 // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                 Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
                 Object unixProtocol = Enum.valueOf((Class<Enum>) protocolFamilyClass, "UNIX");
+                // Explicitly set StandardProtocolFamily.UNIX so that the socket uses the UDS protocol
                 Method openMethod = SocketChannel.class.getMethod("open", protocolFamilyClass);
+                // Open the socketchannel with the UDS protocol
                 SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
                 
                 if (connectionTimeout > 0) {
                     channel.socket().setSoTimeout(connectionTimeout);
                 }
                 try {
+                    // socketchannel is failing to connect here :(
                     if (!channel.connect(address)) {
                         if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                             throw new IOException("Connection timed out");
@@ -170,6 +173,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                 throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
             }
         }
+        // Default to jnr-unixsocket if Java version is less than 16
         UnixSocketChannel channel = UnixSocketChannel.create();
         
         if (connectionTimeout > 0) {
@@ -179,7 +183,8 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
 
         try {
-            // address should be of type UnixSocketAddress
+            // Ensure address is of type UnixSocketAddress -- this should be unnecessary after native UDS support
+            // is fixed and addresses that are not of type UnixSocketAddress are filtered out
             UnixSocketAddress unixAddress;
             if (address instanceof UnixSocketAddress) {
                 unixAddress = (UnixSocketAddress) address;
