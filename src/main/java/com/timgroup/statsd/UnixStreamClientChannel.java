@@ -145,8 +145,10 @@ public class UnixStreamClientChannel implements ClientChannel {
                     channel.socket().setSoTimeout(connectionTimeout);
                 }
                 try {
+                    Method connectMethod = SocketChannel.class.getMethod("connect", SocketAddress.class);
+                    boolean connected = (boolean) connectMethod.invoke(channel, address);
                     // socketchannel is failing to connect here :(
-                    if (!channel.connect(address)) {
+                    if (!connected) {
                         if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                             throw new IOException("Connection timed out");
                         }
