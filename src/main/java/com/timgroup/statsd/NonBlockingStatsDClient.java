@@ -615,7 +615,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
             sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, timestamp, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
-                    builder.append(this.value);
+                    builder.append(this.value.longValue());
                 }
             });
         }
