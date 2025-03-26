@@ -534,16 +534,21 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
                         // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                         Class<?> unixDomainSocketAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
                         Method ofMethod = unixDomainSocketAddressClass.getMethod("of", String.class);
-                        // return type SocketAddress instead of UnixSocketAddress for compatibility with 
-                        //the native SocketChannels in Unix*ClientChannel.java
+                        // return type SocketAddress for compatibility with UnixStreamClientChannel.java
                         socketAddress = (SocketAddress) ofMethod.invoke(null, path);
+                        System.out.println("========== Native UDS socket address: " + socketAddress);
+                        System.out.println("========== Native UDS socket address type: " + socketAddress.getClass().getName());
                     } catch (Exception e) {
                         throw new StatsDClientException("Failed to create UnixSocketAddress for native UDS implementation", e);
                     }
                 } else {
                     socketAddress = new UnixSocketAddress(path);
+                    System.out.println("========== JNR socket address: " + socketAddress);
+                    System.out.println("========== JNR socket address type: " + socketAddress.getClass().getName());
                 }
-                return new UnixSocketAddressWithTransport(socketAddress, transportType);
+                UnixSocketAddressWithTransport result = new UnixSocketAddressWithTransport(socketAddress, transportType);
+                System.out.println("========== Final result type: " + result.getClass().getName());
+                return result;
             }
         };
     }

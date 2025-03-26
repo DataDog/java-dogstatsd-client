@@ -23,7 +23,10 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     public UnixStreamSocketDummyStatsDServer(String socketPath) throws IOException {
         server = UnixServerSocketChannel.open();
         server.configureBlocking(true);
-        server.socket().bind(new UnixSocketAddress(socketPath));
+        UnixSocketAddress address = new UnixSocketAddress(socketPath);
+        System.out.println("========== Server bind address: " + address);
+        System.out.println("========== Server bind address type: " + address.getClass().getName());
+        server.socket().bind(address);
         this.listen();
     }
 
@@ -39,6 +42,8 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
 
     @Override
     protected void listen() {
+        System.out.println("========== Server local address: " + server.getLocalSocketAddress());
+        System.out.println("========== Server local address type: " + server.getLocalSocketAddress().getClass().getName());
         logger.info("Listening on " + server.getLocalSocketAddress());
         Thread thread =
                 new Thread(
@@ -55,6 +60,8 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
                                         if (clientChannel != null) {
                                             clientChannel.configureBlocking(true);
                                             try {
+                                                System.out.println("========== Client remote address: " + clientChannel.getRemoteSocketAddress());
+                                                System.out.println("========== Client remote address type: " + clientChannel.getRemoteSocketAddress().getClass().getName());
                                                 logger.info(
                                                         "Accepted connection from "
                                                                 + clientChannel

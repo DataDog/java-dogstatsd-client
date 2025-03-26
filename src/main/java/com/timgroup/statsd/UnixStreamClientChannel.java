@@ -32,6 +32,8 @@ public class UnixStreamClientChannel implements ClientChannel {
             throws IOException {
         this.delegate = null;
         this.address = address;
+        System.out.println("========== Constructor address: " + address);
+        System.out.println("========== Constructor address type: " + address.getClass().getName());
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
@@ -145,6 +147,8 @@ public class UnixStreamClientChannel implements ClientChannel {
                     channel.socket().setSoTimeout(connectionTimeout);
                 }
                 try {
+                    System.out.println("========== Native UDS connect address: " + address);
+                    System.out.println("========== Native UDS connect address type: " + address.getClass().getName());
                     Method connectMethod = SocketChannel.class.getMethod("connect", SocketAddress.class);
                     boolean connected = (boolean) connectMethod.invoke(channel, address);
                     // socketchannel is failing to connect here :(
@@ -156,6 +160,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                             throw new IOException("Connection failed");
                         }
                     }
+                    System.out.println("========== Connection successful");
                     channel.socket().setSoTimeout(Math.max(timeout, 0));
                     if (bufferSize > 0) {
                         channel.socket().setSendBufferSize(bufferSize);
@@ -194,6 +199,9 @@ public class UnixStreamClientChannel implements ClientChannel {
                 unixAddress = new UnixSocketAddress(address.toString());
             }
             
+            System.out.println("========== JNR connect address: " + unixAddress);
+            System.out.println("========== JNR connect address type: " + unixAddress.getClass().getName());
+
             if (!channel.connect(unixAddress)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                     throw new IOException("Connection timed out");
