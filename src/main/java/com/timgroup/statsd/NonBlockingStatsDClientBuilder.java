@@ -57,6 +57,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
 
+    /** Enable native JDK support for UDS. */
+    public boolean enableJdkSocket = NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET;
+
     /** Telemetry flush interval, in milliseconds. */
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
 
@@ -327,6 +330,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableJdkSocket(boolean val) {
+        enableJdkSocket = val;
+        return this;
+    }
+
     /**
      * Request that all metrics from this client to be enriched to specified tag cardinality.
      *
@@ -529,7 +537,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             @Override public SocketAddress call() {
                 SocketAddress socketAddress;
                 // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
-                if (VersionUtils.isJavaVersionAtLeast(16)) {
+                if (VersionUtils.isJavaVersionAtLeast(16) && NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET) {
                     try {
                         // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                         Class<?> unixDomainSocketAddressClass = Class.forName("java.net.UnixDomainSocketAddress");

@@ -17,6 +17,7 @@ public class UnixStreamClientChannel implements ClientChannel {
     private final int timeout;
     private final int connectionTimeout;
     private final int bufferSize;
+    private final boolean enableJdkSocket;
 
     private SocketChannel delegate;
     private final ByteBuffer delimiterBuffer =
@@ -27,9 +28,7 @@ public class UnixStreamClientChannel implements ClientChannel {
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(
-            SocketAddress address, int timeout, int connectionTimeout, int bufferSize)
-            throws IOException {
+    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize, boolean enableJdkSocket) throws IOException {
         this.delegate = null;
         this.address = address;
         System.out.println("========== Constructor address: " + address);
@@ -37,6 +36,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
+        this.enableJdkSocket = enableJdkSocket;
     }
 
     @Override
@@ -133,7 +133,7 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
         // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
-        if (VersionUtils.isJavaVersionAtLeast(16)) {
+        if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket) {
             try {
                 // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                 Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
@@ -180,7 +180,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                 throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
             }
         }
-        // Default to jnr-unixsocket if Java version is less than 16
+        // Default to jnr-unixsocket if Java version is less than 16 or native UDS support is disabled
         UnixSocketChannel channel = UnixSocketChannel.create();
         
         if (connectionTimeout > 0) {
