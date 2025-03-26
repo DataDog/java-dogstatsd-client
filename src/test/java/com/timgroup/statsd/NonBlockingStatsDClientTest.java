@@ -1831,7 +1831,7 @@ public class NonBlockingStatsDClientTest {
                     this.originDetectionEnabled(false);
                     return new NonBlockingStatsDClient(resolve()) {
                         @Override
-                        ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize) throws Exception {
+                        ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize, boolean enableJdkSocket) throws Exception {
                             return new DatagramClientChannel(addressLookup.call()) {
                                 @Override
                                 public int write(ByteBuffer data) throws IOException {
@@ -1870,7 +1870,7 @@ public class NonBlockingStatsDClientTest {
                     this.bufferPoolSize(1);
                     return new NonBlockingStatsDClient(resolve()) {
                         @Override
-                        ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize) throws Exception {
+                        ClientChannel createByteChannel(Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize, boolean enableJdkSocket) throws Exception {
                             return new DatagramClientChannel(addressLookup.call()) {
                                 @Override
                                 public int write(ByteBuffer data) throws IOException {
