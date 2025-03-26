@@ -287,7 +287,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, bufferSize, enableJdkSocket);
+                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, 
+                    bufferSize, enableJdkSocket);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor =
@@ -484,7 +485,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             // Allow us to support `unix://` for both kind of sockets like in go.
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
-                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, bufferSize, enableJdkSocket);
+                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, 
+                        bufferSize, enableJdkSocket);
                 case UDS_DATAGRAM:
                 case UDS:
                     return new UnixDatagramClientChannel(

@@ -28,7 +28,8 @@ public class UnixStreamClientChannel implements ClientChannel {
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize, boolean enableJdkSocket) throws IOException {
+    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize,
+            boolean enableJdkSocket) throws IOException {
         this.delegate = null;
         this.address = address;
         System.out.println("========== Constructor address: " + address);
