@@ -1,14 +1,10 @@
 package com.timgroup.statsd;
 
 import jnr.unixsocket.UnixDatagramChannel;
-import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketOptions;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 
 class UnixDatagramClientChannel extends DatagramClientChannel {
     /**
@@ -20,50 +16,18 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
      * @throws IOException if socket options cannot be set
      */
     UnixDatagramClientChannel(SocketAddress address, int timeout, int bufferSize) throws IOException {
-        super(createChannel(address, timeout, bufferSize), address);
-    }
-
-    private static DatagramChannel createChannel(SocketAddress address, int timeout, int bufferSize) throws IOException {
-        // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
-        if (VersionUtils.isJavaVersionAtLeast(16)) {
-            try {
-                // Use reflection to avoid compiling Java 16+ classes in incompatible versions
-                Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
-                Object unixProtocol = Enum.valueOf((Class<Enum>) protocolFamilyClass, "UNIX");
-                // Explicitly set StandardProtocolFamily.UNIX so that the socket uses the UDS protocol
-                Method openMethod = DatagramChannel.class.getMethod("open", protocolFamilyClass);
-                // Open the socketchannel with the UDS protocol
-                DatagramChannel channel = (DatagramChannel) openMethod.invoke(null, unixProtocol);
-                
-                if (timeout > 0) {
-                    channel.socket().setSoTimeout(timeout);
-                }
-                if (bufferSize > 0) {
-                    channel.socket().setSendBufferSize(bufferSize);
-                }
-
-                // Connect the channel to the socketaddress
-                Method connectMethod = DatagramChannel.class.getMethod("connect", SocketAddress.class);
-                connectMethod.invoke(channel, address);
-
-                return channel;
-            } catch (Exception e) {
-                throw new IOException(
-                    "Failed to create UnixDatagramClientChannel for native UDS implementation for version " 
-                    + System.getProperty("java.version"), 
-                    e);
-            }
-        }
-        UnixDatagramChannel channel = UnixDatagramChannel.open();
+        // Ideally we could use native JDK UDS support such as with the UnixStreamClientChannel.
+        // However, DatagramChannels do not support StandardProtocolFamily.UNIX, so this is unavailable.
+        // See this open issue for updates: https://bugs.openjdk.org/browse/JDK-8297837?
+        super(UnixDatagramChannel.open(), address);
         // Set send timeout, to handle the case where the transmission buffer is full
         // If no timeout is set, the send becomes blocking
         if (timeout > 0) {
-            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
+            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, timeout);
         }
         if (bufferSize > 0) {
-            channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+            delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
         }
-        return channel;
     }
 
     @Override
