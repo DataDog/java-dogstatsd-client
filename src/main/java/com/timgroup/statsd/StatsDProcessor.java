@@ -4,11 +4,6 @@ import com.timgroup.statsd.Message;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -20,13 +15,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class StatsDProcessor {
-    protected static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
-
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
     protected static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
 
     protected final StatsDClientErrorHandler handler;
 
+    final int maxPacketSizeBytes;
     protected final BufferPool bufferPool;
     protected final Queue<Message> highPrioMessages; // FIFO queue for high priority messages
     protected final BlockingQueue<ByteBuffer> outboundQueue; // FIFO queue with outbound buffers
@@ -47,10 +41,9 @@ public abstract class StatsDProcessor {
 
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
-        protected CharBuffer buffer = CharBuffer.wrap(builder);
-        protected final CharsetEncoder utf8Encoder = MESSAGE_CHARSET.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPLACE)
-                .onUnmappableCharacter(CodingErrorAction.REPLACE);
+        char[] charBuffer = new char[maxPacketSizeBytes];
+        // + 4 so that we can check for buffer overflow without computing encoded length first
+        final byte[] byteBuffer = new byte[maxPacketSizeBytes + 4];
 
         public final void run() {
             try {
@@ -148,20 +141,44 @@ public abstract class StatsDProcessor {
         abstract Message getMessage() throws InterruptedException;
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
-
             int length = builder.length();
-            // use existing charbuffer if possible, otherwise re-wrap
-            if (length <= buffer.capacity()) {
-                buffer.limit(length).position(0);
-            } else {
-                buffer = CharBuffer.wrap(builder);
+            if (length > charBuffer.length) {
+                charBuffer = new char[length];
+            }
+
+            // We trust this returns valid UTF-16.
+            builder.getChars(0, length, charBuffer, 0);
+
+            int blen = 0;
+            for (int i = 0; i < length; i++) {
+                char ch = charBuffer[i];
+                // https://en.wikipedia.org/wiki/UTF-8#Description
+                // https://en.wikipedia.org/wiki/UTF-16#Description
+                if (ch < 0x80) {
+                    byteBuffer[blen++] = (byte)ch;
+                } else if (ch < 0x800) {
+                    byteBuffer[blen++] = (byte)(192 | (ch >> 6));
+                    byteBuffer[blen++] = (byte)(128 | (ch & 63));
+                } else if (ch < 0xd800 || ch >= 0xe000) {
+                    byteBuffer[blen++] = (byte)(224 | (ch >> 12));
+                    byteBuffer[blen++] = (byte)(128 | ((ch >> 6) & 63));
+                    byteBuffer[blen++] = (byte)(128 | (ch & 63));
+                } else {
+                    // surrogate pair
+                    int decoded = ((ch & 0x3ff) << 10) | (charBuffer[++i] & 0x3ff) | 0x10000;
+                    byteBuffer[blen++] = (byte)(240 | (decoded >> 18));
+                    byteBuffer[blen++] = (byte)(128 | ((decoded >> 12) & 63));
+                    byteBuffer[blen++] = (byte)(128 | ((decoded >> 6) & 63));
+                    byteBuffer[blen++] = (byte)(128 | (decoded & 63));
+                }
+
+                if (blen >= maxPacketSizeBytes) {
+                    throw new BufferOverflowException();
+                }
             }
 
             sendBuffer.mark();
-            if (utf8Encoder.encode(buffer, sendBuffer, true) == CoderResult.OVERFLOW) {
-                sendBuffer.reset();
-                throw new BufferOverflowException();
-            }
+            sendBuffer.put(byteBuffer, 0, blen);
         }
     }
 
@@ -175,6 +192,7 @@ public abstract class StatsDProcessor {
         this.workers = new Thread[workers];
         this.qcapacity = queueSize;
 
+        this.maxPacketSizeBytes = maxPacketSizeBytes;
         this.bufferPool = new BufferPool(poolSize, maxPacketSizeBytes, true);
         this.highPrioMessages = new ConcurrentLinkedQueue<>();
         this.outboundQueue = new ArrayBlockingQueue<ByteBuffer>(poolSize);
