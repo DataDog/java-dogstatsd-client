@@ -95,6 +95,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
+    public static final boolean DEFAULT_ENABLE_JDK_SOCKET = true;
 
     public static final boolean DEFAULT_ENABLE_AGGREGATION = true;
     public static final boolean DEFAULT_ENABLE_ORIGIN_DETECTION = true;
@@ -244,6 +245,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param connectionTimeout
      *     the timeout in milliseconds for connecting to the StatsD server. Applies to unix sockets only.
      *     It is also used to detect if a connection is still alive and re-establish a new one if needed.
+     * @param enableJdkSocket
+     *     Boolean to enable native JDK UDS support for the UnixStreamClientChannel.
+     *     Only compatible with Java 16 and up.
      * @throws StatsDClientException
      *     if the client could not be started
      */
@@ -253,7 +257,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
             final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
             final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory customThreadFactory,
-            String containerID, final boolean originDetectionEnabled, final int connectionTimeout)
+            String containerID, final boolean originDetectionEnabled, final int connectionTimeout,
+            final boolean enableJdkSocket)
             throws StatsDClientException {
 
         if ((prefix != null) && (!prefix.isEmpty())) {
@@ -298,7 +303,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         try {
-            clientChannel = createByteChannel(addressLookup, timeout, connectionTimeout, bufferSize);
+            clientChannel = createByteChannel(addressLookup, timeout, connectionTimeout, bufferSize, enableJdkSocket);
 
             ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
 
@@ -317,7 +322,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, bufferSize);
+                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, 
+                    bufferSize, enableJdkSocket);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor = createProcessor(queueSize, handler, getPacketSize(telemetryClientChannel),
@@ -378,7 +384,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
             (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
             builder.aggregationShards, builder.threadFactory, builder.containerID,
-            builder.originDetectionEnabled, builder.connectionTimeout);
+            builder.originDetectionEnabled, builder.connectionTimeout,
+            builder.enableJdkSocket);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
@@ -480,7 +487,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     ClientChannel createByteChannel(
-            Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize)
+            Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize, boolean enableJdkSocket)
             throws Exception {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
@@ -493,7 +500,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             // Allow us to support `unix://` for both kind of sockets like in go.
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
-                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, bufferSize);
+                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, 
+                        bufferSize, enableJdkSocket);
                 case UDS_DATAGRAM:
                 case UDS:
                     return new UnixDatagramClientChannel(unixAddr.getAddress(), timeout, bufferSize);

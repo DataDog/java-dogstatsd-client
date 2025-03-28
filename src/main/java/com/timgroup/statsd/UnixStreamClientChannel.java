@@ -5,7 +5,9 @@ import jnr.unixsocket.UnixSocketChannel;
 import jnr.unixsocket.UnixSocketOptions;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.SocketAddress;
+import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
@@ -14,11 +16,11 @@ import java.nio.channels.SocketChannel;
  * A ClientChannel for Unix domain sockets.
  */
 public class UnixStreamClientChannel implements ClientChannel {
-    private final UnixSocketAddress address;
+    private final SocketAddress address;
     private final int timeout;
     private final int connectionTimeout;
     private final int bufferSize;
-
+    private final boolean enableJdkSocket;
 
     private SocketChannel delegate;
     private final ByteBuffer delimiterBuffer = ByteBuffer.allocateDirect(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
@@ -28,12 +30,16 @@ public class UnixStreamClientChannel implements ClientChannel {
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize) throws IOException {
+    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize,
+            boolean enableJdkSocket) throws IOException {
         this.delegate = null;
-        this.address = (UnixSocketAddress) address;
+        this.address = address;
+        System.out.println("========== Constructor address: " + address);
+        System.out.println("========== Constructor address type: " + address.getClass().getName());
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
+        this.enableJdkSocket = enableJdkSocket;
     }
 
     @Override
@@ -125,40 +131,100 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
         }
 
-        UnixSocketChannel delegate = UnixSocketChannel.create();
-
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+        // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
+        if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket) {
+            try {
+                // Use reflection to avoid compiling Java 16+ classes in incompatible versions
+                Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
+                Object unixProtocol = Enum.valueOf((Class<Enum>) protocolFamilyClass, "UNIX");
+                // Explicitly set StandardProtocolFamily.UNIX so that the socket uses the UDS protocol
+                Method openMethod = SocketChannel.class.getMethod("open", protocolFamilyClass);
+                // Open the socketchannel with the UDS protocol
+                SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
+                
+                if (connectionTimeout > 0) {
+                    channel.socket().setSoTimeout(connectionTimeout);
+                }
+                try {
+                    System.out.println("========== Native UDS connect address: " + address);
+                    System.out.println("========== Native UDS connect address type: " + address.getClass().getName());
+                    Method connectMethod = SocketChannel.class.getMethod("connect", SocketAddress.class);
+                    boolean connected = (boolean) connectMethod.invoke(channel, address);
+                    // socketchannel is failing to connect here :(
+                    if (!connected) {
+                        if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                            throw new IOException("Connection timed out");
+                        }
+                        if (!channel.finishConnect()) {
+                            throw new IOException("Connection failed");
+                        }
+                    }
+                    System.out.println("========== Connection successful");
+                    channel.socket().setSoTimeout(Math.max(timeout, 0));
+                    if (bufferSize > 0) {
+                        channel.socket().setSendBufferSize(bufferSize);
+                    }
+                } catch (Exception e) {
+                    try {
+                        channel.close();
+                    } catch (IOException __) {
+                         // ignore
+                    }
+                    throw e;
+                }
+                
+                this.delegate = channel;
+                return;
+            } catch (Exception e) {
+                throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
+            }
+        }
+        // Default to jnr-unixsocket if Java version is less than 16 or native UDS support is disabled
+        UnixSocketChannel channel = UnixSocketChannel.create();
+        
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux
             // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
-            // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
+            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
+
         try {
-            if (!delegate.connect(address)) {
+            // Ensure address is of type UnixSocketAddress -- this should be unnecessary after native UDS support
+            // is fixed and addresses that are not of type UnixSocketAddress are filtered out
+            UnixSocketAddress unixAddress;
+            if (address instanceof UnixSocketAddress) {
+                unixAddress = (UnixSocketAddress) address;
+            } else {
+                unixAddress = new UnixSocketAddress(address.toString());
+            }
+            
+            System.out.println("========== JNR connect address: " + unixAddress);
+            System.out.println("========== JNR connect address type: " + unixAddress.getClass().getName());
+
+            if (!channel.connect(unixAddress)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                     throw new IOException("Connection timed out");
                 }
-                if (!delegate.finishConnect()) {
+                if (!channel.finishConnect()) {
                     throw new IOException("Connection failed");
                 }
             }
 
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
+            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
             if (bufferSize > 0) {
-                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
         } catch (Exception e) {
             try {
-                delegate.close();
+                channel.close();
             } catch (IOException __) {
                 // ignore
             }
             throw e;
         }
 
-
-        this.delegate = delegate;
+        this.delegate = channel;
     }
     
     @Override
