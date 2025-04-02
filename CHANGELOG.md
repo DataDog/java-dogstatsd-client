@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 4.4.4 / 2025.03.27
+
+* [IMPROVEMENT] Performance improvements. See [#263][]
+
 ## 4.4.3 / 2024.10.04
 
 * [BUGFIX] Use correct buffer size for unix sockets. See [#256][]
@@ -259,6 +263,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#247]: https://github.com/DataDog/java-dogstatsd-client/issues/247
 [#249]: https://github.com/DataDog/java-dogstatsd-client/issues/249
 [#256]: https://github.com/DataDog/java-dogstatsd-client/issues/256
+[#263]: https://github.com/DataDog/java-dogstatsd-client/issues/263
 
 
 [@PatrickAuld]: https://github.com/PatrickAuld
