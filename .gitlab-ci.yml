@@ -3,7 +3,7 @@ stages:
   - create_key
 
 variables:
-  REGISTRY: 486234852809.dkr.ecr.us-east-1.amazonaws.com
+  REGISTRY: registry.ddbuild.io
 
 # From the tagged repo, push the release artifact
 deploy_to_sonatype:
