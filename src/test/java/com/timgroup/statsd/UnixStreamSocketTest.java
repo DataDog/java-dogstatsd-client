@@ -34,6 +34,11 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         lastException = exception;
     }
 
+    synchronized boolean lastExceptionMessageContains(String s) {
+        String msg = lastException.getMessage();
+        return msg != null && msg.contains(s);
+    }
+
     @BeforeClass
     public static void supportedOnly() throws IOException {
         Assume.assumeTrue(TestHelpers.isUdsAvailable());
@@ -108,22 +113,19 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
         // Close the server, client should throw an IOException
         server.close();
-        while(lastException.getMessage() == null) {
+        while(!lastExceptionMessageContains("Connection refused")) {
             client.gauge("mycount", 20);
             Thread.sleep(10);
         }
-        // Depending on the state of the client at that point we might get different messages.
-        assertThat(lastException.getMessage(), anyOf(containsString("Connection refused"), containsString("Broken pipe")));
 
         // Delete the socket file, client should throw an IOException
         lastException = new Exception();
         socketFile.delete();
 
         client.gauge("mycount", 21);
-        while(lastException.getMessage() == null) {
+        while(!lastExceptionMessageContains("No such file or directory")) {
             Thread.sleep(10);
         }
-        assertThat(lastException.getMessage(), containsString("No such file or directory"));
 
         // Re-open the server, next send should work OK
         DummyStatsDServer server2;
