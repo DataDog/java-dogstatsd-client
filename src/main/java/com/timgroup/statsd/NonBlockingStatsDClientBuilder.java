@@ -3,6 +3,8 @@ package com.timgroup.statsd;
 import jnr.constants.platform.Sock;
 import jnr.unixsocket.UnixSocketAddress;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -31,6 +33,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public boolean blocking = NonBlockingStatsDClient.DEFAULT_BLOCKING;
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
+    public boolean enableJdkSocket = NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET;
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
     public int aggregationShards = StatsDAggregator.DEFAULT_SHARDS;
@@ -200,6 +203,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder originDetectionEnabled(boolean val) {
         originDetectionEnabled = val;
+        return this;
+    }
+
+    public NonBlockingStatsDClientBuilder enableJdkSocket(boolean val) {
+        enableJdkSocket = val;
         return this;
     }
 
@@ -376,8 +384,28 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             final UnixSocketAddressWithTransport.TransportType transportType) {
         return new Callable<SocketAddress>() {
             @Override public SocketAddress call() {
-                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
-                return new UnixSocketAddressWithTransport(socketAddress, transportType);
+                SocketAddress socketAddress;
+                // Use native UDS support for compatible Java versions and jnr-unixsocket support otherwise.
+                if (VersionUtils.isJavaVersionAtLeast(16) && NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET) {
+                    try {
+                        // Use reflection to avoid compiling Java 16+ classes in incompatible versions
+                        Class<?> unixDomainSocketAddressClass = Class.forName("java.net.UnixDomainSocketAddress");
+                        Method ofMethod = unixDomainSocketAddressClass.getMethod("of", String.class);
+                        // return type SocketAddress for compatibility with UnixStreamClientChannel.java
+                        socketAddress = (SocketAddress) ofMethod.invoke(null, path);
+                        System.out.println("========== Native UDS socket address: " + socketAddress);
+                        System.out.println("========== Native UDS socket address type: " + socketAddress.getClass().getName());
+                    } catch (Exception e) {
+                        throw new StatsDClientException("Failed to create UnixSocketAddress for native UDS implementation", e);
+                    }
+                } else {
+                    socketAddress = new UnixSocketAddress(path);
+                    System.out.println("========== JNR socket address: " + socketAddress);
+                    System.out.println("========== JNR socket address type: " + socketAddress.getClass().getName());
+                }
+                UnixSocketAddressWithTransport result = new UnixSocketAddressWithTransport(socketAddress, transportType);
+                System.out.println("========== Final result type: " + result.getClass().getName());
+                return result;
             }
         };
     }
