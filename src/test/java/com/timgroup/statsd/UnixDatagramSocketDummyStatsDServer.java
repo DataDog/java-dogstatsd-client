@@ -10,10 +10,12 @@ import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET
 
 public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     private final DatagramChannel server;
+    UnixSocketAddress addr;
 
     public UnixDatagramSocketDummyStatsDServer(String socketPath) throws IOException {
         server = UnixDatagramChannel.open();
-        server.bind(new UnixSocketAddress(socketPath));
+        addr = new UnixSocketAddress(socketPath);
+        server.bind(addr);
         this.listen();
     }
 
@@ -27,10 +29,21 @@ public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     }
 
     public void close() throws IOException {
+        if (!server.isOpen()) {
+            return;
+        }
+        thread.interrupt();
+        // JNR doesn't interrupt syscalls when a thread is interrupted, so we send a dummy message
+        // to wake the thread up.
+        int sent = server.send(ByteBuffer.wrap(new byte[]{1}), addr);
+        if (sent == 0) {
+            throw new IOException("failed to send wake up call to the server thread");
+        }
+        server.close();
         try {
-            server.close();
+            thread.join();
         } catch (Exception e) {
-            //ignore
+            throw new IOException(e);
         }
     }
 }

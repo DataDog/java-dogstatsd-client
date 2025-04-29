@@ -108,8 +108,9 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
         // Close the server, client should throw an IOException
         server.close();
+
+        client.gauge("mycount", 20);
         while(lastException.getMessage() == null) {
-            client.gauge("mycount", 20);
             Thread.sleep(10);
         }
         // Depending on the state of the client at that point we might get different messages.

@@ -17,14 +17,15 @@ abstract class DummyStatsDServer implements Closeable {
     private AtomicInteger packetsReceived = new AtomicInteger(0);
 
     protected volatile Boolean freeze = false;
+    Thread thread;
 
     protected void listen() {
-        Thread thread = new Thread(new Runnable() {
+        thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
 
-                while(isOpen()) {
+                while(isOpen() && !Thread.interrupted()) {
                     if (freeze) {
                         try {
                             Thread.sleep(10);
