@@ -19,7 +19,7 @@ import static org.hamcrest.Matchers.hasItem;
 public class NonBlockingDirectStatsDClientTest {
 
     private static final int STATSD_SERVER_PORT = 17256;
-    private static final int MAX_PACKET_SIZE = 64;
+    private static final int MAX_PACKET_SIZE = 8182;
     private static DirectStatsDClient client;
     private static DummyStatsDServer server;
 
@@ -103,7 +103,23 @@ public class NonBlockingDirectStatsDClientTest {
     }
 
     @Test(timeout = 5000L)
+    public void sends_sketch_to_statsd() {
+        client.recordSketchWithTimestamp("mysketch", new long[] { 423L, 234L }, 1, 1747236777, "foo:bar", "baz");
+        server.waitForMessage("my.prefix");
+        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mysketch:CKnvksEGEAIZAAAAAABAbUAhAAAAAABwekApAAAAAACIdEAxAAAAAACIhEA6BLQagBtCAgEB|S|T1747236777|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
     public void sends_too_long_multivalued_distribution_to_statsd() {
+        DirectStatsDClient client = new NonBlockingStatsDClientBuilder()
+                .prefix("my.prefix")
+                .hostname("localhost")
+                .port(STATSD_SERVER_PORT)
+                .enableTelemetry(false)
+                .originDetectionEnabled(false)
+                .maxPacketSizeBytes(64)
+                .buildDirectStatsDClient();
+
         long[] values = {423L, 234L, 456L, 512L, 345L, 898L, 959876543123L, 667L};
         client.recordDistributionValues("mydistribution", values, 0.4, "foo:bar", "baz");
 

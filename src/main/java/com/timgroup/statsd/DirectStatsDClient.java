@@ -43,4 +43,22 @@ public interface DirectStatsDClient extends StatsDClient {
      * @param tags       array of tags to be added to the data
      */
     void recordDistributionValues(String aspect, long[] values, double sampleRate, String... tags);
+
+    /**
+     * Record values for the specified named distribution.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and will be recorded as the metric value at the
+     * given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect     the name of the distribution
+     * @param values     the values to be incorporated in the distribution. This method consumes the array.
+     * @param sampleRate percentage of time metric to be sent
+     * @param tags       array of tags to be added to the data
+     */
+    void recordSketchWithTimestamp(String aspect, long[] values, double sampleRate, long timestamp, String... tags);
+
 }

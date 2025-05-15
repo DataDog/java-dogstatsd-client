@@ -20,6 +20,13 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         }
     }
 
+    @Override
+    public void recordSketchWithTimestamp(String aspect, long[] values, double sampleRate, long timestamp, String... tags) {
+        if (values != null && values.length > 0) {
+            sendMetric(new LongSketchMessage(aspect, values, sampleRate, timestamp, tags));
+        }
+    }
+
     abstract class MultiValuedStatsDMessage extends Message {
         private final double sampleRate; // NaN for none
         private final long timestamp; // zero for none
@@ -151,6 +158,60 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         @Override
         protected void writeValueTo(StringBuilder buffer, int index) {
             buffer.append(values[index]);
+        }
+    }
+
+    final ProtobufWriter pw = new ProtobufWriter();
+    final DirectSketch sk = new DirectSketch();
+
+    final class LongSketchMessage extends Message {
+        final long[] values;
+        final double sampleRate;
+        final long timestamp;
+
+        LongSketchMessage(String aspect, long[] values, double sampleRate, long timestamp, String[] tags) {
+            super(aspect, Message.Type.SKETCH, tags);
+            this.sampleRate = sampleRate;
+            this.values = values;
+            this.timestamp = timestamp;
+
+        }
+
+        @Override
+        public final boolean canAggregate() {
+            return false;
+        }
+
+        @Override
+        public final void aggregate(Message message) {}
+
+        @Override
+        public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+            sk.build(values, sampleRate);
+
+            pw.clear();
+            sk.serialize(pw, timestamp);
+
+            builder
+                .append(prefix)
+                .append(aspect)
+                .append(":");
+
+            pw.flip();
+            pw.encodeAscii(builder);
+
+            builder.append("|S");
+
+            if (timestamp != 0) {
+                builder.append("|T").append(timestamp);
+            }
+            if (containerID != null && !containerID.isEmpty()) {
+                builder.append("|c:").append(containerID);
+            }
+            tagString(tags, builder);
+            builder.append("\n");
+
+            return false;
         }
     }
 }
