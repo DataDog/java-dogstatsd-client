@@ -83,7 +83,7 @@ class ProtobufWriter {
             throw new BufferOverflowException();
         }
         final int newSize = capacity + more;
-        if (capacity < Integer.MAX_VALUE/2 && newSize < capacity * 2) {
+        if (capacity < Integer.MAX_VALUE / 2 && newSize < capacity * 2) {
             return capacity * 2;
         }
         return newSize;
