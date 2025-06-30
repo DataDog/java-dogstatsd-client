@@ -78,6 +78,7 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>nexus</publishingServerId>
+                            <waitUntil>validated</waitUntil>
                         </configuration>
                     </plugin>
                     <plugin>
