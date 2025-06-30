@@ -77,7 +77,7 @@
                         <version>0.8.0</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <publishingServerId>nexus</publishingServerId>
+                            <publishingServerId>central</publishingServerId>
                             <waitUntil>validated</waitUntil>
                         </configuration>
                     </plugin>
