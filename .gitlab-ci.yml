@@ -44,7 +44,7 @@ deploy_to_sonatype:
     - set -x
 
     - echo "Building release..."
-    - mvn -X -DperformRelease=true --settings ./settings.xml clean deploy
+    - mvn -DperformRelease=true --settings ./settings.xml clean deploy
 
   artifacts:
     expire_in: 6 mos
