@@ -1,8 +1,6 @@
 package com.timgroup.statsd;
 
-
 public abstract class NumericMessage<T extends Number> extends Message {
-
     protected Number value;
 
     protected NumericMessage(Message.Type type) {
@@ -13,7 +11,6 @@ public abstract class NumericMessage<T extends Number> extends Message {
         super(aspect, type, tags);
         this.value = value;
     }
-
 
     /**
      * Aggregate message.
@@ -59,6 +56,4 @@ public abstract class NumericMessage<T extends Number> extends Message {
     public void setValue(Number value) {
         this.value = value;
     }
-
 }
-

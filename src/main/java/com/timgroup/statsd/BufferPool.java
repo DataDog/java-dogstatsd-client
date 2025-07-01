@@ -11,7 +11,6 @@ public class BufferPool {
     private final int bufferSize;
     private final boolean direct;
 
-
     BufferPool(final int poolSize, int bufferSize, final boolean direct) throws InterruptedException {
 
         size = poolSize;

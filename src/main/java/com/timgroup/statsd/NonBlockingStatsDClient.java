@@ -19,7 +19,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 
-
 /**
  * A simple StatsD client implementation facilitating metrics recording.
  *
@@ -174,111 +173,47 @@ public class NonBlockingStatsDClient implements StatsDClient {
     protected final StatsDSender statsDSender;
     protected StatsDSender telemetryStatsDSender;
     protected final Telemetry telemetry;
+    final String telemetryTags;
     private final int maxPacketSizeBytes;
     private final boolean blocking;
+    private final String containerID;
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
-     * specified host and port. All messages send via this client will have
-     * their keys prefixed with the specified string. The new client will
-     * attempt to open a connection to the StatsD server immediately upon
-     * instantiation, and may throw an exception if that a connection cannot
-     * be established. Once a client has been instantiated in this way, all
-     * exceptions thrown during subsequent usage are passed to the specified
-     * handler and then consumed, guaranteeing that failures in metrics will
-     * not affect normal code execution.
+     * host and port specified by the given builder.
+     * The builder must be resolved before calling this internal constructor.
      *
-     * @param prefix
-     *     the prefix to apply to keys sent via this client
-     * @param constantTags
-     *     tags to be added to all content sent
-     * @param errorHandler
-     *     handler to use when an exception occurs during usage, may be null to indicate noop
-     * @param addressLookup
-     *     yields the IP address and socket of the StatsD server
-     * @param telemetryAddressLookup
-     *     yields the IP address and socket of the StatsD telemetry server destination
-     * @param queueSize
-     *     the maximum amount of unprocessed messages in the Queue.
-     * @param timeout
-     *     the timeout in milliseconds for blocking operations. Applies to unix sockets only.
-     * @param bufferSize
-     *     the socket buffer size in bytes. Applies to unix sockets only.
-     * @param maxPacketSizeBytes
-     *     the maximum number of bytes for a message that can be sent
-     * @param entityID
-     *     the entity id value used with an internal tag for tracking client entity.
-     *     If "entityID=null" the client default the value with the environment variable "DD_ENTITY_ID".
-     *     If the environment variable is not defined, the internal tag is not added.
-     * @param poolSize
-     *     The size for the network buffer pool.
-     * @param processorWorkers
-     *     The number of processor worker threads assembling buffers for submission.
-     * @param senderWorkers
-     *     The number of sender worker threads submitting buffers to the socket.
-     * @param blocking
-     *     Blocking or non-blocking implementation for statsd message queue.
-     * @param enableTelemetry
-     *     Boolean to enable client telemetry.
-     * @param telemetryFlushInterval
-     *     Telemetry flush interval integer, in milliseconds.
-     * @param aggregationFlushInterval
-     *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
-     * @param aggregationShards
-     *     Aggregation flush interval integer, in milliseconds. 0 disables aggregation.
-     * @param containerID
-     *     Allows passing the container ID, this will be used by the Agent to enrich
-     *     metrics with container tags.
-     *     This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
-     *     When configured, the provided container ID is prioritized over the container ID discovered
-     *     via Origin Detection. When entityID or DD_ENTITY_ID are set, this value is ignored.
-     * @param originDetectionEnabled
-     *     Enable/disable the client origin detection.
-     *     This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
-     *     When enabled, the client tries to discover its container ID and sends it to the Agent
-     *     to enrich the metrics with container tags.
-     *     Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
-     *     The client tries to read the container ID by parsing the file /proc/self/cgroup.
-     *     This is not supported on Windows.
-     *     The client prioritizes the value passed via or entityID or DD_ENTITY_ID (if set) over the container ID.
-     * @param connectionTimeout
-     *     the timeout in milliseconds for connecting to the StatsD server. Applies to unix sockets only.
-     *     It is also used to detect if a connection is still alive and re-establish a new one if needed.
-     * @throws StatsDClientException
-     *     if the client could not be started
+     * @param builder
+     *     the resolved configuration builder
+     *
+     * @see NonBlockingStatsDClientBuilder#resolve()
      */
-    NonBlockingStatsDClient(final String prefix, final int queueSize, final String[] constantTags,
-            final StatsDClientErrorHandler errorHandler, final Callable<SocketAddress> addressLookup,
-            final Callable<SocketAddress> telemetryAddressLookup, final int timeout, final int bufferSize,
-            final int maxPacketSizeBytes, String entityID, final int poolSize, final int processorWorkers,
-            final int senderWorkers, boolean blocking, final boolean enableTelemetry, final int telemetryFlushInterval,
-            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory customThreadFactory,
-            String containerID, final boolean originDetectionEnabled, final int connectionTimeout)
-            throws StatsDClientException {
+    public NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
 
-        if ((prefix != null) && (!prefix.isEmpty())) {
-            this.prefix = prefix + ".";
+        if (builder.prefix != null && !builder.prefix.isEmpty()) {
+            prefix = builder.prefix + ".";
         } else {
-            this.prefix = "";
+            prefix = "";
         }
-        if (errorHandler == null) {
+
+        if (builder.errorHandler == null) {
             handler = NO_OP_HANDLER;
         } else {
-            handler = errorHandler;
+            handler = builder.errorHandler;
         }
 
-        this.blocking = blocking;
-        this.maxPacketSizeBytes = maxPacketSizeBytes;
+        blocking = builder.blocking;
+        maxPacketSizeBytes = builder.maxPacketSizeBytes;
 
         {
             List<String> costantPreTags = new ArrayList<>();
-            if (constantTags != null) {
-                for (final String constantTag : constantTags) {
+            if (builder.constantTags != null) {
+                for (final String constantTag : builder.constantTags) {
                     costantPreTags.add(constantTag);
                 }
             }
             // Support "dd.internal.entity_id" internal tag.
-            updateTagsWithEntityID(costantPreTags, entityID);
+            updateTagsWithEntityID(costantPreTags, builder.entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
@@ -293,44 +228,44 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
             costantPreTags = null;
             // Origin detection
-            boolean originEnabled = isOriginDetectionEnabled(containerID, originDetectionEnabled);
-            containerID = getContainerID(containerID, originEnabled);
+            boolean originEnabled = isOriginDetectionEnabled(builder.containerID, builder.originDetectionEnabled);
+            containerID = getContainerID(builder.containerID, originEnabled);
         }
 
         try {
-            clientChannel = createByteChannel(addressLookup, timeout, connectionTimeout, bufferSize);
+            clientChannel = createByteChannel(builder.addressLookup, builder.timeout, builder.connectionTimeout,
+                builder.socketBufferSize);
 
-            ThreadFactory threadFactory = customThreadFactory != null ? customThreadFactory : new StatsDThreadFactory();
+            ThreadFactory threadFactory = builder.threadFactory != null ? builder.threadFactory : new StatsDThreadFactory();
 
-            statsDProcessor = createProcessor(queueSize, handler, getPacketSize(clientChannel), poolSize,
-                    processorWorkers, blocking, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
+            int aggregationFlushInterval =  builder.enableAggregation ? builder.aggregationFlushInterval : 0;
+            statsDProcessor = createProcessor(builder.queueSize, handler, getPacketSize(clientChannel), builder.bufferPoolSize,
+                builder.processorWorkers, builder.blocking, aggregationFlushInterval, builder.aggregationShards, threadFactory);
 
             Properties properties = new Properties();
             properties.load(getClass().getClassLoader().getResourceAsStream(
                 "dogstatsd/version.properties"));
 
-            String telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + clientChannel.getTransportType(),
-                                                          CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
-                                                          CLIENT_TAG}, new StringBuilder()).toString();
+            telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + clientChannel.getTransportType(),
+                                                   CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
+                                                   CLIENT_TAG}, new StringBuilder()).toString();
 
-            if (addressLookup == telemetryAddressLookup) {
+            if (builder.addressLookup == builder.telemetryAddressLookup) {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, bufferSize);
+                telemetryClientChannel = createByteChannel(builder.telemetryAddressLookup, builder.timeout,
+                    builder.connectionTimeout, builder.socketBufferSize);
 
                 // similar settings, but a single worker and non-blocking.
-                telemetryStatsDProcessor = createProcessor(queueSize, handler, getPacketSize(telemetryClientChannel),
-                        poolSize, 1, false, 0, aggregationShards, threadFactory, containerID);
+                telemetryStatsDProcessor = createProcessor(builder.queueSize, handler, getPacketSize(telemetryClientChannel),
+                        builder.bufferPoolSize, 1, false, 0, builder.aggregationShards, threadFactory);
             }
 
-            this.telemetry = new Telemetry.Builder()
-                .tags(telemetryTags)
-                .processor(telemetryStatsDProcessor)
-                .build();
+            telemetry = new Telemetry(this);
 
             statsDSender = createSender(handler, clientChannel, statsDProcessor.getBufferPool(),
-                    statsDProcessor.getOutboundQueue(), senderWorkers, threadFactory);
+                    statsDProcessor.getOutboundQueue(), builder.senderWorkers, threadFactory);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
@@ -341,8 +276,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
 
             // set telemetry
-            statsDProcessor.setTelemetry(this.telemetry);
-            statsDSender.setTelemetry(this.telemetry);
+            statsDProcessor.setTelemetry(telemetry);
+            statsDSender.setTelemetry(telemetry);
 
         } catch (final Exception e) {
             throw new StatsDClientException("Failed to start StatsD client", e);
@@ -351,47 +286,25 @@ public class NonBlockingStatsDClient implements StatsDClient {
         statsDProcessor.startWorkers("StatsD-Processor-");
         statsDSender.startWorkers("StatsD-Sender-");
 
-        if (enableTelemetry) {
+        if (builder.enableTelemetry) {
             if (telemetryStatsDProcessor != statsDProcessor) {
                 telemetryStatsDProcessor.startWorkers("StatsD-TelemetryProcessor-");
                 telemetryStatsDSender.startWorkers("StatsD-TelemetrySender-");
             }
-            this.telemetry.start(telemetryFlushInterval);
+            telemetry.start(builder.telemetryFlushInterval);
         }
-    }
-
-    /**
-     * Create a new StatsD client communicating with a StatsD instance on the
-     * host and port specified by the given builder.
-     * The builder must be resolved before calling this internal constructor.
-     *
-     * @param builder
-     *     the resolved configuration builder
-     *
-     * @see NonBlockingStatsDClientBuilder#resolve()
-     */
-    public NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
-        this(builder.prefix, builder.queueSize, builder.constantTags, builder.errorHandler,
-            builder.addressLookup, builder.telemetryAddressLookup, builder.timeout,
-            builder.socketBufferSize, builder.maxPacketSizeBytes, builder.entityID,
-            builder.bufferPoolSize, builder.processorWorkers, builder.senderWorkers,
-            builder.blocking, builder.enableTelemetry, builder.telemetryFlushInterval,
-            (builder.enableAggregation ? builder.aggregationFlushInterval : 0),
-            builder.aggregationShards, builder.threadFactory, builder.containerID,
-            builder.originDetectionEnabled, builder.connectionTimeout);
     }
 
     protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory,
-            final String containerID)
+            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory)
             throws Exception {
         if (blocking) {
             return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
         } else {
             return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory, containerID);
+                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
         }
     }
 
@@ -524,7 +437,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         @Override
-        public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+        public final boolean writeTo(StringBuilder builder, int capacity) {
             builder.append(prefix).append(aspect).append(':');
             writeValue(builder);
             builder.append('|').append(type);
@@ -535,11 +448,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append("|T").append(timestamp);
             }
             tagString(this.tags, builder);
-            if (containerID != null && !containerID.isEmpty()) {
-                builder.append("|c:").append(containerID);
-            }
-
-            builder.append('\n');
+            writeMessageTail(builder);
             return false;
         }
 
@@ -552,6 +461,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         protected abstract void writeValue(StringBuilder builder);
     }
 
+    void writeMessageTail(StringBuilder builder) {
+        if (containerID != null && !containerID.isEmpty()) {
+            builder.append("|c:").append(containerID);
+        }
+        builder.append('\n');
+    }
 
     boolean sendMetric(final Message message) {
         return send(message);
@@ -1144,7 +1059,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     @Override
     public void recordEvent(final Event event, final String... eventTags) {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "") {
-            @Override public boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+            @Override public boolean writeTo(StringBuilder builder, int capacity) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
                 builder.append(Message.Type.EVENT.toString())
@@ -1162,11 +1077,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 eventMap(event, builder);
                 tagString(eventTags, builder);
-                if (containerID != null && !containerID.isEmpty()) {
-                    builder.append("|c:").append(containerID);
-                }
-
-                builder.append('\n');
+                writeMessageTail(builder);
                 return false;
             }
         });
@@ -1201,7 +1112,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordServiceCheckRun(final ServiceCheck sc) {
         statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "") {
             @Override
-            public boolean writeTo(StringBuilder sb, int capacity, String containerID) {
+            public boolean writeTo(StringBuilder sb, int capacity) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
                 sb.append(Message.Type.SERVICE_CHECK.toString())
                         .append("|")
@@ -1218,11 +1129,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 if (sc.getMessage() != null) {
                     sb.append("|m:").append(sc.getEscapedMessage());
                 }
-                if (containerID != null && !containerID.isEmpty()) {
-                    sb.append("|c:").append(containerID);
-                }
-
-                sb.append('\n');
+                writeMessageTail(sb);
                 return false;
             }
         });
@@ -1289,16 +1196,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
             }
 
             @Override
-            protected final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+            protected final boolean writeTo(StringBuilder builder, int capacity) {
                 builder.append(prefix).append(aspect).append(':');
                 writeValue(builder);
                 builder.append('|').append(type);
                 tagString(this.tags, builder);
-                if (containerID != null && !containerID.isEmpty()) {
-                    builder.append("|c:").append(containerID);
-                }
-
-                builder.append('\n');
+                writeMessageTail(builder);
                 return false;
             }
         });
@@ -1345,5 +1248,40 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     private int getPacketSize(ClientChannel chan) {
         return maxPacketSizeBytes > 0 ? maxPacketSizeBytes : chan.getMaxPacketSizeBytes();
+    }
+
+    class TelemetryMessage extends NumericMessage<Integer> {
+        private final String tagsString;  // pre-baked comma separeated tags string
+
+        protected TelemetryMessage(String metric, Integer value, String tags) {
+            super(metric, Message.Type.COUNT, value, null);
+            this.tagsString = tags;
+            this.done = true;  // dont aggregate telemetry messages for now
+        }
+
+        @Override
+        public final boolean writeTo(StringBuilder builder, int capacity) {
+            builder.append(aspect)
+                .append(':')
+                .append(this.value)
+                .append('|')
+                .append(type)
+                .append(tagsString);
+            writeMessageTail(builder);
+            return false;
+        }
+    }
+
+    public void sendTelemetryMetric(String metric, Integer value) {
+        telemetryStatsDProcessor.send(new TelemetryMessage(metric, value, telemetryTags));
+    }
+
+    void sendTelemetryMetric(String metric, Integer value, String tags) {
+        StringBuilder tagsBuilder = new StringBuilder();
+        tagsBuilder.setLength(0);
+        tagsBuilder.append(telemetryTags);
+        tagsBuilder.append(','); // telemetryTags is never empty
+        tagsBuilder.append(tags);
+        telemetryStatsDProcessor.send(new TelemetryMessage(metric, value, tagsBuilder.toString()));
     }
 }

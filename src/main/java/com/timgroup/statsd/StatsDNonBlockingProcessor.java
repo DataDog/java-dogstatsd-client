@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 public class StatsDNonBlockingProcessor extends StatsDProcessor {
 
     private final Queue<Message> messages;
@@ -38,10 +37,10 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
     StatsDNonBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
             final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory, final String containerID) throws Exception {
+            final ThreadFactory threadFactory) throws Exception {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
-                aggregatorFlushInterval, aggregatorShards, threadFactory, containerID);
+                aggregatorFlushInterval, aggregatorShards, threadFactory);
         this.qsize = new AtomicInteger(0);
         this.messages = new ConcurrentLinkedQueue<>();
     }

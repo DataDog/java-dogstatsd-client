@@ -2,10 +2,12 @@ package com.timgroup.statsd;
 
 import java.util.logging.Logger;
 import org.junit.After;
-import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Assume;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,7 +18,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.equalTo;
 
-
+@RunWith(Parameterized.class)
 public class TelemetryTest {
     private static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
         @Override public void handle(final Exception ex) { /* No-op */ }
@@ -35,7 +37,7 @@ public class TelemetryTest {
         public final List<Message> messages = new ArrayList<>();
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory(), null);
+            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory());
         }
 
 
@@ -70,7 +72,7 @@ public class TelemetryTest {
             ArrayList<String> stringMessages = new ArrayList<>(messages.size());
             for(Message m : messages) {
                 sb.setLength(0);
-                m.writeTo(sb, Integer.MAX_VALUE, this.containerID);
+                m.writeTo(sb, Integer.MAX_VALUE);
                 stringMessages.add(sb.toString());
             }
             return stringMessages;
@@ -83,28 +85,9 @@ public class TelemetryTest {
         }
     }
 
-    private static final int STATSD_SERVER_PORT = 17254;
-    private static final NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder()
-        .prefix("my.prefix")
-        .hostname("localhost")
-        .constantTags("test")
-        .port(STATSD_SERVER_PORT)
-        .originDetectionEnabled(false)
-        .enableTelemetry(false); // disable telemetry so we can control calls to "flush"
-    private static NonBlockingStatsDClient client = builder.build();
+    private static NonBlockingStatsDClient client;
 
-    // telemetry client
-    private static final NonBlockingStatsDClientBuilder telemetryBuilder = new NonBlockingStatsDClientBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .constantTags("test")
-            .port(STATSD_SERVER_PORT)
-            .enableAggregation(false)
-            .originDetectionEnabled(false)
-            .enableTelemetry(false);  // disable telemetry so we can control calls to "flush"
-    private static NonBlockingStatsDClient telemetryClient = telemetryBuilder.build();
-
-    private static DummyStatsDServer server;
+    private static UDPDummyStatsDServer server;
     private static FakeProcessor fakeProcessor;
 
     private static String computeTelemetryTags() throws IOException, Exception {
@@ -115,19 +98,50 @@ public class TelemetryTest {
     }
 
     private static String telemetryTags;
+    private final String containerID;
+    private final String tail;
 
-    @BeforeClass
-    public static void start() throws IOException, Exception {
-        server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
+    @Parameters
+    public static Object[][] parameters() {
+        return new Object[][]{
+            { null },
+            { "my-fake-container-id" },
+        };
+    }
+
+    public TelemetryTest(String containerID) {
+        this.containerID = containerID;
+
+        StringBuilder sb = new StringBuilder();
+        if (containerID != null) {
+            sb.append("|c:").append(containerID);
+        }
+        sb.append("\n");
+        tail = sb.toString();
+    }
+
+    @Before
+    public void start() throws IOException, Exception {
+        server = new UDPDummyStatsDServer(0);
         fakeProcessor = new FakeProcessor(LOGGING_HANDLER);
-        client.telemetry.processor = fakeProcessor;
-        telemetryClient.telemetry.processor = fakeProcessor;
 
+        NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder()
+            .prefix("my.prefix")
+            .hostname("localhost")
+            .constantTags("test")
+            .port(server.getPort())
+            .originDetectionEnabled(false)
+            .enableTelemetry(false); // disable telemetry so we can control calls to "flush"
+        if (containerID != null) {
+            builder.containerID(containerID);
+        }
+        client = builder.build();
+        client.telemetryStatsDProcessor = fakeProcessor;
         telemetryTags = computeTelemetryTags();
     }
 
-    @AfterClass
-    public static void stop() throws Exception {
+    @After
+    public void stop() throws Exception {
         try {
             client.stop();
             server.close();
@@ -136,139 +150,122 @@ public class TelemetryTest {
         }
     }
 
-    @After
-    public void clear() {
-        server.clear();
-        client.telemetry.reset();
-        telemetryClient.telemetry.reset();
-        fakeProcessor.clear();
-        fakeProcessor.containerID = null;
-    }
-
     @Test(timeout = 5000L)
     public void telemetry_incrManuallyIncrData() throws Exception {
 
-        telemetryClient.telemetry.incrMetricsSent(1);
-        telemetryClient.telemetry.incrGaugeSent(1);
-        telemetryClient.telemetry.incrCountSent(1);
-        telemetryClient.telemetry.incrSetSent(1);
-        telemetryClient.telemetry.incrHistogramSent(1);
-        telemetryClient.telemetry.incrDistributionSent(1);
-        telemetryClient.telemetry.incrMetricsSent(1, Message.Type.GAUGE);  // adds to metricsSent
-        telemetryClient.telemetry.incrMetricsSent(1, Message.Type.COUNT);  // adds to metricsSent
-        telemetryClient.telemetry.incrMetricsSent(1, Message.Type.SET);  // adds to metricsSent
-        telemetryClient.telemetry.incrMetricsSent(1, Message.Type.HISTOGRAM);  // adds to metricsSent
-        telemetryClient.telemetry.incrMetricsSent(1, Message.Type.DISTRIBUTION);  // adds to metricsSent
-        telemetryClient.telemetry.incrEventsSent(2);
-        telemetryClient.telemetry.incrServiceChecksSent(3);
-        telemetryClient.telemetry.incrBytesSent(4);
-        telemetryClient.telemetry.incrBytesDropped(5);
-        telemetryClient.telemetry.incrPacketSent(6);
-        telemetryClient.telemetry.incrPacketDropped(7);
-        telemetryClient.telemetry.incrPacketDroppedQueue(8);
-        telemetryClient.telemetry.incrAggregatedContexts(9);
-        telemetryClient.telemetry.incrAggregatedGaugeContexts(10);
-        telemetryClient.telemetry.incrAggregatedCountContexts(11);
-        telemetryClient.telemetry.incrAggregatedSetContexts(12);
+        client.telemetry.incrMetricsSent(1);
+        client.telemetry.incrGaugeSent(1);
+        client.telemetry.incrCountSent(1);
+        client.telemetry.incrSetSent(1);
+        client.telemetry.incrHistogramSent(1);
+        client.telemetry.incrDistributionSent(1);
+        client.telemetry.incrMetricsSent(1, Message.Type.GAUGE);  // adds to metricsSent
+        client.telemetry.incrMetricsSent(1, Message.Type.COUNT);  // adds to metricsSent
+        client.telemetry.incrMetricsSent(1, Message.Type.SET);  // adds to metricsSent
+        client.telemetry.incrMetricsSent(1, Message.Type.HISTOGRAM);  // adds to metricsSent
+        client.telemetry.incrMetricsSent(1, Message.Type.DISTRIBUTION);  // adds to metricsSent
+        client.telemetry.incrEventsSent(2);
+        client.telemetry.incrServiceChecksSent(3);
+        client.telemetry.incrBytesSent(4);
+        client.telemetry.incrBytesDropped(5);
+        client.telemetry.incrPacketSent(6);
+        client.telemetry.incrPacketDropped(7);
+        client.telemetry.incrPacketDroppedQueue(8);
+        client.telemetry.incrAggregatedContexts(9);
+        client.telemetry.incrAggregatedGaugeContexts(10);
+        client.telemetry.incrAggregatedCountContexts(11);
+        client.telemetry.incrAggregatedSetContexts(12);
 
-        assertThat(telemetryClient.telemetry.metricsSent.get(), equalTo(6));
-        assertThat(telemetryClient.telemetry.gaugeSent.get(), equalTo(2));
-        assertThat(telemetryClient.telemetry.countSent.get(), equalTo(2));
-        assertThat(telemetryClient.telemetry.setSent.get(), equalTo(2));
-        assertThat(telemetryClient.telemetry.histogramSent.get(), equalTo(2));
-        assertThat(telemetryClient.telemetry.distributionSent.get(), equalTo(2));
-        assertThat(telemetryClient.telemetry.eventsSent.get(), equalTo(2));
-        assertThat(telemetryClient.telemetry.serviceChecksSent.get(), equalTo(3));
-        assertThat(telemetryClient.telemetry.bytesSent.get(), equalTo(4));
-        assertThat(telemetryClient.telemetry.bytesDropped.get(), equalTo(5));
-        assertThat(telemetryClient.telemetry.packetsSent.get(), equalTo(6));
-        assertThat(telemetryClient.telemetry.packetsDropped.get(), equalTo(7));
-        assertThat(telemetryClient.telemetry.packetsDroppedQueue.get(), equalTo(8));
-        assertThat(telemetryClient.telemetry.aggregatedContexts.get(), equalTo(9));
-        assertThat(telemetryClient.telemetry.aggregatedGaugeContexts.get(), equalTo(10));
-        assertThat(telemetryClient.telemetry.aggregatedCountContexts.get(), equalTo(11));
-        assertThat(telemetryClient.telemetry.aggregatedSetContexts.get(), equalTo(12));
+        assertThat(client.telemetry.metricsSent.get(), equalTo(6));
+        assertThat(client.telemetry.gaugeSent.get(), equalTo(2));
+        assertThat(client.telemetry.countSent.get(), equalTo(2));
+        assertThat(client.telemetry.setSent.get(), equalTo(2));
+        assertThat(client.telemetry.histogramSent.get(), equalTo(2));
+        assertThat(client.telemetry.distributionSent.get(), equalTo(2));
+        assertThat(client.telemetry.eventsSent.get(), equalTo(2));
+        assertThat(client.telemetry.serviceChecksSent.get(), equalTo(3));
+        assertThat(client.telemetry.bytesSent.get(), equalTo(4));
+        assertThat(client.telemetry.bytesDropped.get(), equalTo(5));
+        assertThat(client.telemetry.packetsSent.get(), equalTo(6));
+        assertThat(client.telemetry.packetsDropped.get(), equalTo(7));
+        assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(8));
+        assertThat(client.telemetry.aggregatedContexts.get(), equalTo(9));
+        assertThat(client.telemetry.aggregatedGaugeContexts.get(), equalTo(10));
+        assertThat(client.telemetry.aggregatedCountContexts.get(), equalTo(11));
+        assertThat(client.telemetry.aggregatedSetContexts.get(), equalTo(12));
 
-        telemetryClient.telemetry.flush();
+        client.telemetry.flush();
 
-        assertThat(telemetryClient.telemetry.metricsSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.gaugeSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.countSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.setSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.histogramSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.distributionSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.eventsSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.serviceChecksSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.bytesSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.bytesDropped.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.packetsSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.packetsDropped.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.packetsDroppedQueue.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.aggregatedContexts.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.aggregatedGaugeContexts.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.aggregatedCountContexts.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.aggregatedSetContexts.get(), equalTo(0));
+        assertThat(client.telemetry.metricsSent.get(), equalTo(0));
+        assertThat(client.telemetry.gaugeSent.get(), equalTo(0));
+        assertThat(client.telemetry.countSent.get(), equalTo(0));
+        assertThat(client.telemetry.setSent.get(), equalTo(0));
+        assertThat(client.telemetry.histogramSent.get(), equalTo(0));
+        assertThat(client.telemetry.distributionSent.get(), equalTo(0));
+        assertThat(client.telemetry.eventsSent.get(), equalTo(0));
+        assertThat(client.telemetry.serviceChecksSent.get(), equalTo(0));
+        assertThat(client.telemetry.bytesSent.get(), equalTo(0));
+        assertThat(client.telemetry.bytesDropped.get(), equalTo(0));
+        assertThat(client.telemetry.packetsSent.get(), equalTo(0));
+        assertThat(client.telemetry.packetsDropped.get(), equalTo(0));
+        assertThat(client.telemetry.packetsDroppedQueue.get(), equalTo(0));
+        assertThat(client.telemetry.aggregatedContexts.get(), equalTo(0));
+        assertThat(client.telemetry.aggregatedGaugeContexts.get(), equalTo(0));
+        assertThat(client.telemetry.aggregatedCountContexts.get(), equalTo(0));
+        assertThat(client.telemetry.aggregatedSetContexts.get(), equalTo(0));
 
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.metrics:6|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics:6|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," + telemetryTags + ",metrics_type:gauge" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," + telemetryTags + ",metrics_type:count" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," + telemetryTags + ",metrics_type:set" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.HISTOGRAM) + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," + telemetryTags + ",metrics_type:histogram" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.DISTRIBUTION) + "\n"));
+                hasItem("datadog.dogstatsd.client.metrics_by_type:2|c|#test," + telemetryTags + ",metrics_type:distribution" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.events:2|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.events:2|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.service_checks:3|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.service_checks:3|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.bytes_sent:4|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.bytes_sent:4|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.bytes_dropped:5|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.bytes_dropped:5|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.packets_sent:6|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.packets_sent:6|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.packets_dropped:7|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.packets_dropped:7|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.packets_dropped_queue:8|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.packets_dropped_queue:8|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.aggregated_context:9|c|#test," + telemetryTags + "\n"));
+                hasItem("datadog.dogstatsd.client.aggregated_context:9|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.aggregated_context_by_type:10|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
+                hasItem("datadog.dogstatsd.client.aggregated_context_by_type:10|c|#test," + telemetryTags + ",metrics_type:gauge" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.aggregated_context_by_type:11|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
+               hasItem("datadog.dogstatsd.client.aggregated_context_by_type:11|c|#test," + telemetryTags + ",metrics_type:count" + tail));
 
         assertThat(statsdMessages,
-                hasItem("datadog.dogstatsd.client.aggregated_context_by_type:12|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
+                hasItem("datadog.dogstatsd.client.aggregated_context_by_type:12|c|#test," + telemetryTags + ",metrics_type:set" + tail));
     }
 
     @Test(timeout = 5000L)
@@ -287,31 +284,31 @@ public class TelemetryTest {
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.bytes_sent:29|c|#test," + telemetryTags + "\n"));
+                   hasItem(String.format("datadog.dogstatsd.client.bytes_sent:%d|c|#test,%s%s", 28 + tail.length(), telemetryTags, tail)));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + tail));
 
         assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + "\n"));
+                   hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + tail));
     }
 
     @Test(timeout = 5000L)
@@ -373,14 +370,14 @@ public class TelemetryTest {
 
         List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
 
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_sent:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_sent:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "\n"));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_sent:0|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_sent:0|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + tail));
+        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + tail));
     }
 
     @Test(timeout = 5000L)
@@ -434,120 +431,6 @@ public class TelemetryTest {
 
         assertThat(client.telemetry.metricsSent.get(), equalTo(1));
         assertThat(client.telemetry.packetsSent.get(), equalTo(1));
-        assertThat(client.telemetry.bytesSent.get(), equalTo(27));
-    }
-
-    @Test(timeout = 5000L)
-    public void telemetry_DevModeData() throws Exception {
-
-
-        telemetryClient.gauge("gauge", 24);
-        telemetryClient.count("count", 1);
-        telemetryClient.histogram("histo", 1);
-        telemetryClient.distribution("distro", 1);
-
-        // leaving time to the server to flush metrics (equivalent to waitForMessage)
-        while (telemetryClient.telemetry.metricsSent.get() == 0
-               || telemetryClient.telemetry.packetsSent.get() == 0
-               || telemetryClient.telemetry.bytesSent.get() == 0) {
-            try {
-                Thread.sleep(50L);
-            } catch (InterruptedException e) {}
-        }
-
-        assertThat(telemetryClient.telemetry.metricsSent.get(), equalTo(4));
-        assertThat(telemetryClient.telemetry.gaugeSent.get(), equalTo(1));
-        assertThat(telemetryClient.telemetry.countSent.get(), equalTo(1));
-        assertThat(telemetryClient.telemetry.setSent.get(), equalTo(0));
-        assertThat(telemetryClient.telemetry.histogramSent.get(), equalTo(1));
-        assertThat(telemetryClient.telemetry.distributionSent.get(), equalTo(1));
-        assertThat(telemetryClient.telemetry.packetsSent.get(), equalTo(1));
-        assertThat(telemetryClient.telemetry.bytesSent.get(), equalTo(106));
-
-        // Start flush timer with a 50ms interval
-        telemetryClient.telemetry.start(50L);
-
-        // Wait for the flush to happen
-        while (telemetryClient.telemetry.metricsSent.get() != 0) {
-            try {
-                Thread.sleep(30L);
-            } catch (InterruptedException e) {}
-        }
-        telemetryClient.telemetry.stop();
-
-        assertThat(telemetryClient.telemetry.metricsSent.get(), equalTo(0));
-        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings();
-
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics:4|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:0|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.HISTOGRAM) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.metrics_by_type:1|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.DISTRIBUTION) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_sent:106|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "\n"));
-        // aggregation is disabled
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.GAUGE) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.COUNT) + "\n"));
-        assertThat(statsdMessages, hasItem("datadog.dogstatsd.client.aggregated_context_by_type:0|c|#test," +
-                    telemetryClient.telemetry.getTelemetryTags(telemetryTags, Message.Type.SET) + "\n"));
-    }
-
-    @Test(timeout = 5000L)
-    public void telemetry_containerID() throws Exception {
-        final String fakeContainerID = "fake-container-id";
-        client.count("mycount", 24);
-        fakeProcessor.containerID = fakeContainerID;
-
-        // wait for the "mycount" to be sent
-        server.waitForMessage("mycount");
-        server.clear();
-        fakeProcessor.clear();
-
-        assertThat(client.telemetry.metricsSent.get(), equalTo(1));
-        client.telemetry.flush();
-        assertThat(client.telemetry.metricsSent.get(), equalTo(0));
-
-        List<String> statsdMessages = fakeProcessor.getMessagesAsStrings() ;
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.metrics:1|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.events:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.service_checks:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.bytes_sent:29|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.bytes_dropped:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_sent:1|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_dropped:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.packets_dropped_queue:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
-
-        assertThat(statsdMessages,
-                   hasItem("datadog.dogstatsd.client.aggregated_context:0|c|#test," + telemetryTags + "|c:" + fakeContainerID + "\n"));
+        assertThat(client.telemetry.bytesSent.get(), equalTo(26 + tail.length()));
     }
 }

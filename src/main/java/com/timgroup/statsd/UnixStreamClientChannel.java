@@ -19,7 +19,6 @@ public class UnixStreamClientChannel implements ClientChannel {
     private final int connectionTimeout;
     private final int bufferSize;
 
-
     private SocketChannel delegate;
     private final ByteBuffer delimiterBuffer = ByteBuffer.allocateDirect(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
 
@@ -157,10 +156,9 @@ public class UnixStreamClientChannel implements ClientChannel {
             throw e;
         }
 
-
         this.delegate = delegate;
     }
-    
+
     @Override
     public void close() throws IOException {
         disconnect();

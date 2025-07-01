@@ -11,43 +11,93 @@ import java.net.UnknownHostException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * Create a new StatsD client communicating with a StatsD instance on the
+ * specified host and port. All messages send via this client will have
+ * their keys prefixed with the specified string. The new client will
+ * attempt to open a connection to the StatsD server immediately upon
+ * instantiation, and may throw an exception if that a connection cannot
+ * be established. Once a client has been instantiated in this way, all
+ * exceptions thrown during subsequent usage are passed to the specified
+ * handler and then consumed, guaranteeing that failures in metrics will
+ * not affect normal code execution.
+ */
 public class NonBlockingStatsDClientBuilder implements Cloneable {
 
-    /**
-     * 1400 chosen as default here so that the number of bytes in a message plus the number of bytes required
-     * for additional udp headers should be under the 1500 Maximum Transmission Unit for ethernet.
-     * See https://github.com/DataDog/java-dogstatsd-client/pull/17 for discussion.
-     */
-
+    /** The maximum number of bytes for a message that can be sent. */
     public int maxPacketSizeBytes = 0;
     public int port = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
     public int telemetryPort = NonBlockingStatsDClient.DEFAULT_DOGSTATSD_PORT;
+    /** The maximum amount of unprocessed messages in the queue. */
     public int queueSize = NonBlockingStatsDClient.DEFAULT_QUEUE_SIZE;
+    /** The timeout in milliseconds for blocking operations. Applies to unix sockets only. */
     public int timeout = NonBlockingStatsDClient.SOCKET_TIMEOUT_MS;
+    /** The size for the network buffer pool. */
     public int bufferPoolSize = NonBlockingStatsDClient.DEFAULT_POOL_SIZE;
+    /** The socket buffer size in bytes. Applies to unix sockets only. */
     public int socketBufferSize = NonBlockingStatsDClient.SOCKET_BUFFER_BYTES;
+    /** The number of processor worker threads assembling buffers for submission. */
     public int processorWorkers = NonBlockingStatsDClient.DEFAULT_PROCESSOR_WORKERS;
+    /** The number of sender worker threads submitting buffers to the socket. */
     public int senderWorkers = NonBlockingStatsDClient.DEFAULT_SENDER_WORKERS;
+    /** Blocking or non-blocking implementation for statsd message queue. */
     public boolean blocking = NonBlockingStatsDClient.DEFAULT_BLOCKING;
+    /** Enable sending client telemetry. */
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
+    /** Telemetry flush interval, in milliseconds. */
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
+    /** Aggregation flush interval, in milliseconds. 0 disables aggregation. */
     public int aggregationFlushInterval = StatsDAggregator.DEFAULT_FLUSH_INTERVAL;
     public int aggregationShards = StatsDAggregator.DEFAULT_SHARDS;
+    /**
+     * Enable/disable the client origin detection.
+     *
+     * <p>This feature requires Datadog Agent version &gt;=6.35.0 &amp;&amp; &lt;7.0.0 or Agent versions &gt;=7.35.0.
+     * When enabled, the client tries to discover its container ID and sends it to the Agent
+     * to enrich the metrics with container tags.
+     * Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
+     * The client tries to read the container ID by parsing the file /proc/self/cgroup.
+     * This is not supported on Windows.
+     */
     public boolean originDetectionEnabled = NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION;
+    /**
+     * The timeout in milliseconds for connecting to the StatsD server. Applies to unix sockets only.
+     *
+     * <p>It is also used to detect if a connection is still alive and re-establish a new one if needed.
+     */
     public int connectionTimeout = NonBlockingStatsDClient.SOCKET_CONNECT_TIMEOUT_MS;
 
+    /** Yields the IP address and socket of the StatsD server. */
     public Callable<SocketAddress> addressLookup;
+    /** Yields the IP address and socket of the StatsD telemetry server destination. */
     public Callable<SocketAddress> telemetryAddressLookup;
 
     public String hostname;
     public String telemetryHostname;
     public String namedPipe;
-    public String prefix;
-    public String entityID;
-    public String[] constantTags;
-    public String containerID;
 
+    /** The prefix to apply to keys sent via this client. */
+    public String prefix;
+
+    /** The entity id value used with an internal tag for tracking client entity.
+     *
+     * <p>If null the client default the value with the environment variable "DD_ENTITY_ID".
+     * If the environment variable is not defined, the internal tag is not added.
+     */
+    public String entityID;
+    /** Tags to be added to all content sent. */
+    public String[] constantTags;
+    /**
+     * Allows passing the container ID, this will be used by the Agent to enrich
+     * metrics with container tags.
+     *
+     * <p>This feature requires Datadog Agent version &gt;=6.35.0 &amp;&amp; &lt;7.0.0 or Agent versions &gt;=7.35.0.
+     * When configured, the provided container ID is prioritized over the container ID discovered
+     * via Origin Detection. When entityID or DD_ENTITY_ID are set, this value is ignored.
+     */
+    public String containerID;
+    /** Handler to use when an exception occurs during usage, may be null to indicate noop. */
     public StatsDClientErrorHandler errorHandler;
     public ThreadFactory threadFactory;
 
@@ -63,26 +113,35 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    /** The maximum amount of unprocessed messages in the queue. */
     public NonBlockingStatsDClientBuilder queueSize(int val) {
         queueSize = val;
         return this;
     }
 
+    /** The timeout in milliseconds for blocking operations. Applies to unix sockets only. */
     public NonBlockingStatsDClientBuilder timeout(int val) {
         timeout = val;
         return this;
     }
 
+    /**
+     * The timeout in milliseconds for connecting to the StatsD server. Applies to unix sockets only.
+     *
+     * <p>It is also used to detect if a connection is still alive and re-establish a new one if needed.
+     */
     public NonBlockingStatsDClientBuilder connectionTimeout(int val) {
         connectionTimeout = val;
         return this;
     }
 
+    /** The size for the network buffer pool. */
     public NonBlockingStatsDClientBuilder bufferPoolSize(int val) {
         bufferPoolSize = val;
         return this;
     }
 
+    /** The socket buffer size in bytes. Applies to unix sockets only. */
     public NonBlockingStatsDClientBuilder socketBufferSize(int val) {
         socketBufferSize = val;
         return this;
@@ -93,26 +152,31 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    /** The number of processor worker threads assembling buffers for submission. */
     public NonBlockingStatsDClientBuilder processorWorkers(int val) {
         processorWorkers = val;
         return this;
     }
 
+    /** The number of sender worker threads submitting buffers to the socket. */
     public NonBlockingStatsDClientBuilder senderWorkers(int val) {
         senderWorkers = val;
         return this;
     }
 
+    /** Blocking or non-blocking implementation for statsd message queue. */
     public NonBlockingStatsDClientBuilder blocking(boolean val) {
         blocking = val;
         return this;
     }
 
+    /** Yields the IP address and socket of the StatsD server. */
     public NonBlockingStatsDClientBuilder addressLookup(Callable<SocketAddress> val) {
         addressLookup = val;
         return this;
     }
 
+    /** Yields the IP address and socket of the StatsD telemetry server destination. */
     public NonBlockingStatsDClientBuilder telemetryAddressLookup(Callable<SocketAddress> val) {
         telemetryAddressLookup = val;
         return this;
@@ -143,26 +207,35 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    /** The prefix to apply to keys sent via this client. */
     public NonBlockingStatsDClientBuilder prefix(String val) {
         prefix = val;
         return this;
     }
 
+    /** The entity id value used with an internal tag for tracking client entity.
+     *
+     * <p>If null the client default the value with the environment variable "DD_ENTITY_ID".
+     * If the environment variable is not defined, the internal tag is not added.
+     */
     public NonBlockingStatsDClientBuilder entityID(String val) {
         entityID = val;
         return this;
     }
 
+    /** Tags to be added to all content sent. */
     public NonBlockingStatsDClientBuilder constantTags(String... val) {
         constantTags = val;
         return this;
     }
 
+    /** Handler to use when an exception occurs during usage, may be null to indicate noop. */
     public NonBlockingStatsDClientBuilder errorHandler(StatsDClientErrorHandler val) {
         errorHandler = val;
         return this;
     }
 
+    /** Enable sending client telemetry. */
     public NonBlockingStatsDClientBuilder enableTelemetry(boolean val) {
         enableTelemetry = val;
         return this;
@@ -173,11 +246,13 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    /** Telemetry flush interval, in milliseconds. */
     public NonBlockingStatsDClientBuilder telemetryFlushInterval(int val) {
         telemetryFlushInterval = val;
         return this;
     }
 
+    /** Aggregation flush interval, in milliseconds. 0 disables aggregation. */
     public NonBlockingStatsDClientBuilder aggregationFlushInterval(int val) {
         aggregationFlushInterval = val;
         return this;
@@ -193,11 +268,30 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    /**
+     * Allows passing the container ID, this will be used by the Agent to enrich
+     * metrics with container tags.
+     *
+     * <p>This feature requires Datadog Agent version &gt;=6.35.0 &amp;&amp; &lt;7.0.0 or Agent versions &gt;=7.35.0.
+     * When configured, the provided container ID is prioritized over the container ID discovered
+     * via Origin Detection. When entityID or DD_ENTITY_ID are set, this value is ignored.
+     */
     public NonBlockingStatsDClientBuilder containerID(String val) {
         containerID = val;
         return this;
     }
 
+    /**
+     * Enable/disable the client origin detection.
+     *
+     * <p>This feature requires Datadog Agent version &gt;=6.35.0 &amp;&amp; &lt;7.0.0 or Agent versions &gt;7.35.0.
+     * When enabled, the client tries to discover its container ID and sends it to the Agent
+     * to enrich the metrics with container tags.
+     * Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
+     * The client tries to read the container ID by parsing the file /proc/self/cgroup.
+     * This is not supported on Windows.
+     * The client prioritizes the value passed via or entityID or DD_ENTITY_ID (if set) over the container ID.
+     */
     public NonBlockingStatsDClientBuilder originDetectionEnabled(boolean val) {
         originDetectionEnabled = val;
         return this;
@@ -426,7 +520,4 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             }
         }
     }
-
-
 }
-

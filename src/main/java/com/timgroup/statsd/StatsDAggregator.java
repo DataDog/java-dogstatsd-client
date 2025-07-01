@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-
 public class StatsDAggregator {
     public static int DEFAULT_FLUSH_INTERVAL = 2000; // 2s
     public static int DEFAULT_SHARDS = 4;  // 4 partitions to reduce contention.
@@ -88,7 +87,6 @@ public class StatsDAggregator {
         if (flushInterval == 0 || !message.canAggregate() || message.getDone()) {
             return false;
         }
-
 
         int hash = message.hashCode();
         int bucket = Math.abs(hash % this.shardGranularity);
