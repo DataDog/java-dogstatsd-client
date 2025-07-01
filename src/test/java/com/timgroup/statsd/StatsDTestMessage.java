@@ -9,7 +9,7 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
     }
 
     @Override
-    public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+    public final boolean writeTo(StringBuilder builder, int capacity) {
         builder.append("test.").append(aspect).append(':');
         writeValue(builder);
         builder.append('|').append(type);
@@ -17,9 +17,6 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
             builder.append('|').append('@').append(NonBlockingStatsDClient.format(NonBlockingStatsDClient.SAMPLE_RATE_FORMATTER, sampleRate));
         }
         NonBlockingStatsDClient.tagString(this.tags, "", builder);
-        if (containerID != null && !containerID.isEmpty()) {
-            builder.append("|c:").append(containerID);
-        }
 
         builder.append('\n');
         return false;

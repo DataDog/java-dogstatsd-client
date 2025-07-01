@@ -28,7 +28,6 @@ public class StatsDSender {
 
     private volatile Telemetry telemetry;
 
-
     StatsDSender(final WritableByteChannel clientChannel,
                  final StatsDClientErrorHandler handler, BufferPool pool, BlockingQueue<ByteBuffer> buffers,
                  final int workers, final ThreadFactory threadFactory) {

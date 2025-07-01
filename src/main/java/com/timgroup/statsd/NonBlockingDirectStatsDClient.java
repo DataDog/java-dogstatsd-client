@@ -42,21 +42,21 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         }
 
         @Override
-        public final boolean writeTo(StringBuilder builder, int capacity, String containerID) {
-            int metadataSize = metadataSize(builder, containerID);
+        public final boolean writeTo(StringBuilder builder, int capacity) {
+            int metadataSize = metadataSize(builder);
             writeHeadMetadata(builder);
             boolean partialWrite = writeValuesTo(builder, capacity - metadataSize);
-            writeTailMetadata(builder, containerID);
+            writeTailMetadata(builder);
             return partialWrite;
 
         }
 
-        private int metadataSize(StringBuilder builder, String containerID) {
+        private int metadataSize(StringBuilder builder) {
             if (metadataSize == -1) {
                 final int previousLength = builder.length();
                 final int previousEncodedLength = Utf8.encodedLength(builder);
                 writeHeadMetadata(builder);
-                writeTailMetadata(builder, containerID);
+                writeTailMetadata(builder);
                 metadataSize = Utf8.encodedLength(builder) - previousEncodedLength;
                 builder.setLength(previousLength);
             }
@@ -67,7 +67,7 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
             builder.append(prefix).append(aspect);
         }
 
-        private void writeTailMetadata(StringBuilder builder, String containerID) {
+        private void writeTailMetadata(StringBuilder builder) {
             builder.append('|').append(type);
             if (!Double.isNaN(sampleRate)) {
                 builder.append('|').append('@').append(format(SAMPLE_RATE_FORMATTER, sampleRate));
@@ -76,11 +76,7 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
                 builder.append("|T").append(timestamp);
             }
             tagString(tags, builder);
-            if (containerID != null && !containerID.isEmpty()) {
-                builder.append("|c:").append(containerID);
-            }
-
-            builder.append('\n');
+            writeMessageTail(builder);
         }
 
         private boolean writeValuesTo(StringBuilder builder, int remainingCapacity) {

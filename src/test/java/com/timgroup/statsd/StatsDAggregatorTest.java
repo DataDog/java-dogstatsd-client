@@ -56,7 +56,7 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+        protected boolean writeTo(StringBuilder builder, int capacity) {
             return false;
         }
     }
@@ -67,7 +67,7 @@ public class StatsDAggregatorTest {
         }
 
         @Override
-        protected boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+        protected boolean writeTo(StringBuilder builder, int capacity) {
             return false;
         }
     }
@@ -81,7 +81,7 @@ public class StatsDAggregatorTest {
         private final AtomicInteger messageAggregated = new AtomicInteger(0);
 
         FakeProcessor(final StatsDClientErrorHandler handler) throws Exception {
-            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory(), null);
+            super(0, handler, 0, 1, 1, 0, 0, new StatsDThreadFactory());
             this.messages = new ConcurrentLinkedQueue<>();
         }
 
@@ -144,12 +144,6 @@ public class StatsDAggregatorTest {
     @BeforeClass
     public static void start() throws Exception {
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
-
-        // set telemetry
-        Telemetry telemetry = new Telemetry.Builder()
-                .processor(fakeProcessor)
-                .build();
-        fakeProcessor.setTelemetry(telemetry);
 
         // 15s flush period should be enough for all tests to be done - flushes will be manual
         StatsDAggregator aggregator = new StatsDAggregator(fakeProcessor, StatsDAggregator.DEFAULT_SHARDS, 3000L);
@@ -272,7 +266,7 @@ public class StatsDAggregatorTest {
         for (int i = 0; i < numMessages; i++) {
             fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, tags[i % numTags]) {
                 @Override
-                boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+                boolean writeTo(StringBuilder builder, int capacity) {
                     return false;
                 }
 

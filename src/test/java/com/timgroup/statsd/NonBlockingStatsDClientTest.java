@@ -1560,7 +1560,7 @@ public class NonBlockingStatsDClientTest {
             }
 
             @Override
-            boolean writeTo(StringBuilder builder, int capacity, String containerID) {
+            boolean writeTo(StringBuilder builder, int capacity) {
                 return false;
             }
         }

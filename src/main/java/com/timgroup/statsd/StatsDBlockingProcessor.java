@@ -9,7 +9,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-
 public class StatsDBlockingProcessor extends StatsDProcessor {
 
     private final BlockingQueue<Message> messages;
@@ -30,10 +29,10 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
     StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
             final int maxPacketSizeBytes, final int poolSize, final int workers,
             final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory, final String containerID) throws Exception {
+            final ThreadFactory threadFactory) throws Exception {
 
         super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
-                aggregatorFlushInterval, aggregatorShards, threadFactory, containerID);
+                aggregatorFlushInterval, aggregatorShards, threadFactory);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 

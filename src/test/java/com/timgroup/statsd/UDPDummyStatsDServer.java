@@ -31,4 +31,8 @@ public class UDPDummyStatsDServer extends DummyStatsDServer {
             //ignore
         }
     }
+
+    int getPort() throws IOException {
+        return ((InetSocketAddress)server.getLocalAddress()).getPort();
+    }
 }
