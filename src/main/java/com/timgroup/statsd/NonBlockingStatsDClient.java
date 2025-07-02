@@ -227,9 +227,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                         costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder()).toString();
             }
             costantPreTags = null;
-            // Origin detection
-            boolean originEnabled = isOriginDetectionEnabled(builder.containerID, builder.originDetectionEnabled);
-            containerID = getContainerID(builder.containerID, originEnabled);
+            containerID = getContainerID(builder.containerID, builder.originDetectionEnabled);
         }
 
         try {
@@ -1211,8 +1209,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
-    boolean isOriginDetectionEnabled(String containerID, boolean originDetectionEnabled) {
-        if (!originDetectionEnabled || (containerID != null && !containerID.isEmpty())) {
+    boolean isOriginDetectionEnabled(boolean originDetectionEnabled) {
+        if (!originDetectionEnabled) {
             // origin detection is explicitly disabled
             // or a user-defined container ID was provided
             return false;
@@ -1234,7 +1232,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             return containerID;
         }
 
-        if (originDetectionEnabled) {
+        if (isOriginDetectionEnabled(originDetectionEnabled)) {
             CgroupReader reader = new CgroupReader();
             try {
                 return reader.getContainerID();
