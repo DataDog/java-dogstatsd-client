@@ -128,6 +128,10 @@ public class CgroupReaderTest {
         .toString();
 
         assertThat(CgroupReader.parse(linux44), equalTo("cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411"));
+
+        // UUID
+        String uuid = "1:name=systemd:/uuid/34dc0b5e-626f-2c5c-4c51-70e34b10e765\n";
+        assertThat(CgroupReader.parse(uuid), equalTo("34dc0b5e-626f-2c5c-4c51-70e34b10e765"));
     }
 
     @Rule

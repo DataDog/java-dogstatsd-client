@@ -20,11 +20,12 @@ import java.util.regex.Pattern;
  */
 class CgroupReader {
     private static final Path CGROUP_PATH = Paths.get("/proc/self/cgroup");
+    private static final String UUID_SOURCE = "[0-9a-f]{8}(?:[_-][0-9a-f]{4}){3}[_-][0-9a-f]{12}";
     private static final String CONTAINER_SOURCE = "[0-9a-f]{64}";
     private static final String TASK_SOURCE = "[0-9a-f]{32}-\\d+";
     private static final Pattern LINE_RE = Pattern.compile("^\\d+:[^:]*:(.+)$", Pattern.MULTILINE | Pattern.UNIX_LINES);
     private static final Pattern CONTAINER_RE = Pattern.compile(
-            "(" + CONTAINER_SOURCE + "|" + TASK_SOURCE + ")(?:.scope)?$");
+            "(" + UUID_SOURCE + "|" + CONTAINER_SOURCE + "|" + TASK_SOURCE + ")(?:.scope)?$");
 
     /**
      * DEFAULT_CGROUP_MOUNT_PATH is the default cgroup mount path.
