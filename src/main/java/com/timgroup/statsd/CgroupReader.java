@@ -51,12 +51,6 @@ class CgroupReader {
      **/
     private static final long HOST_CGROUP_NAMESPACE_INODE = 0xEFFFFFFBL;
 
-    private boolean readOnce = false;
-    /**
-     * containerID holds either the container ID or the cgroup controller inode.
-     **/
-    public String containerID;
-
     /**
      * Returns the container ID if available or the cgroup controller inode.
      *
@@ -64,9 +58,7 @@ class CgroupReader {
      *                     occurs reading from the stream.
      */
     public String getContainerID() throws IOException {
-        if (readOnce) {
-            return containerID;
-        }
+        String containerID;
 
         final String cgroupContent = read(CGROUP_PATH);
         if (cgroupContent == null || cgroupContent.isEmpty()) {
@@ -95,7 +87,6 @@ class CgroupReader {
      *                     occurs reading from the stream.
      */
     private String read(Path path) throws IOException {
-        readOnce = true;
         if (!Files.isReadable(path)) {
             return null;
         }
