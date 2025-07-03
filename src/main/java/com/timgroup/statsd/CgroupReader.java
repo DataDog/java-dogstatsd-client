@@ -51,6 +51,35 @@ class CgroupReader {
      **/
     private static final long HOST_CGROUP_NAMESPACE_INODE = 0xEFFFFFFBL;
 
+    interface Fs {
+        String getContents(Path path) throws IOException;
+
+        long getInode(Path path) throws IOException;
+    }
+
+    static class FilesFs implements Fs {
+        @Override
+        public String getContents(Path path) throws IOException {
+            return new String(Files.readAllBytes(path));
+        }
+
+        @Override
+        public long getInode(Path path) throws IOException {
+            return (long) Files.getAttribute(path, "unix:ino");
+        }
+    }
+
+    private final Fs fs;
+
+    CgroupReader() {
+        this(new FilesFs());
+    }
+
+    CgroupReader(Fs fs) {
+        super();
+        this.fs = fs;
+    }
+
     /**
      * Returns the container ID if available or the cgroup controller inode.
      *
@@ -60,7 +89,7 @@ class CgroupReader {
     public String getContainerID() throws IOException {
         String containerID;
 
-        final String cgroupContent = read(CGROUP_PATH);
+        final String cgroupContent = fs.getContents(CGROUP_PATH);
         if (cgroupContent == null || cgroupContent.isEmpty()) {
             return null;
         }
@@ -78,20 +107,6 @@ class CgroupReader {
             containerID = getCgroupInode(DEFAULT_CGROUP_MOUNT_PATH, cgroupContent);
         }
         return containerID;
-    }
-
-    /**
-     * Returns the content of `path` (=/proc/self/cgroup).
-     *
-     * @throws IOException if /proc/self/cgroup is readable and still an I/O error
-     *                     occurs reading from the stream.
-     */
-    private String read(Path path) throws IOException {
-        if (!Files.isReadable(path)) {
-            return null;
-        }
-
-        return new String(Files.readAllBytes(path));
     }
 
     /**
@@ -121,7 +136,7 @@ class CgroupReader {
      *
      * @param path Path to the cgroup namespace file.
      */
-    private static boolean isHostCgroupNamespace(final Path path) {
+    private boolean isHostCgroupNamespace(final Path path) {
         long hostCgroupInode = inodeForPath(path);
         return hostCgroupInode == HOST_CGROUP_NAMESPACE_INODE;
     }
@@ -131,9 +146,9 @@ class CgroupReader {
      *
      * @param path Path to the cgroup namespace file.
      */
-    private static long inodeForPath(final Path path) {
+    private long inodeForPath(final Path path) {
         try {
-            long inode = (long) Files.getAttribute(path, "unix:ino");
+            long inode = (long) fs.getInode(path);
             return inode;
         } catch (Exception e) {
             return 0;
@@ -147,7 +162,7 @@ class CgroupReader {
      * @param cgroupMountPath Path to the cgroup mount point.
      * @param cgroupContent   String content of the cgroup file.
      */
-    public static String getCgroupInode(final Path cgroupMountPath, final String cgroupContent) throws IOException {
+    public String getCgroupInode(final Path cgroupMountPath, final String cgroupContent) throws IOException {
         Map<String, String> cgroupControllersPaths = parseCgroupNodePath(cgroupContent);
         if (cgroupControllersPaths == null) {
             return null;
@@ -179,7 +194,7 @@ class CgroupReader {
      *
      * @param cgroupContent Cgroup file content.
      */
-    public static Map<String, String> parseCgroupNodePath(final String cgroupContent) throws IOException {
+    public Map<String, String> parseCgroupNodePath(final String cgroupContent) throws IOException {
         Map<String, String> res = new HashMap<>();
         BufferedReader br = new BufferedReader(new StringReader(cgroupContent));
 

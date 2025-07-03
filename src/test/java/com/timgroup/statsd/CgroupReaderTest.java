@@ -11,10 +11,12 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import org.junit.rules.TemporaryFolder;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThrows;
 
 public class CgroupReaderTest {
     @Test
@@ -155,7 +157,7 @@ public class CgroupReaderTest {
         long inode = (long) Files.getAttribute(nodePath, "unix:ino");
 
         String cgroupContent = "myfile\5:memory:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860\n";
-        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath, cgroupContent);
+        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath, cgroupContent);
 
         assertEquals("in-" + inode, inodeResult);
     }
@@ -169,7 +171,7 @@ public class CgroupReaderTest {
 
         long inodeNumber = (long) Files.getAttribute(cgroupMountPath, "unix:ino");
         String cgroupContent = "0::/\n";
-        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath, cgroupContent);
+        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath, cgroupContent);
 
         assertEquals("in-" + inodeNumber, inodeResult);
     }
@@ -181,7 +183,7 @@ public class CgroupReaderTest {
         Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
 
         String cgroupContent = "memory:/nonexistentpath\n";
-        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath,
+        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath,
                 cgroupContent);
 
         assertNull(inodeResult);
@@ -195,9 +197,32 @@ public class CgroupReaderTest {
         Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
 
         String cgroupContent = "";
-        String inodeResult = CgroupReader.getCgroupInode(cgroupMountPath,
+        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath,
                 cgroupContent);
 
         assertNull(inodeResult);
+    }
+
+    @Test
+    public void testFilesFs() throws IOException {
+        final CgroupReader.Fs fs = new CgroupReader.FilesFs();
+
+        folder.create();
+        final Path path = folder.newFolder("foo", "bar").toPath().resolve("baz");
+        Files.write(path, "contents".getBytes());
+
+        assertEquals(fs.getContents(path), "contents");
+        assertEquals(fs.getInode(path), Files.getAttribute(path, "unix:ino"));
+
+        assertThrows(IOException.class, new ThrowingRunnable() {
+            @Override public void run() throws Exception {
+                fs.getContents(path.resolveSibling("ook"));
+            }
+        });
+        assertThrows(IOException.class, new ThrowingRunnable() {
+            @Override public void run() throws Exception {
+                fs.getInode(path.resolveSibling("ook"));
+            }
+        });
     }
 }
