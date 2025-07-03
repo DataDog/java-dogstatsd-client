@@ -20,6 +20,12 @@ import java.util.regex.Pattern;
  */
 class CgroupReader {
     private static final Path CGROUP_PATH = Paths.get("/proc/self/cgroup");
+    private static final String CONTAINER_SOURCE = "[0-9a-f]{64}";
+    private static final String TASK_SOURCE = "[0-9a-f]{32}-\\d+";
+    private static final Pattern LINE_RE = Pattern.compile("^\\d+:[^:]*:(.+)$", Pattern.MULTILINE | Pattern.UNIX_LINES);
+    private static final Pattern CONTAINER_RE = Pattern.compile(
+            "(" + CONTAINER_SOURCE + "|" + TASK_SOURCE + ")(?:.scope)?$");
+
     /**
      * DEFAULT_CGROUP_MOUNT_PATH is the default cgroup mount path.
      **/
@@ -28,11 +34,6 @@ class CgroupReader {
      * CGROUP_NS_PATH is the path to the cgroup namespace file.
      **/
     private static final Path CGROUP_NS_PATH = Paths.get("/proc/self/ns/cgroup");
-    private static final String CONTAINER_SOURCE = "[0-9a-f]{64}";
-    private static final String TASK_SOURCE = "[0-9a-f]{32}-\\d+";
-    private static final Pattern LINE_RE = Pattern.compile("^\\d+:[^:]*:(.+)$", Pattern.MULTILINE | Pattern.UNIX_LINES);
-    private static final Pattern CONTAINER_RE = Pattern.compile(
-            "(" + CONTAINER_SOURCE + "|" + TASK_SOURCE + ")(?:.scope)?$");
 
     /**
      * CGROUPV1_BASE_CONTROLLER is the controller used to identify the container-id
