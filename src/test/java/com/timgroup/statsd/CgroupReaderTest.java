@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.junit.Assume;
 import org.junit.Before;
@@ -41,7 +42,7 @@ public class CgroupReaderTest {
     public void containerID_parse() throws Exception {
         // Docker
         String docker = dockerSelfCgroup;
-        assertThat(CgroupReader.parse(docker), equalTo(dockerContainerID));
+        assertThat(CgroupReader.parseSelfCgroup(docker), equalTo(dockerContainerID));
 
         // Kubernetes
         String kubernetes = new StringBuilder()
@@ -58,7 +59,7 @@ public class CgroupReaderTest {
         .append("1:name=systemd:/kubepods/besteffort/pod3d274242-8ee0-11e9-a8a6-1e68d864ef1a/3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1")
         .toString();
 
-        assertThat(CgroupReader.parse(kubernetes), equalTo("3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1"));
+        assertThat(CgroupReader.parseSelfCgroup(kubernetes), equalTo("3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1"));
 
         // ECS EC2
         String ecs = new StringBuilder()
@@ -73,7 +74,7 @@ public class CgroupReaderTest {
         .append("1:blkio:/ecs/name-ecs-classic/5a0d5ceddf6c44c1928d367a815d890f/38fac3e99302b3622be089dd41e7ccf38aff368a86cc339972075136ee2710ce")
         .toString();
 
-        assertThat(CgroupReader.parse(ecs), equalTo("38fac3e99302b3622be089dd41e7ccf38aff368a86cc339972075136ee2710ce"));
+        assertThat(CgroupReader.parseSelfCgroup(ecs), equalTo("38fac3e99302b3622be089dd41e7ccf38aff368a86cc339972075136ee2710ce"));
 
         // ECS Fargate
         String ecsFargate = new StringBuilder()
@@ -90,7 +91,7 @@ public class CgroupReaderTest {
         .append("1:name=systemd:/ecs/55091c13-b8cf-4801-b527-f4601742204d/432624d2150b349fe35ba397284dea788c2bf66b885d14dfc1569b01890ca7da\n")
         .toString();
 
-        assertThat(CgroupReader.parse(ecsFargate), equalTo("432624d2150b349fe35ba397284dea788c2bf66b885d14dfc1569b01890ca7da"));
+        assertThat(CgroupReader.parseSelfCgroup(ecsFargate), equalTo("432624d2150b349fe35ba397284dea788c2bf66b885d14dfc1569b01890ca7da"));
 
         // ECS Fargate >= 1.4.0
         String ecsFargate14 = new StringBuilder()
@@ -107,7 +108,7 @@ public class CgroupReaderTest {
         .append("1:name=systemd:/ecs/34dc0b5e626f2c5c4c5170e34b10e765-1234567890\n")
         .toString();
 
-        assertThat(CgroupReader.parse(ecsFargate14), equalTo("34dc0b5e626f2c5c4c5170e34b10e765-1234567890"));
+        assertThat(CgroupReader.parseSelfCgroup(ecsFargate14), equalTo("34dc0b5e626f2c5c4c5170e34b10e765-1234567890"));
 
         // Linux non-containerized
         String nonContainerized = new StringBuilder()
@@ -124,7 +125,7 @@ public class CgroupReaderTest {
         .append("1:name=systemd:/user.slice/user-0.slice/session-14.scope\n")
         .toString();
 
-        assertNull(CgroupReader.parse(nonContainerized));
+        assertNull(CgroupReader.parseSelfCgroup(nonContainerized));
 
         // Linux 4.4
         String linux44 = new StringBuilder()
@@ -132,11 +133,11 @@ public class CgroupReaderTest {
         .append("1:name=systemd:/system.slice/docker-cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411.scope\n")
         .toString();
 
-        assertThat(CgroupReader.parse(linux44), equalTo("cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411"));
+        assertThat(CgroupReader.parseSelfCgroup(linux44), equalTo("cde7c2bab394630a42d73dc610b9c57415dced996106665d427f6d0566594411"));
 
         // UUID
         String uuid = "1:name=systemd:/uuid/34dc0b5e-626f-2c5c-4c51-70e34b10e765\n";
-        assertThat(CgroupReader.parse(uuid), equalTo("34dc0b5e-626f-2c5c-4c51-70e34b10e765"));
+        assertThat(CgroupReader.parseSelfCgroup(uuid), equalTo("34dc0b5e-626f-2c5c-4c51-70e34b10e765"));
     }
 
     @Rule
@@ -320,5 +321,40 @@ public class CgroupReaderTest {
         });
 
         assertEquals(cr.getContainerID(), null);
+    }
+
+    @Test
+    public void testGetContainerID_mountinfo() throws Exception {
+        String[][] cases = new String[][]{
+            { "docker", "0cfa82bf3ab29da271548d6a044e95c948c6fd2f7578fb41833a44ca23da425f" },
+            { "kubelet", "fc7038bc73a8d3850c66ddbfb0b2901afa378bfcbb942cc384b051767e4ac6b0" },
+            { "sandboxes1", null },
+            { "sandboxes2", null },
+        };
+
+        for (String[] cs : cases) {
+            final String mountInfoContents = getTestResource("dogstatsd/mountinfo", cs[0]);
+
+            CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+                @Override public String getContents(Path path) throws IOException {
+                    String sp = path.toString();
+                    if ("/proc/self/mountinfo".equals(sp)) {
+                        return mountInfoContents;
+                    }
+                    throw new FileNotFoundException(sp);
+                }
+                @Override public long getInode(Path path) throws IOException {
+                    String sp = path.toString();
+                    throw new FileNotFoundException(sp);
+                }
+            });
+
+            assertEquals(cr.getContainerID(), cs[1]);
+        }
+    }
+
+    private String getTestResource(String prefix, String name) throws Exception {
+        return new String(Files.readAllBytes(Paths.get(
+            getClass().getClassLoader().getResource(prefix + "/" + name).toURI())));
     }
 }

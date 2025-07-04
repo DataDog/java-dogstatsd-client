@@ -51,6 +51,12 @@ class CgroupReader {
      **/
     private static final long HOST_CGROUP_NAMESPACE_INODE = 0xEFFFFFFBL;
 
+    private final Path MOUNTINFO_PATH = Paths.get("/proc/self/mountinfo");
+
+    private final Pattern MOUNTINFO_RE = Pattern.compile(
+        ".*/([^\\s/]+)/(([0-9a-f]{64})|([0-9a-f]{32}-\\d+)|([0-9a-f]{8}(-[0-9a-f]{4}){4})$)/[\\S]*hostname"
+    );
+
     interface Fs {
         String getContents(Path path) throws IOException;
 
@@ -87,13 +93,33 @@ class CgroupReader {
      *                     occurs reading from the stream.
      */
     public String getContainerID() throws IOException {
-        String containerID;
+        String containerID = null;
 
-        final String cgroupContent = fs.getContents(CGROUP_PATH);
-        if (cgroupContent == null || cgroupContent.isEmpty()) {
-            return null;
+        String cgroupContent = null;
+        try {
+            cgroupContent = fs.getContents(CGROUP_PATH);
+        } catch (IOException ex) {
+            // ignored
         }
-        containerID = parse(cgroupContent);
+
+        if (!isEmpty(cgroupContent)) {
+            containerID = parseSelfCgroup(cgroupContent);
+        }
+
+        if (!isEmpty(containerID)) {
+            return containerID;
+        }
+
+        try {
+            containerID = trySelfMountInfo();
+        } catch (IOException ex) {
+            // ignored
+        }
+
+        if (!isEmpty(containerID)) {
+            return containerID;
+        }
+
         /*
          * If the container ID is not available it means that the application is either
          * not running in a container or running is private cgroup namespace, we
@@ -103,7 +129,7 @@ class CgroupReader {
          * found, it means that the application is running on a host/vm.
          *
          */
-        if ((containerID == null || containerID.equals("")) && !isHostCgroupNamespace(CGROUP_NS_PATH)) {
+        if (!isEmpty(cgroupContent) && !isHostCgroupNamespace(CGROUP_NS_PATH)) {
             containerID = getCgroupInode(DEFAULT_CGROUP_MOUNT_PATH, cgroupContent);
         }
         return containerID;
@@ -116,7 +142,7 @@ class CgroupReader {
      *
      * @param cgroupsContent Cgroup file content
      */
-    public static String parse(final String cgroupsContent) {
+    public static String parseSelfCgroup(final String cgroupsContent) {
         final Matcher lines = LINE_RE.matcher(cgroupsContent);
         while (lines.find()) {
             final String path = lines.group(1);
@@ -211,5 +237,30 @@ class CgroupReader {
 
         br.close();
         return res;
+    }
+
+    private static boolean isEmpty(String str) {
+        return str == null || str.isEmpty();
+    }
+
+    String trySelfMountInfo() throws IOException {
+        String mountInfo = fs.getContents(MOUNTINFO_PATH);
+        if (isEmpty(mountInfo)) {
+            return null;
+        }
+
+        BufferedReader br = new BufferedReader(new StringReader(mountInfo));
+
+        String line;
+        while ((line = br.readLine()) != null) {
+            Matcher matcher = MOUNTINFO_RE.matcher(line);
+            if (matcher.find()) {
+                if (!"sandboxes".equals(matcher.group(1))) {
+                    return matcher.group(2);
+                }
+            }
+        }
+
+        return null;
     }
 }
