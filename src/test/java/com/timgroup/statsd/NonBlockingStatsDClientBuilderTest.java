@@ -26,7 +26,7 @@ public class NonBlockingStatsDClientBuilderTest {
             .enableTelemetry(false)
             .build();
 
-        assertFalse(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
+        assertFalse(client.isOriginDetectionEnabled(NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
         environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
     }
 
@@ -44,7 +44,7 @@ public class NonBlockingStatsDClientBuilderTest {
             .enableTelemetry(false)
             .build();
 
-        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
+        assertTrue(client.isOriginDetectionEnabled(NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
         environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
     }
 
@@ -60,7 +60,7 @@ public class NonBlockingStatsDClientBuilderTest {
             .enableTelemetry(false)
             .build();
 
-        assertTrue(client.isOriginDetectionEnabled(null, NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
+        assertTrue(client.isOriginDetectionEnabled(NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
     }
 
     @Test(timeout = 5000L)
@@ -74,7 +74,7 @@ public class NonBlockingStatsDClientBuilderTest {
             .enableTelemetry(false)
             .build();
 
-        assertFalse(client.isOriginDetectionEnabled(null, false));
+        assertFalse(client.isOriginDetectionEnabled(false));
     }
 
     @Test(timeout = 5000L)
