@@ -142,7 +142,7 @@ public abstract class Message implements Comparable<Message> {
 
         return false;
     }
-    
+
     @Override
     public int compareTo(Message message) {
         int typeComparison = getType().compareTo(message.getType());
