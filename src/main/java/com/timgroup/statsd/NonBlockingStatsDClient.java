@@ -1238,11 +1238,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (isOriginDetectionEnabled(originDetectionEnabled)) {
             CgroupReader reader = new CgroupReader();
-            try {
-                return reader.getContainerID();
-            } catch (final IOException e) {
-                throw new StatsDClientException("Failed to get container ID", e);
-            }
+            return reader.getContainerID();
         }
 
         return null;

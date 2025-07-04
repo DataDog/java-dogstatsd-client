@@ -92,7 +92,7 @@ class CgroupReader {
      * @throws IOException if /proc/self/cgroup is readable and still an I/O error
      *                     occurs reading from the stream.
      */
-    public String getContainerID() throws IOException {
+    public String getContainerID() {
         String containerID = null;
 
         String cgroupContent = null;
@@ -110,12 +110,7 @@ class CgroupReader {
             return containerID;
         }
 
-        try {
-            containerID = trySelfMountInfo();
-        } catch (IOException ex) {
-            // ignored
-        }
-
+        containerID = trySelfMountInfo();
         if (!isEmpty(containerID)) {
             return containerID;
         }
@@ -188,7 +183,7 @@ class CgroupReader {
      * @param cgroupMountPath Path to the cgroup mount point.
      * @param cgroupContent   String content of the cgroup file.
      */
-    public String getCgroupInode(final Path cgroupMountPath, final String cgroupContent) throws IOException {
+    public String getCgroupInode(final Path cgroupMountPath, final String cgroupContent) {
         Map<String, String> cgroupControllersPaths = parseCgroupNodePath(cgroupContent);
         if (cgroupControllersPaths == null) {
             return null;
@@ -220,12 +215,10 @@ class CgroupReader {
      *
      * @param cgroupContent Cgroup file content.
      */
-    public Map<String, String> parseCgroupNodePath(final String cgroupContent) throws IOException {
+    public Map<String, String> parseCgroupNodePath(final String cgroupContent) {
         Map<String, String> res = new HashMap<>();
-        BufferedReader br = new BufferedReader(new StringReader(cgroupContent));
 
-        String line;
-        while ((line = br.readLine()) != null) {
+        for (String line : cgroupContent.split("\n")) {
             String[] tokens = line.split(":");
             if (tokens.length != 3) {
                 continue;
@@ -235,7 +228,6 @@ class CgroupReader {
             }
         }
 
-        br.close();
         return res;
     }
 
@@ -243,16 +235,15 @@ class CgroupReader {
         return str == null || str.isEmpty();
     }
 
-    String trySelfMountInfo() throws IOException {
-        String mountInfo = fs.getContents(MOUNTINFO_PATH);
-        if (isEmpty(mountInfo)) {
+    String trySelfMountInfo() {
+        String mountInfo;
+        try {
+            mountInfo = fs.getContents(MOUNTINFO_PATH);
+        } catch (IOException ex) {
             return null;
         }
 
-        BufferedReader br = new BufferedReader(new StringReader(mountInfo));
-
-        String line;
-        while ((line = br.readLine()) != null) {
+        for (String line : mountInfo.split("\n")) {
             Matcher matcher = MOUNTINFO_RE.matcher(line);
             if (matcher.find()) {
                 if (!"sandboxes".equals(matcher.group(1))) {
