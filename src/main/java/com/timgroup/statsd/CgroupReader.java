@@ -57,7 +57,7 @@ class CgroupReader {
 
     /**
      * Returns the container ID if available or the cgroup controller inode.
-     * 
+     *
      * @throws IOException if /proc/self/cgroup is readable and still an I/O error
      *                     occurs reading from the stream.
      */
@@ -78,7 +78,7 @@ class CgroupReader {
          * the container ID.
          * In Host cgroup namespace, the container ID should be found. If it is not
          * found, it means that the application is running on a host/vm.
-         * 
+         *
          */
         if ((containerID == null || containerID.equals("")) && !isHostCgroupNamespace(CGROUP_NS_PATH)) {
             containerID = getCgroupInode(DEFAULT_CGROUP_MOUNT_PATH, cgroupContent);
@@ -88,7 +88,7 @@ class CgroupReader {
 
     /**
      * Returns the content of `path` (=/proc/self/cgroup).
-     * 
+     *
      * @throws IOException if /proc/self/cgroup is readable and still an I/O error
      *                     occurs reading from the stream.
      */
@@ -105,7 +105,7 @@ class CgroupReader {
      * Parses a Cgroup file (=/proc/self/cgroup) content and returns the
      * corresponding container ID. It can be found only if the container
      * is running in host cgroup namespace.
-     * 
+     *
      * @param cgroupsContent Cgroup file content
      */
     public static String parse(final String cgroupsContent) {
@@ -125,7 +125,7 @@ class CgroupReader {
      * Returns true if the host cgroup namespace is used.
      * It looks at the inode of `/proc/self/ns/cgroup` and compares it to
      * HOST_CGROUP_NAMESPACE_INODE.
-     * 
+     *
      * @param path Path to the cgroup namespace file.
      */
     private static boolean isHostCgroupNamespace(final Path path) {
@@ -135,7 +135,7 @@ class CgroupReader {
 
     /**
      * Returns the inode for the given path.
-     * 
+     *
      * @param path Path to the cgroup namespace file.
      */
     private static long inodeForPath(final Path path) {
@@ -150,7 +150,7 @@ class CgroupReader {
     /**
      * Returns the cgroup controller inode for the given cgroup mount path and
      * procSelfCgroupPath.
-     * 
+     *
      * @param cgroupMountPath Path to the cgroup mount point.
      * @param cgroupContent   String content of the cgroup file.
      */
@@ -183,7 +183,7 @@ class CgroupReader {
 
     /**
      * Returns a map of cgroup controllers and their corresponding cgroup path.
-     * 
+     *
      * @param cgroupContent Cgroup file content.
      */
     public static Map<String, String> parseCgroupNodePath(final String cgroupContent) throws IOException {

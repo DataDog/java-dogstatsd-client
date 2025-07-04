@@ -12,7 +12,7 @@ import java.util.Map;
 public class MapUtils {
 
     private static final MethodHandle MAP_PUT_IF_ABSENT = buildMapPutIfAbsent();
-    
+
     /**
      * Emulates {@code Map.putIfAbsent} semantics. Replace when baselining at JDK8+.
      * @return the previous value associated with the message, or null if the value was not seen before
