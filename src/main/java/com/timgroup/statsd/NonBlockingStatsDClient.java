@@ -177,6 +177,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final int maxPacketSizeBytes;
     private final boolean blocking;
     private final String containerID;
+    private final String externalEnv = Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV"));
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
@@ -462,6 +463,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
     void writeMessageTail(StringBuilder builder) {
         if (containerID != null && !containerID.isEmpty()) {
             builder.append("|c:").append(containerID);
+        }
+        if (externalEnv != null && !externalEnv.isEmpty()) {
+            builder.append("|e:").append(externalEnv);
         }
         builder.append('\n');
     }

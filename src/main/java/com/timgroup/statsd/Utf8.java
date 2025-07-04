@@ -18,6 +18,7 @@ import static java.lang.Character.MAX_SURROGATE;
 import static java.lang.Character.MIN_SURROGATE;
 
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 /**
  * This class is a partial copy of the {@code com.google.common.base.Utf8}
@@ -92,5 +93,12 @@ final class Utf8 {
             }
         }
         return utf8Length;
+    }
+
+    static String sanitize(String str) {
+        if (str == null) {
+            return null;
+        }
+        return Pattern.compile("[|\\p{Cntrl}]").matcher(str).replaceAll("");
     }
 }

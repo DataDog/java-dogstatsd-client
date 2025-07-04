@@ -55,22 +55,28 @@ public class NonBlockingStatsDClientTest {
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
 
     private String containerID;
+    private String externalEnv;
     private String payloadTail;
 
     @Parameters
     public static Object[][] parameters() {
-        return new Object[][]{
-            { null },
-            { "fake-container-id" },
-        };
+        return TestHelpers.permutations(
+            new Object[][]{
+                { null, "fake-container-id" },
+                { null, "fake-external-env" },
+            });
     }
 
-    public NonBlockingStatsDClientTest(String containerID) {
+    public NonBlockingStatsDClientTest(String containerID, String externalEnv) {
         this.containerID = containerID;
+        this.externalEnv = externalEnv;
 
         StringBuilder sb = new StringBuilder();
         if (containerID != null) {
             sb.append("|c:").append(containerID);
+        }
+        if (externalEnv != null) {
+            sb.append("|e:").append(externalEnv);
         }
         payloadTail = sb.toString();
     }
@@ -80,6 +86,10 @@ public class NonBlockingStatsDClientTest {
 
     @Before
     public void start() throws IOException {
+        if (externalEnv != null) {
+            environmentVariables.set("DD_EXTERNAL_ENV", externalEnv);
+        }
+
         server = new UDPDummyStatsDServer(0);
         client = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
