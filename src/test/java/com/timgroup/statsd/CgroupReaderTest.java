@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -19,10 +20,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThrows;
 
 public class CgroupReaderTest {
-    @Test
-    public void containerID_parse() throws Exception {
-        // Docker
-        String docker = new StringBuilder()
+    private static final String dockerContainerID = "3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860";
+    private static final String dockerSelfCgroup = new StringBuilder()
         .append("13:name=systemd:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860\n")
         .append("12:pids:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860\n")
         .append("11:hugetlb:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860\n")
@@ -38,7 +37,11 @@ public class CgroupReaderTest {
         .append("1:cpuset:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860")
         .toString();
 
-        assertThat(CgroupReader.parse(docker), equalTo("3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860"));
+    @Test
+    public void containerID_parse() throws Exception {
+        // Docker
+        String docker = dockerSelfCgroup;
+        assertThat(CgroupReader.parse(docker), equalTo(dockerContainerID));
 
         // Kubernetes
         String kubernetes = new StringBuilder()
@@ -145,65 +148,6 @@ public class CgroupReaderTest {
     }
 
     @Test
-    public void testWithExistingCgroupV1Inode() throws IOException {
-
-        folder.create();
-        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
-        Path controllerDir = cgroupMountPath.resolve("memory");
-        Path cgroupPath = controllerDir.resolve("docker");
-        Path nodePath = cgroupPath.resolve("3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860");
-        Files.createDirectories(nodePath);
-
-        long inode = (long) Files.getAttribute(nodePath, "unix:ino");
-
-        String cgroupContent = "myfile\5:memory:/docker/3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860\n";
-        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath, cgroupContent);
-
-        assertEquals("in-" + inode, inodeResult);
-    }
-
-    @Test
-    public void testWithExistingCgroupV2Inode() throws IOException {
-
-        folder.create();
-        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
-        Files.createDirectories(cgroupMountPath);
-
-        long inodeNumber = (long) Files.getAttribute(cgroupMountPath, "unix:ino");
-        String cgroupContent = "0::/\n";
-        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath, cgroupContent);
-
-        assertEquals("in-" + inodeNumber, inodeResult);
-    }
-
-    @Test
-    public void testWithNonExistentCgroupNodePath() throws IOException {
-
-        folder.create();
-        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
-
-        String cgroupContent = "memory:/nonexistentpath\n";
-        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath,
-                cgroupContent);
-
-        assertNull(inodeResult);
-
-    }
-
-    @Test
-    public void testWithEmptyCgroupContent() throws IOException {
-
-        folder.create();
-        Path cgroupMountPath = folder.newFolder("sys", "fs", "cgroup").toPath();
-
-        String cgroupContent = "";
-        String inodeResult = new CgroupReader().getCgroupInode(cgroupMountPath,
-                cgroupContent);
-
-        assertNull(inodeResult);
-    }
-
-    @Test
     public void testFilesFs() throws IOException {
         final CgroupReader.Fs fs = new CgroupReader.FilesFs();
 
@@ -224,5 +168,157 @@ public class CgroupReaderTest {
                 fs.getInode(path.resolveSibling("ook"));
             }
         });
+    }
+
+    @Test
+    public void testGetContainerID_cgroupPath() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return dockerSelfCgroup;
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                throw new IOException("not allowed");
+            }
+        });
+
+        assertEquals(cr.getContainerID(), dockerContainerID);
+    }
+
+    @Test
+    public void testGetContainerID_cgroupEmpty() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                throw new IOException("not allowed");
+            }
+        });
+
+        assertEquals(cr.getContainerID(), null);
+    }
+
+
+    @Test
+    public void testGetContainerID_inodeV1() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "0:cpu:/foo\n0:memory:/foo\n";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                if ("/sys/fs/cgroup/memory/foo".equals(path.toString())) {
+                    return 42;
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+        });
+
+        assertEquals(cr.getContainerID(), "in-42");
+    }
+
+    @Test
+    public void testGetContainerID_inodeV1NonExistent() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "0:cpu:/foo\n0:memory:/foo\n";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                throw new FileNotFoundException(path.toString());
+            }
+        });
+
+        assertEquals(cr.getContainerID(), null);
+    }
+
+    @Test
+    public void testGetContainerID_inodeV2NonExistent() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "0:memory:/foo\n";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                throw new FileNotFoundException(path.toString());
+            }
+        });
+
+        assertEquals(cr.getContainerID(), null);
+    }
+
+    @Test
+    public void testGetContainerID_inodeV2() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "0::/foo\n";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                if ("/sys/fs/cgroup/foo".equals(path.toString())) {
+                    return 42;
+                }
+                if ("/proc/self/ns/cgroup".equals(path)) {
+                    return 0xEFFFFFFBL;
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+        });
+
+        assertEquals(cr.getContainerID(), "in-42");
+    }
+
+    @Test
+    public void testGetContainerID_v2_bad_path() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "0::/foo\n";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                throw new FileNotFoundException(path.toString());
+            }
+        });
+
+        assertEquals(cr.getContainerID(), null);
+    }
+
+    @Test
+    public void testGetContainerID_inodeV2RootNs() throws IOException {
+        CgroupReader cr = new CgroupReader(new CgroupReader.Fs() {
+            @Override public String getContents(Path path) throws IOException {
+                if ("/proc/self/cgroup".equals(path.toString())) {
+                    return "0::/foo\n";
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+            @Override public long getInode(Path path) throws IOException {
+                if ("/proc/self/ns/cgroup".equals(path.toString())) {
+                    return 0xEFFFFFFBL;
+                }
+                if ("/foo".equals(path.toString())) {
+                    return 42;
+                }
+                throw new FileNotFoundException(path.toString());
+            }
+        });
+
+        assertEquals(cr.getContainerID(), null);
     }
 }
