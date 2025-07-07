@@ -1,9 +1,8 @@
 package com.timgroup.statsd;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,7 +26,7 @@ import static org.junit.Assert.assertTrue;
 public class StatsDAggregatorTest {
 
     private static final String TEST_NAME = "StatsDAggregatorTest";
-    private static FakeProcessor fakeProcessor;
+    private FakeProcessor fakeProcessor;
 
     private static Logger log = Logger.getLogger(TEST_NAME);
 
@@ -139,8 +138,8 @@ public class StatsDAggregatorTest {
         }
     }
 
-    @BeforeClass
-    public static void start() throws Exception {
+    @Before
+    public void start() throws Exception {
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
 
         // 15s flush period should be enough for all tests to be done - flushes will be manual
@@ -149,19 +148,13 @@ public class StatsDAggregatorTest {
         fakeProcessor.startWorkers("StatsD-Test-");
     }
 
-    @AfterClass
-    public static void stop() {
+    @After
+    public void stop() {
         try {
             fakeProcessor.shutdown(false);
         } catch (InterruptedException e) {
             return;
         }
-    }
-
-    @After
-    public void clear() {
-        // we should probably clear all queues
-        fakeProcessor.clear();
     }
 
     public void waitForQueueSize(Queue queue, int size) {
