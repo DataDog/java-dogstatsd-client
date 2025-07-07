@@ -27,8 +27,6 @@ import static org.junit.Assert.assertTrue;
 public class StatsDAggregatorTest {
 
     private static final String TEST_NAME = "StatsDAggregatorTest";
-    private static final int STATSD_SERVER_PORT = 17254;
-    private static DummyStatsDServer server;
     private static FakeProcessor fakeProcessor;
 
     private static Logger log = Logger.getLogger(TEST_NAME);
