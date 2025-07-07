@@ -3,10 +3,6 @@ package com.timgroup.statsd;
 public abstract class NumericMessage<T extends Number> extends Message {
     protected Number value;
 
-    protected NumericMessage(Message.Type type) {
-        super(type);
-    }
-
     protected NumericMessage(String aspect, Message.Type type, T value, String[] tags) {
         super(aspect, type, tags);
         this.value = value;
