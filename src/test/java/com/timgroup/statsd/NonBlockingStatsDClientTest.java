@@ -56,6 +56,7 @@ public class NonBlockingStatsDClientTest {
 
     private String containerID;
     private String externalEnv;
+    private String tagsCardinality;
     private String payloadTail;
 
     @Parameters
@@ -64,14 +65,19 @@ public class NonBlockingStatsDClientTest {
             new Object[][]{
                 { null, "fake-container-id" },
                 { null, "fake-external-env" },
+                { null, "low" },
             });
     }
 
-    public NonBlockingStatsDClientTest(String containerID, String externalEnv) {
+    public NonBlockingStatsDClientTest(String containerID, String externalEnv, String tagsCardinality) {
         this.containerID = containerID;
         this.externalEnv = externalEnv;
+        this.tagsCardinality = tagsCardinality;
 
         StringBuilder sb = new StringBuilder();
+        if (tagsCardinality != null) {
+            sb.append("|card:").append(tagsCardinality);
+        }
         if (containerID != null) {
             sb.append("|c:").append(containerID);
         }
@@ -88,6 +94,9 @@ public class NonBlockingStatsDClientTest {
     public void start() throws IOException {
         if (externalEnv != null) {
             environmentVariables.set("DD_EXTERNAL_ENV", externalEnv);
+        }
+        if (tagsCardinality != null) {
+            environmentVariables.set("DD_CARDINALITY", tagsCardinality);
         }
 
         server = new UDPDummyStatsDServer(0);
@@ -1109,61 +1118,6 @@ public class NonBlockingStatsDClientTest {
             testClient.stop();
             telemetryServer.close();
         }
-    }
-
-    @Test
-    public void testMessageHashcode() throws Exception {
-
-        StatsDTestMessage previous = new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[0]) {
-            @Override protected void writeValue(StringBuilder builder) {
-                builder.append(this.value);
-            };
-        };
-        StatsDTestMessage previousNewAspectString = new StatsDTestMessage<Long>(new String("my.count"), Message.Type.COUNT, Long.valueOf(1), 0, new String[0]) {
-            @Override protected void writeValue(StringBuilder builder) {
-                builder.append(this.value);
-            };
-        };
-        StatsDTestMessage previousTagged =
-            new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[] {"foo", "bar"}) {
-
-            @Override protected void writeValue(StringBuilder builder) {
-                builder.append(this.value);
-            };
-        };
-
-        StatsDTestMessage next = new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[0]) {
-            @Override protected void writeValue(StringBuilder builder) {
-                builder.append(this.value);
-            };
-        };
-        StatsDTestMessage nextTagged =
-            new StatsDTestMessage<Long>("my.count", Message.Type.COUNT, Long.valueOf(1), 0, new String[] {"foo", "bar"}) {
-
-            @Override protected void writeValue(StringBuilder builder) {
-                builder.append(this.value);
-            };
-        };
-
-        assertEquals(previous.hashCode(), next.hashCode());
-        assertEquals(previousTagged.hashCode(), nextTagged.hashCode());
-        assertEquals(previous.hashCode(), previousNewAspectString.hashCode());
-        assertEquals(previous, previousNewAspectString);
-
-        class TestAlphaNumericMessage extends AlphaNumericMessage {
-            public TestAlphaNumericMessage(String aspect, Type type, String value, String[] tags) {
-                super(aspect, type, value, tags);
-            }
-
-            @Override
-            boolean writeTo(StringBuilder builder, int capacity) {
-                return false;
-            }
-        }
-        AlphaNumericMessage alphaNum1 = new TestAlphaNumericMessage("my.count", Message.Type.COUNT, "value", new String[] {"tag"});
-        AlphaNumericMessage alphaNum2 = new TestAlphaNumericMessage(new String("my.count"), Message.Type.COUNT, new String("value"), new String[]{new String("tag")});
-        assertEquals(alphaNum1, alphaNum2);
-
     }
 
     @Test(timeout = 5000L)

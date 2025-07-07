@@ -4,7 +4,7 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
     final double sampleRate; // NaN for none
 
     protected StatsDTestMessage(String aspect, Message.Type type, T value, double sampleRate, String[] tags) {
-        super(aspect, type, value, tags);
+        super(aspect, type, value, TagsCardinality.DEFAULT, tags);
         this.sampleRate = sampleRate;
     }
 

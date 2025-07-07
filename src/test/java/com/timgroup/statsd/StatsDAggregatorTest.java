@@ -49,7 +49,11 @@ public class StatsDAggregatorTest {
 
     public static class FakeMessage<T extends Number> extends NumericMessage<T> {
         protected FakeMessage(String aspect, Message.Type type, T value) {
-            super(aspect, type, value, null);
+            super(aspect, type, value, TagsCardinality.DEFAULT, null);
+        }
+
+        protected FakeMessage(String aspect, Message.Type type, T value, TagsCardinality cardinality) {
+            super(aspect, type, value, cardinality, null);
         }
 
         @Override
@@ -60,7 +64,7 @@ public class StatsDAggregatorTest {
 
     public static class FakeAlphaMessage extends AlphaNumericMessage {
         protected FakeAlphaMessage(String aspect, Message.Type type, String value) {
-            super(aspect, type, value, null);
+            super(aspect, type, value, TagsCardinality.DEFAULT, null);
         }
 
         @Override
@@ -194,6 +198,24 @@ public class StatsDAggregatorTest {
     }
 
     @Test(timeout = 2000L)
+    public void aggregate_messages_with_cardinality() throws Exception {
+        for(int i=0 ; i<10 ; i++) {
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1, TagsCardinality.LOW));
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1, TagsCardinality.HIGH));
+        }
+
+        waitForQueueSize(fakeProcessor.messages, 0);
+
+        assertEquals(30, fakeProcessor.messageAggregated.get());
+        assertEquals(0, fakeProcessor.messageSent.get());
+
+        fakeProcessor.aggregator.flush();
+
+        assertEquals(3, fakeProcessor.highPrioMessages.size());
+    }
+
+    @Test(timeout = 2000L)
     public void aggregation_sharding() throws Exception {
         final int iterations = 10;
 
@@ -255,7 +277,7 @@ public class StatsDAggregatorTest {
             tags[i] = new String[] {String.valueOf(i)};
         }
         for (int i = 0; i < numMessages; i++) {
-            fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, tags[i % numTags]) {
+            fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, TagsCardinality.DEFAULT, tags[i % numTags]) {
                 @Override
                 boolean writeTo(StringBuilder builder, int capacity) {
                     return false;

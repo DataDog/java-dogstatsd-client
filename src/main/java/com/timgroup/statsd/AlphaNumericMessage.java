@@ -4,13 +4,13 @@ public abstract class AlphaNumericMessage extends Message {
 
     protected final String value;
 
-    protected AlphaNumericMessage(Message.Type type, String value) {
-        super(type);
+    protected AlphaNumericMessage(Message.Type type, String value, TagsCardinality cardinality) {
+        super(type, cardinality);
         this.value = value;
     }
 
-    protected AlphaNumericMessage(String aspect, Message.Type type, String value, String[] tags) {
-        super(aspect, type, tags);
+    protected AlphaNumericMessage(String aspect, Message.Type type, String value, TagsCardinality cardinality, String[] tags) {
+        super(aspect, type, cardinality, tags);
         this.value = value;
     }
 

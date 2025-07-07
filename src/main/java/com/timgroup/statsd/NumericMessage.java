@@ -3,8 +3,8 @@ package com.timgroup.statsd;
 public abstract class NumericMessage<T extends Number> extends Message {
     protected Number value;
 
-    protected NumericMessage(String aspect, Message.Type type, T value, String[] tags) {
-        super(aspect, type, tags);
+    protected NumericMessage(String aspect, Message.Type type, T value, TagsCardinality cardinality, String[] tags) {
+        super(aspect, type, cardinality, tags);
         this.value = value;
     }
 

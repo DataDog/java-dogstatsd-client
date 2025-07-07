@@ -100,6 +100,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     /** Handler to use when an exception occurs during usage, may be null to indicate noop. */
     public StatsDClientErrorHandler errorHandler;
     public ThreadFactory threadFactory;
+    public TagsCardinality tagsCardinality = null;
 
     public NonBlockingStatsDClientBuilder() { }
 
@@ -298,6 +299,16 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     }
 
     /**
+     * Request that all metrics from this client to be enriched to specified tag cardinality.
+     *
+     * <p>See <a href="https://docs.datadoghq.com/getting_started/tagging/assigning_tags/?tab=containerizedenvironments#tags-cardinality">Tags cardinality documentation</a>.
+     */
+    public NonBlockingStatsDClientBuilder tagsCardinality(TagsCardinality cardinality) {
+        tagsCardinality = cardinality;
+        return this;
+    }
+
+    /**
      * NonBlockingStatsDClient factory method.
      * @return the built NonBlockingStatsDClient.
      */
@@ -343,6 +354,17 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
         resolved.addressLookup = lookup;
         resolved.telemetryAddressLookup = telemetryLookup;
+
+        resolved.tagsCardinality = this.tagsCardinality;
+        if (resolved.tagsCardinality == null) {
+            resolved.tagsCardinality = TagsCardinality.fromString(System.getenv("DD_CARDINALITY"));
+        }
+        if (resolved.tagsCardinality == null) {
+            resolved.tagsCardinality = TagsCardinality.fromString(System.getenv("DATADOG_CARDINALITY"));
+        }
+        if (resolved.tagsCardinality == null) {
+            resolved.tagsCardinality = TagsCardinality.DEFAULT;
+        }
 
         return resolved;
     }

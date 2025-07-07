@@ -4,7 +4,9 @@ import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Assume;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -99,20 +101,28 @@ public class TelemetryTest {
 
     private static String telemetryTags;
     private final String containerID;
+    private final String tagsCardinality;
     private final String tail;
 
     @Parameters
     public static Object[][] parameters() {
-        return new Object[][]{
-            { null },
-            { "my-fake-container-id" },
-        };
+        return TestHelpers.permutations(new Object[][]{
+            { null, "my-fake-container-id" },
+            { null, "none" },
+        });
     }
 
-    public TelemetryTest(String containerID) {
+    @Rule
+    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+    public TelemetryTest(String containerID, String tagsCardinality) {
         this.containerID = containerID;
+        this.tagsCardinality = tagsCardinality;
 
         StringBuilder sb = new StringBuilder();
+        if (tagsCardinality != null) {
+            sb.append("|card:").append(tagsCardinality);
+        }
         if (containerID != null) {
             sb.append("|c:").append(containerID);
         }
@@ -124,6 +134,8 @@ public class TelemetryTest {
     public void start() throws IOException, Exception {
         server = new UDPDummyStatsDServer(0);
         fakeProcessor = new FakeProcessor(LOGGING_HANDLER);
+
+        environmentVariables.set("DD_CARDINALITY", tagsCardinality);
 
         NonBlockingStatsDClientBuilder builder = new NonBlockingStatsDClientBuilder()
             .prefix("my.prefix")
@@ -392,6 +404,7 @@ public class TelemetryTest {
                 .port(0)
                 .enableTelemetry(false) // disable telemetry so we can control calls to "flush"
                 .originDetectionEnabled(false)
+                .containerID(containerID)
                 .build();
 
         assertThat(clientError.statsDProcessor.bufferPool.getBufferSize(), equalTo(8192));
@@ -411,7 +424,7 @@ public class TelemetryTest {
 
         assertThat(clientError.telemetry.metricsSent.get(), equalTo(1));
         assertThat(clientError.telemetry.packetsDropped.get(), equalTo(1));
-        assertThat(clientError.telemetry.bytesDropped.get(), equalTo(27));
+        assertThat(clientError.telemetry.bytesDropped.get(), equalTo("my.prefix.gauge:24|g|#test".length() + tail.length()));
     }
 
     @Test(timeout = 5000L)

@@ -11,6 +11,7 @@ public abstract class Message implements Comparable<Message> {
     final Message.Type type;
     final String[] tags;
     protected boolean done;
+    final TagsCardinality tagsCardinality;
 
     // borrowed from Array.hashCode implementation:
     // https://github.com/openjdk/jdk11/blob/master/src/java.base/share/classes/java/util/Arrays.java#L4454-L4465
@@ -39,14 +40,18 @@ public abstract class Message implements Comparable<Message> {
 
     protected static final Set<Type> AGGREGATE_SET = EnumSet.of(Type.COUNT, Type.GAUGE, Type.SET);
 
-    protected Message(Message.Type type) {
-        this("", type, null);
+    protected Message(Message.Type type, TagsCardinality cardinality) {
+        this("", type, cardinality, null);
     }
 
-    protected Message(String aspect, Message.Type type, String[] tags) {
+    protected Message(String aspect, Message.Type type, TagsCardinality cardinality, String[] tags) {
+        if (cardinality == null) {
+            throw new NullPointerException("cardinality");
+        }
         this.aspect = aspect == null ? "" : aspect;
         this.type = type;
         this.done = false;
+        this.tagsCardinality = cardinality;
         this.tags = tags;
     }
 
@@ -97,6 +102,10 @@ public abstract class Message implements Comparable<Message> {
         return this.tags;
     }
 
+    public TagsCardinality getTagsCardinality() {
+        return tagsCardinality;
+    }
+
     /**
      * Return whether a message can be aggregated.
      *
@@ -119,9 +128,12 @@ public abstract class Message implements Comparable<Message> {
      */
     @Override
     public int hashCode() {
-        return type.hashCode() * HASH_MULTIPLIER * HASH_MULTIPLIER
-                + aspect.hashCode() * HASH_MULTIPLIER
-                + Arrays.hashCode(this.tags);
+        int hash = 0;
+        hash = hash * HASH_MULTIPLIER + type.hashCode();
+        hash = hash * HASH_MULTIPLIER + aspect.hashCode();
+        hash = hash * HASH_MULTIPLIER + tagsCardinality.hashCode();
+        hash = hash * HASH_MULTIPLIER + Arrays.hashCode(this.tags);
+        return hash;
     }
 
     /**
@@ -137,6 +149,7 @@ public abstract class Message implements Comparable<Message> {
 
             return (Objects.equals(this.getAspect(), msg.getAspect()))
                 && (this.getType() == msg.getType())
+                && (this.getTagsCardinality().equals(msg.getTagsCardinality()))
                 && Arrays.equals(this.tags, msg.getTags());
         }
 
@@ -145,28 +158,33 @@ public abstract class Message implements Comparable<Message> {
 
     @Override
     public int compareTo(Message message) {
-        int typeComparison = getType().compareTo(message.getType());
-        if (typeComparison == 0) {
-            int aspectComparison = getAspect().compareTo(message.getAspect());
-            if (aspectComparison == 0) {
-                if (tags == null && message.tags == null) {
-                    return 0;
-                } else if (tags == null) {
-                    return 1;
-                } else if (message.tags == null) {
-                    return -1;
-                }
-                if (tags.length == message.tags.length) {
-                    int comparison = 0;
-                    for (int i = 0; i < tags.length && comparison == 0; i++) {
-                        comparison = tags[i].compareTo(message.tags[i]);
-                    }
-                    return comparison;
-                }
-                return tags.length < message.tags.length ? 1 : -1;
-            }
-            return aspectComparison;
+        int cmp = getType().compareTo(message.getType());
+        if (cmp != 0) {
+            return cmp;
         }
-        return typeComparison;
+        cmp = getAspect().compareTo(message.getAspect());
+        if (cmp != 0) {
+            return cmp;
+        }
+        cmp = getTagsCardinality().compareTo(message.getTagsCardinality());
+        if (cmp != 0) {
+            return cmp;
+        }
+
+        if (tags == null && message.tags == null) {
+            return 0;
+        } else if (tags == null) {
+            return 1;
+        } else if (message.tags == null) {
+            return -1;
+        }
+        if (tags.length == message.tags.length) {
+            int comparison = 0;
+            for (int i = 0; i < tags.length && comparison == 0; i++) {
+                comparison = tags[i].compareTo(message.tags[i]);
+            }
+            return comparison;
+        }
+        return tags.length < message.tags.length ? 1 : -1;
     }
 }

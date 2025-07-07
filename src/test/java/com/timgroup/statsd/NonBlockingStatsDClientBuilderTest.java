@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.function.ThrowingRunnable;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -85,5 +86,26 @@ public class NonBlockingStatsDClientBuilderTest {
                     new NonBlockingStatsDClientBuilder().resolve();
                 }
             });
+    }
+
+    @Test
+    public void tags_cardinality() throws Exception {
+        environmentVariables.set("DD_DOGSTATSD_URL", "localhost:8125");
+        // default value
+        assertEquals(TagsCardinality.DEFAULT,
+            new NonBlockingStatsDClientBuilder().resolve().tagsCardinality);
+        // one env variable works
+        environmentVariables.set("DATADOG_CARDINALITY", "low");
+        assertEquals(TagsCardinality.LOW,
+            new NonBlockingStatsDClientBuilder().resolve().tagsCardinality);
+        // the other variable takes precedence
+        environmentVariables.set("DD_CARDINALITY", "high");
+        assertEquals(TagsCardinality.HIGH,
+            new NonBlockingStatsDClientBuilder().resolve().tagsCardinality);
+        // explicit user input takes precedence even if they request default
+        assertEquals(TagsCardinality.DEFAULT,
+            new NonBlockingStatsDClientBuilder()
+                .tagsCardinality(TagsCardinality.DEFAULT)
+                .resolve().tagsCardinality);
     }
 }
