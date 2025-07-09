@@ -178,6 +178,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final boolean blocking;
     private final String containerID;
     private final String externalEnv = Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV"));
+    final TagsCardinality clientTagsCardinality;
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the
@@ -205,6 +206,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         blocking = builder.blocking;
         maxPacketSizeBytes = builder.maxPacketSizeBytes;
+        clientTagsCardinality = builder.tagsCardinality;
 
         {
             List<String> costantPreTags = new ArrayList<>();
@@ -429,8 +431,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
         final double sampleRate; // NaN for none
         final long timestamp; // zero for none
 
-        protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, long timestamp, String[] tags) {
-            super(aspect, type, value, tags);
+        protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, long timestamp,
+            TagsCardinality card, String[] tags)
+        {
+            super(aspect, type, value, card, tags);
             this.sampleRate = sampleRate;
             this.timestamp = timestamp;
         }
@@ -447,7 +451,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 builder.append("|T").append(timestamp);
             }
             tagString(this.tags, builder);
-            writeMessageTail(builder);
+            writeMessageTail(builder, tagsCardinality);
             return false;
         }
 
@@ -460,7 +464,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
         protected abstract void writeValue(StringBuilder builder);
     }
 
-    void writeMessageTail(StringBuilder builder) {
+    void writeMessageTail(StringBuilder builder, TagsCardinality msgTagsCardinality) {
+        if (msgTagsCardinality.value != null) {
+            builder.append("|card:").append(msgTagsCardinality.value);
+        }
         if (containerID != null && !containerID.isEmpty()) {
             builder.append("|c:").append(containerID);
         }
@@ -486,7 +493,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     // send double with sample rate and timestamp
-    private void send(String aspect, final double value, Message.Type type, double sampleRate, long timestamp, String[] tags) {
+    private void send(
+        String aspect, final double value, Message.Type type, double sampleRate, long timestamp, TagsCardinality cardinality,
+        String[] tags)
+    {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -499,7 +509,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, timestamp, tags) {
+            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, timestamp, cardinality, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(format(NUMBER_FORMATTER, this.value));
                 }
@@ -508,16 +518,19 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
-        send(aspect, value, type, sampleRate, 0, tags);
+        send(aspect, value, type, sampleRate, 0, clientTagsCardinality, tags);
     }
 
     // send double without sample rate
     private void send(String aspect, final double value, Message.Type type, String[] tags) {
-        send(aspect, value, type, Double.NaN, 0, tags);
+        send(aspect, value, type, Double.NaN, 0, clientTagsCardinality, tags);
     }
 
     // send long with sample rate
-    private void send(String aspect, final long value, Message.Type type, double sampleRate, long timestamp, String[] tags) {
+    private void send(
+        String aspect, final long value, Message.Type type, double sampleRate, long timestamp, TagsCardinality cardinality,
+        String[] tags)
+    {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -530,7 +543,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, timestamp, tags) {
+            sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, timestamp, cardinality, tags) {
                 @Override protected void writeValue(StringBuilder builder) {
                     builder.append(this.value.longValue());
                 }
@@ -539,19 +552,19 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
-        send(aspect, value, type, sampleRate, 0, tags);
+        send(aspect, value, type, sampleRate, 0, clientTagsCardinality, tags);
     }
 
     // send long without sample rate
     private void send(String aspect, final long value, Message.Type type, String[] tags) {
-        send(aspect, value, type, Double.NaN, 0, tags);
+        send(aspect, value, type, Double.NaN, 0, clientTagsCardinality, tags);
     }
 
     private void sendWithTimestamp(String aspect, final double value, Message.Type type, long timestamp, String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
-        send(aspect, value, type, Double.NaN, timestamp, tags);
+        send(aspect, value, type, Double.NaN, timestamp, clientTagsCardinality, tags);
     }
 
     private void sendWithTimestamp(String aspect, final long value, Message.Type type, long timestamp, String[] tags) {
@@ -559,7 +572,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             timestamp = MIN_TIMESTAMP;
         }
 
-        send(aspect, value, type, Double.NaN, timestamp, tags);
+        send(aspect, value, type, Double.NaN, timestamp, clientTagsCardinality, tags);
     }
 
     /**
@@ -1060,7 +1073,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordEvent(final Event event, final String... eventTags) {
-        statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "") {
+        statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "", clientTagsCardinality) {
             @Override public boolean writeTo(StringBuilder builder, int capacity) {
                 final String title = escapeEventString(prefix + event.getTitle());
                 final String text = escapeEventString(event.getText());
@@ -1079,7 +1092,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
                 eventMap(event, builder);
                 tagString(eventTags, builder);
-                writeMessageTail(builder);
+                writeMessageTail(builder, tagsCardinality);
                 return false;
             }
         });
@@ -1112,7 +1125,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      */
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
-        statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "") {
+        statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "", clientTagsCardinality) {
             @Override
             public boolean writeTo(StringBuilder sb, int capacity) {
                 // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
@@ -1131,7 +1144,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 if (sc.getMessage() != null) {
                     sb.append("|m:").append(sc.getEscapedMessage());
                 }
-                writeMessageTail(sb);
+                if (tagsCardinality != clientTagsCardinality) {
+                    throw new NullPointerException("huh");
+                }
+                writeMessageTail(sb, tagsCardinality);
                 return false;
             }
         });
@@ -1192,7 +1208,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public void recordSetValue(final String aspect, final String val, final String... tags) {
         // documentation is light, but looking at dogstatsd source, we can send string values
         // here instead of numbers
-        statsDProcessor.send(new AlphaNumericMessage(aspect, Message.Type.SET, val, tags) {
+        statsDProcessor.send(new AlphaNumericMessage(aspect, Message.Type.SET, val, clientTagsCardinality, tags) {
             protected void writeValue(StringBuilder builder) {
                 builder.append(getValue());
             }
@@ -1203,7 +1219,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 writeValue(builder);
                 builder.append('|').append(type);
                 tagString(this.tags, builder);
-                writeMessageTail(builder);
+                writeMessageTail(builder, tagsCardinality);
                 return false;
             }
         });
@@ -1252,7 +1268,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         private final String tagsString;  // pre-baked comma separeated tags string
 
         protected TelemetryMessage(String metric, Integer value, String tags) {
-            super(metric, Message.Type.COUNT, value, null);
+            super(metric, Message.Type.COUNT, value, clientTagsCardinality, null);
             this.tagsString = tags;
             this.done = true;  // dont aggregate telemetry messages for now
         }
@@ -1265,7 +1281,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 .append('|')
                 .append(type)
                 .append(tagsString);
-            writeMessageTail(builder);
+            writeMessageTail(builder, tagsCardinality);
             return false;
         }
     }

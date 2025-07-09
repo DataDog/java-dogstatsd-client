@@ -9,14 +9,16 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
     @Override
     public void recordDistributionValues(String aspect, double[] values, double sampleRate, String... tags) {
         if (values != null && values.length > 0) {
-            sendMetric(new DoublesStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, tags));
+            sendMetric(
+                new DoublesStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, clientTagsCardinality, tags));
         }
     }
 
     @Override
     public void recordDistributionValues(String aspect, long[] values, double sampleRate, String... tags) {
         if (values != null && values.length > 0) {
-            sendMetric(new LongsStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, tags));
+            sendMetric(
+                new LongsStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, clientTagsCardinality, tags));
         }
     }
 
@@ -26,8 +28,10 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         private int metadataSize = -1; // Cache the size of the metadata, -1 means not calculated yet
         private int offset = 0; // The index of the first value that has not been written
 
-        MultiValuedStatsDMessage(String aspect, Message.Type type, String[] tags, double sampleRate, long timestamp) {
-            super(aspect, type, tags);
+        MultiValuedStatsDMessage(
+            String aspect, Message.Type type, TagsCardinality cardinality, String[] tags, double sampleRate, long timestamp)
+        {
+            super(aspect, type, cardinality, tags);
             this.sampleRate = sampleRate;
             this.timestamp = timestamp;
         }
@@ -76,7 +80,7 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
                 builder.append("|T").append(timestamp);
             }
             tagString(tags, builder);
-            writeMessageTail(builder);
+            writeMessageTail(builder, tagsCardinality);
         }
 
         private boolean writeValuesTo(StringBuilder builder, int remainingCapacity) {
@@ -114,8 +118,11 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
     final class LongsStatsDMessage extends MultiValuedStatsDMessage {
         private final long[] values;
 
-        LongsStatsDMessage(String aspect, Message.Type type, long[] values, double sampleRate, long timestamp, String[] tags) {
-            super(aspect, type, tags, sampleRate, timestamp);
+        LongsStatsDMessage(
+            String aspect, Message.Type type, long[] values, double sampleRate, long timestamp, TagsCardinality cardinality,
+            String[] tags)
+        {
+            super(aspect, type, cardinality, tags, sampleRate, timestamp);
             this.values = values;
         }
 
@@ -133,9 +140,11 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
     final class DoublesStatsDMessage extends MultiValuedStatsDMessage {
         private final double[] values;
 
-        DoublesStatsDMessage(String aspect, Message.Type type, double[] values, double sampleRate, long timestamp,
-                             String[] tags) {
-            super(aspect, type, tags, sampleRate, timestamp);
+        DoublesStatsDMessage(
+            String aspect, Message.Type type, double[] values, double sampleRate, long timestamp, TagsCardinality card,
+            String[] tags)
+        {
+            super(aspect, type, card, tags, sampleRate, timestamp);
             this.values = values;
         }
 

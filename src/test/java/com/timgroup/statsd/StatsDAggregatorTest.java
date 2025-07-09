@@ -1,9 +1,8 @@
 package com.timgroup.statsd;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assume;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,9 +26,7 @@ import static org.junit.Assert.assertTrue;
 public class StatsDAggregatorTest {
 
     private static final String TEST_NAME = "StatsDAggregatorTest";
-    private static final int STATSD_SERVER_PORT = 17254;
-    private static DummyStatsDServer server;
-    private static FakeProcessor fakeProcessor;
+    private FakeProcessor fakeProcessor;
 
     private static Logger log = Logger.getLogger(TEST_NAME);
 
@@ -52,7 +49,11 @@ public class StatsDAggregatorTest {
 
     public static class FakeMessage<T extends Number> extends NumericMessage<T> {
         protected FakeMessage(String aspect, Message.Type type, T value) {
-            super(aspect, type, value, null);
+            super(aspect, type, value, TagsCardinality.DEFAULT, null);
+        }
+
+        protected FakeMessage(String aspect, Message.Type type, T value, TagsCardinality cardinality) {
+            super(aspect, type, value, cardinality, null);
         }
 
         @Override
@@ -63,7 +64,7 @@ public class StatsDAggregatorTest {
 
     public static class FakeAlphaMessage extends AlphaNumericMessage {
         protected FakeAlphaMessage(String aspect, Message.Type type, String value) {
-            super(aspect, type, value, null);
+            super(aspect, type, value, TagsCardinality.DEFAULT, null);
         }
 
         @Override
@@ -141,8 +142,8 @@ public class StatsDAggregatorTest {
         }
     }
 
-    @BeforeClass
-    public static void start() throws Exception {
+    @Before
+    public void start() throws Exception {
         fakeProcessor = new FakeProcessor(NO_OP_HANDLER);
 
         // 15s flush period should be enough for all tests to be done - flushes will be manual
@@ -151,19 +152,13 @@ public class StatsDAggregatorTest {
         fakeProcessor.startWorkers("StatsD-Test-");
     }
 
-    @AfterClass
-    public static void stop() {
+    @After
+    public void stop() {
         try {
             fakeProcessor.shutdown(false);
         } catch (InterruptedException e) {
             return;
         }
-    }
-
-    @After
-    public void clear() {
-        // we should probably clear all queues
-        fakeProcessor.clear();
     }
 
     public void waitForQueueSize(Queue queue, int size) {
@@ -200,6 +195,24 @@ public class StatsDAggregatorTest {
         // 2 metrics (gauge, count) + 1 set, so 3 aggregates
         assertEquals(3, fakeProcessor.highPrioMessages.size());
 
+    }
+
+    @Test(timeout = 2000L)
+    public void aggregate_messages_with_cardinality() throws Exception {
+        for(int i=0 ; i<10 ; i++) {
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1));
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1, TagsCardinality.LOW));
+            fakeProcessor.send(new FakeMessage<Integer>("some.count", Message.Type.COUNT, 1, TagsCardinality.HIGH));
+        }
+
+        waitForQueueSize(fakeProcessor.messages, 0);
+
+        assertEquals(30, fakeProcessor.messageAggregated.get());
+        assertEquals(0, fakeProcessor.messageSent.get());
+
+        fakeProcessor.aggregator.flush();
+
+        assertEquals(3, fakeProcessor.highPrioMessages.size());
     }
 
     @Test(timeout = 2000L)
@@ -264,7 +277,7 @@ public class StatsDAggregatorTest {
             tags[i] = new String[] {String.valueOf(i)};
         }
         for (int i = 0; i < numMessages; i++) {
-            fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, tags[i % numTags]) {
+            fakeProcessor.send(new NumericMessage<Integer>("some.counter", Message.Type.COUNT, 1, TagsCardinality.DEFAULT, tags[i % numTags]) {
                 @Override
                 boolean writeTo(StringBuilder builder, int capacity) {
                     return false;

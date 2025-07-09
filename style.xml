@@ -60,6 +60,7 @@
         <module name="LineLength">
             <property name="severity" value="error"/>
             <property name="max" value="130"/>
+            <property name="ignorePattern" value="&lt;a href"/>
         </module>
         <module name="RightCurly"/>
         <module name="RightCurly">
