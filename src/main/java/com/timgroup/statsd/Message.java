@@ -25,7 +25,8 @@ public abstract class Message implements Comparable<Message> {
         HISTOGRAM("h"),
         DISTRIBUTION("d"),
         EVENT("_e"),
-        SERVICE_CHECK("_sc");
+        SERVICE_CHECK("_sc"),
+        SKETCH("S");
 
         private final String type;
 
