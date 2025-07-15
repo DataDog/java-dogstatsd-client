@@ -521,7 +521,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    private void send(String aspect, final double value, Message.Type type, double sampleRate, final TagsCardinality cardinality, String[] tags) {
+    private void send(String aspect, final double value, Message.Type type, double sampleRate, final TagsCardinality cardinality,
+        String[] tags) {
         send(aspect, value, type, sampleRate, 0, cardinality, tags);
     }
 
@@ -562,7 +563,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    private void send(String aspect, final long value, Message.Type type, double sampleRate, final TagsCardinality cardinality, String[] tags) {
+    private void send(String aspect, final long value, Message.Type type, double sampleRate, final TagsCardinality cardinality,
+        String[] tags) {
         send(aspect, value, type, sampleRate, 0, cardinality, tags);
     }
 
@@ -582,7 +584,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         send(aspect, value, type, Double.NaN, timestamp, clientTagsCardinality, tags);
     }
 
-    private void sendWithTimestamp(String aspect, final double value, Message.Type type, long timestamp, final TagsCardinality cardinality, String[] tags) {
+    private void sendWithTimestamp(String aspect, final double value, Message.Type type, long timestamp,
+        final TagsCardinality cardinality, String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
@@ -597,7 +600,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
         send(aspect, value, type, Double.NaN, timestamp, clientTagsCardinality, tags);
     }
 
-    private void sendWithTimestamp(String aspect, final long value, Message.Type type, long timestamp, final TagsCardinality cardinality, String[] tags) {
+    private void sendWithTimestamp(String aspect, final long value, Message.Type type, long timestamp,
+        final TagsCardinality cardinality, String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
@@ -634,7 +638,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void count(final String aspect, final long delta, final double sampleRate, final TagsCardinality cardinality, final String...tags) {
+    public void count(final String aspect, final long delta, final double sampleRate, final TagsCardinality cardinality,
+        final String...tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, cardinality, tags);
     }
 
@@ -667,7 +672,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void count(final String aspect, final double delta, final double sampleRate, final TagsCardinality cardinality, final String...tags) {
+    public void count(final String aspect, final double delta, final double sampleRate, final TagsCardinality cardinality,
+        final String...tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, cardinality, tags);
     }
 
@@ -683,7 +689,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void countWithTimestamp(final String aspect, final long value, final long timestamp, final TagsCardinality cardinality, final String...tags) {
+    public void countWithTimestamp(final String aspect, final long value, final long timestamp, final TagsCardinality cardinality,
+        final String...tags) {
         sendWithTimestamp(aspect, value, Message.Type.COUNT, timestamp, cardinality, tags);
     }
 
@@ -699,7 +706,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void countWithTimestamp(final String aspect, final double value, final long timestamp, final TagsCardinality cardinality, final String...tags) {
+    public void countWithTimestamp(final String aspect, final double value, final long timestamp,
+        final TagsCardinality cardinality, final String...tags) {
         sendWithTimestamp(aspect, value, Message.Type.COUNT, timestamp, cardinality, tags);
     }
 
@@ -810,7 +818,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordGaugeValue(final String aspect, final double value, final double sampleRate,final TagsCardinality cardinality,  final String... tags) {
+    public void recordGaugeValue(final String aspect, final double value, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, cardinality, tags);
     }
 
@@ -843,7 +852,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordGaugeValue(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void recordGaugeValue(final String aspect, final long value, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, cardinality, tags);
     }
 
@@ -867,7 +877,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void gauge(final String aspect, final double value, final double sampleRate,final TagsCardinality cardinality,  final String... tags) {
+    public void gauge(final String aspect, final double value, final double sampleRate,final TagsCardinality cardinality,
+        final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -891,7 +902,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void gauge(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void gauge(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
+        final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -907,7 +919,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void gaugeWithTimestamp(final String aspect, final double value, final long timestamp, final TagsCardinality cardinality, final String... tags) {
+    public void gaugeWithTimestamp(final String aspect, final double value, final long timestamp,
+        final TagsCardinality cardinality, final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.GAUGE, timestamp, cardinality, tags);
     }
 
@@ -923,7 +936,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void gaugeWithTimestamp(final String aspect, final long value, final long timestamp, final TagsCardinality cardinality, final String... tags) {
+    public void gaugeWithTimestamp(final String aspect, final long value, final long timestamp, final TagsCardinality cardinality,
+        final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.GAUGE, timestamp, cardinality, tags);
     }
 
@@ -956,7 +970,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordExecutionTime(final String aspect, final long timeInMs, final double sampleRate, final TagsCardinality cardinality,  final String... tags) {
+    public void recordExecutionTime(final String aspect, final long timeInMs, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, timeInMs, Message.Type.TIME, sampleRate, cardinality, tags);
     }
 
@@ -980,7 +995,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void time(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void time(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
+        final String... tags) {
         recordExecutionTime(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -1013,7 +1029,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordHistogramValue(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void recordHistogramValue(final String aspect, final double value, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, sampleRate, cardinality, tags);
     }
 
@@ -1046,7 +1063,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordHistogramValue(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void recordHistogramValue(final String aspect, final long value, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, sampleRate, cardinality, tags);
     }
 
@@ -1070,7 +1088,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void histogram(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void histogram(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality,
+        final String... tags) {
         recordHistogramValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -1094,7 +1113,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void histogram(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void histogram(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
+        final String... tags) {
         recordHistogramValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -1127,7 +1147,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordDistributionValue(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void recordDistributionValue(final String aspect, final double value, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, cardinality, tags);
     }
 
@@ -1160,7 +1181,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void recordDistributionValue(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void recordDistributionValue(final String aspect, final long value, final double sampleRate,
+        final TagsCardinality cardinality, final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, cardinality, tags);
     }
 
@@ -1184,7 +1206,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void distribution(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void distribution(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality,
+        final String... tags) {
         recordDistributionValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -1208,7 +1231,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * {@inheritDoc}
      */
     @Override
-    public void distribution(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality, final String... tags) {
+    public void distribution(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
+        final String... tags) {
         recordDistributionValue(aspect, value, sampleRate, cardinality, tags);
     }
 
