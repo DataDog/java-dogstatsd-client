@@ -23,6 +23,7 @@
         <checkstyle.consoleOutput>true</checkstyle.consoleOutput>
         <jdk.module.illegalAccess>deny</jdk.module.illegalAccess>
         <checkstyle.version>3.1.0</checkstyle.version>
+        <argLine></argLine>
     </properties>
 
     <licenses>
@@ -155,9 +156,30 @@
                         <configuration>
                             <!-- Fix for "java.lang.reflect.InaccessibleObjectException: Unable to make field private final java.util.Map java.util.Collections$UnmodifiableMap.m accessible: module java.base does not "opens java.util" to unnamed module @75eeccf5" -->
                             <argLine>
+                                @{argLine}
                                 --add-opens=java.base/java.util=ALL-UNNAMED
                             </argLine>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.13</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
