@@ -19,14 +19,12 @@ default_steps: &default_steps
     - checkout
 
     - run: |
-        mvn clean install $MVN_EXTRA_OPTS
+        mvn clean install
 
 jobs:
   openjdk7:
     docker:
       - image: jfullaondo/openjdk:7
-    environment:
-      MVN_EXTRA_OPTS: -Dcheckstyle.version=2.15 -Dcheckstyle.skip
     <<: *default_steps
   openjdk8:
     docker: &jdk8
