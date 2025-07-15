@@ -3,7 +3,8 @@ package com.timgroup.statsd;
 class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
     final double sampleRate; // NaN for none
 
-    protected StatsDTestMessage(String aspect, Message.Type type, T value, double sampleRate, String[] tags) {
+    protected StatsDTestMessage(
+            String aspect, Message.Type type, T value, double sampleRate, String[] tags) {
         super(aspect, type, value, TagsCardinality.DEFAULT, tags);
         this.sampleRate = sampleRate;
     }
@@ -14,7 +15,11 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
         writeValue(builder);
         builder.append('|').append(type);
         if (!Double.isNaN(sampleRate)) {
-            builder.append('|').append('@').append(NonBlockingStatsDClient.format(NonBlockingStatsDClient.SAMPLE_RATE_FORMATTER, sampleRate));
+            builder.append('|')
+                    .append('@')
+                    .append(
+                            NonBlockingStatsDClient.format(
+                                    NonBlockingStatsDClient.SAMPLE_RATE_FORMATTER, sampleRate));
         }
         NonBlockingStatsDClient.tagString(this.tags, "", builder);
 
@@ -23,6 +28,8 @@ class StatsDTestMessage<T extends Number> extends NumericMessage<T> {
     }
 
     protected void writeValue(StringBuilder builder) {
-        builder.append(NonBlockingStatsDClient.format(NonBlockingStatsDClient.NUMBER_FORMATTER, this.value));
+        builder.append(
+                NonBlockingStatsDClient.format(
+                        NonBlockingStatsDClient.NUMBER_FORMATTER, this.value));
     }
 }

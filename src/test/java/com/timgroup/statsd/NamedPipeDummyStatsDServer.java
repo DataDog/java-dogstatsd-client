@@ -9,7 +9,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.logging.Logger;
 
-// Template from https://github.com/java-native-access/jna/blob/master/contrib/platform/test/com/sun/jna/platform/win32/Kernel32NamedPipeTest.java
+// Template from
+// https://github.com/java-native-access/jna/blob/master/contrib/platform/test/com/sun/jna/platform/win32/Kernel32NamedPipeTest.java
 // And https://docs.microsoft.com/en-us/windows/win32/ipc/multithreaded-pipe-server
 public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
     private static final Logger log = Logger.getLogger("NamedPipeDummyStatsDServer");
@@ -20,14 +21,18 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
     public NamedPipeDummyStatsDServer(String pipeName) {
         String normalizedPipeName = NamedPipeSocketAddress.normalizePipeName(pipeName);
 
-        hNamedPipe= Kernel32.INSTANCE.CreateNamedPipe(normalizedPipeName,
-                WinBase.PIPE_ACCESS_DUPLEX,        // dwOpenMode
-                WinBase.PIPE_TYPE_BYTE | WinBase.PIPE_READMODE_BYTE | WinBase.PIPE_WAIT,    // dwPipeMode
-                1,    // nMaxInstances,
-                Byte.MAX_VALUE,    // nOutBufferSize,
-                Byte.MAX_VALUE,    // nInBufferSize,
-                1000,    // nDefaultTimeOut,
-                null);    // lpSecurityAttributes
+        hNamedPipe =
+                Kernel32.INSTANCE.CreateNamedPipe(
+                        normalizedPipeName,
+                        WinBase.PIPE_ACCESS_DUPLEX, // dwOpenMode
+                        WinBase.PIPE_TYPE_BYTE
+                                | WinBase.PIPE_READMODE_BYTE
+                                | WinBase.PIPE_WAIT, // dwPipeMode
+                        1, // nMaxInstances,
+                        Byte.MAX_VALUE, // nOutBufferSize,
+                        Byte.MAX_VALUE, // nInBufferSize,
+                        1000, // nDefaultTimeOut,
+                        null); // lpSecurityAttributes
 
         if (WinBase.INVALID_HANDLE_VALUE.equals(hNamedPipe)) {
             throw new RuntimeException("Unable to create named pipe");
@@ -35,6 +40,7 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
 
         listen();
     }
+
     @Override
     protected boolean isOpen() {
         return isOpen;
@@ -61,12 +67,13 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
         }
 
         IntByReference bytesRead = new IntByReference();
-        boolean success = Kernel32.INSTANCE.ReadFile(
-                hNamedPipe,        // handle to pipe
-                packet.array(),    // buffer to receive data
-                packet.remaining(), // size of buffer
-                bytesRead, // number of bytes read
-                null);        // not overlapped I/O
+        boolean success =
+                Kernel32.INSTANCE.ReadFile(
+                        hNamedPipe, // handle to pipe
+                        packet.array(), // buffer to receive data
+                        packet.remaining(), // size of buffer
+                        bytesRead, // number of bytes read
+                        null); // not overlapped I/O
 
         log.info("Read bytes. Result: " + success + ". Bytes read: " + bytesRead.getValue());
         packet.position(bytesRead.getValue());

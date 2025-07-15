@@ -9,7 +9,12 @@ public abstract class AlphaNumericMessage extends Message {
         this.value = value;
     }
 
-    protected AlphaNumericMessage(String aspect, Message.Type type, String value, TagsCardinality cardinality, String[] tags) {
+    protected AlphaNumericMessage(
+            String aspect,
+            Message.Type type,
+            String value,
+            TagsCardinality cardinality,
+            String[] tags) {
         super(aspect, type, cardinality, tags);
         this.value = value;
     }
@@ -17,11 +22,10 @@ public abstract class AlphaNumericMessage extends Message {
     /**
      * Aggregate message.
      *
-     * @param message
-     *     Message to aggregate.
+     * @param message Message to aggregate.
      */
     @Override
-    public void aggregate(Message message) { }
+    public void aggregate(Message message) {}
 
     /**
      * Get underlying message value.
@@ -44,8 +48,8 @@ public abstract class AlphaNumericMessage extends Message {
             return false;
         }
 
-        if (object instanceof AlphaNumericMessage ) {
-            AlphaNumericMessage msg = (AlphaNumericMessage)object;
+        if (object instanceof AlphaNumericMessage) {
+            AlphaNumericMessage msg = (AlphaNumericMessage) object;
             return this.value.equals(msg.getValue());
         }
 
@@ -61,4 +65,3 @@ public abstract class AlphaNumericMessage extends Message {
         return comparison;
     }
 }
-

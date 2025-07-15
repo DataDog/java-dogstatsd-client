@@ -1,23 +1,19 @@
 package com.timgroup.statsd;
 
-import java.io.IOException;
-import java.util.logging.Logger;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import org.junit.function.ThrowingRunnable;
-import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.runners.Parameterized;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
+
+import java.io.IOException;
+import java.util.logging.Logger;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class CardinalityOverrideTest {
@@ -36,20 +32,20 @@ public class CardinalityOverrideTest {
     @Parameters
     public static Object[][] parameters() {
         return TestHelpers.permutations(
-            // test permutations of values being set or not or set to default, but when set cardinality value is not
-            // inspected, so no need to test permutations of low, orchestrator, high
-            new Object[][]{
-                { null, "", "high" },
-                {
-                    new Case(null, null),
-                    new Case(TagsCardinality.DEFAULT, ""),
-                    new Case(TagsCardinality.LOW, "low"),
-                }
-            });
+                // test permutations of values being set or not or set to default, but when set
+                // cardinality value is not
+                // inspected, so no need to test permutations of low, orchestrator, high
+                new Object[][] {
+                    {null, "", "high"},
+                    {
+                        new Case(null, null),
+                        new Case(TagsCardinality.DEFAULT, ""),
+                        new Case(TagsCardinality.LOW, "low"),
+                    }
+                });
     }
 
-    @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     String clientTagsCardinality;
     Case msgTagsCardinality;
@@ -83,21 +79,22 @@ public class CardinalityOverrideTest {
             environmentVariables.set("DD_CARDINALITY", clientTagsCardinality);
         }
         server = new UDPDummyStatsDServer(0);
-        client = new NonBlockingStatsDClientBuilder()
-            .prefix("my.prefix")
-            .hostname("localhost")
-            .port(server.getPort())
-            .enableTelemetry(false)
-            .originDetectionEnabled(false)
-            .enableAggregation(false)
-            .errorHandler(new StatsDClientErrorHandler() {
-                public void handle(Exception ex) {
-                    log.info(ex.toString());
-                }
-            })
-            .build();
+        client =
+                new NonBlockingStatsDClientBuilder()
+                        .prefix("my.prefix")
+                        .hostname("localhost")
+                        .port(server.getPort())
+                        .enableTelemetry(false)
+                        .originDetectionEnabled(false)
+                        .enableAggregation(false)
+                        .errorHandler(
+                                new StatsDClientErrorHandler() {
+                                    public void handle(Exception ex) {
+                                        log.info(ex.toString());
+                                    }
+                                })
+                        .build();
     }
-
 
     @After
     public void stop() throws IOException {
@@ -227,20 +224,22 @@ public class CardinalityOverrideTest {
 
     @Test(timeout = 1000)
     public void record_event() {
-        client.recordEvent(Event.builder()
-            .withTitle("foo")
-            .withTagsCardinality(msgTagsCardinality.value)
-            .build());
+        client.recordEvent(
+                Event.builder()
+                        .withTitle("foo")
+                        .withTagsCardinality(msgTagsCardinality.value)
+                        .build());
         assertPayload("_e{13,0}:my.prefix.foo|");
     }
 
     @Test(timeout = 1000)
     public void record_service_check_run() {
-        client.recordServiceCheckRun(ServiceCheck.builder()
-            .withName("foo")
-            .withStatus(ServiceCheck.Status.OK)
-            .withTagsCardinality(msgTagsCardinality.value)
-            .build());
+        client.recordServiceCheckRun(
+                ServiceCheck.builder()
+                        .withName("foo")
+                        .withStatus(ServiceCheck.Status.OK)
+                        .withTagsCardinality(msgTagsCardinality.value)
+                        .build());
         assertPayload("_sc|foo|0");
     }
 }

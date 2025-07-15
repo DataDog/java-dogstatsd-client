@@ -2,35 +2,57 @@ package com.timgroup.statsd;
 
 class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements DirectStatsDClient {
 
-    public NonBlockingDirectStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+    public NonBlockingDirectStatsDClient(final NonBlockingStatsDClientBuilder builder)
+            throws StatsDClientException {
         super(builder);
     }
 
     @Override
-    public void recordDistributionValues(String aspect, double[] values, double sampleRate, String... tags) {
+    public void recordDistributionValues(
+            String aspect, double[] values, double sampleRate, String... tags) {
         if (values != null && values.length > 0) {
             sendMetric(
-                new DoublesStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, clientTagsCardinality, tags));
+                    new DoublesStatsDMessage(
+                            aspect,
+                            Message.Type.DISTRIBUTION,
+                            values,
+                            sampleRate,
+                            0,
+                            clientTagsCardinality,
+                            tags));
         }
     }
 
     @Override
-    public void recordDistributionValues(String aspect, long[] values, double sampleRate, String... tags) {
+    public void recordDistributionValues(
+            String aspect, long[] values, double sampleRate, String... tags) {
         if (values != null && values.length > 0) {
             sendMetric(
-                new LongsStatsDMessage(aspect, Message.Type.DISTRIBUTION, values, sampleRate, 0, clientTagsCardinality, tags));
+                    new LongsStatsDMessage(
+                            aspect,
+                            Message.Type.DISTRIBUTION,
+                            values,
+                            sampleRate,
+                            0,
+                            clientTagsCardinality,
+                            tags));
         }
     }
 
     abstract class MultiValuedStatsDMessage extends Message {
         private final double sampleRate; // NaN for none
         private final long timestamp; // zero for none
-        private int metadataSize = -1; // Cache the size of the metadata, -1 means not calculated yet
+        private int metadataSize =
+                -1; // Cache the size of the metadata, -1 means not calculated yet
         private int offset = 0; // The index of the first value that has not been written
 
         MultiValuedStatsDMessage(
-            String aspect, Message.Type type, TagsCardinality cardinality, String[] tags, double sampleRate, long timestamp)
-        {
+                String aspect,
+                Message.Type type,
+                TagsCardinality cardinality,
+                String[] tags,
+                double sampleRate,
+                long timestamp) {
             super(aspect, type, cardinality, tags);
             this.sampleRate = sampleRate;
             this.timestamp = timestamp;
@@ -42,8 +64,7 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         }
 
         @Override
-        public final void aggregate(Message message) {
-        }
+        public final void aggregate(Message message) {}
 
         @Override
         public final boolean writeTo(StringBuilder builder, int capacity) {
@@ -52,7 +73,6 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
             boolean partialWrite = writeValuesTo(builder, capacity - metadataSize);
             writeTailMetadata(builder);
             return partialWrite;
-
         }
 
         private int metadataSize(StringBuilder builder) {
@@ -119,9 +139,13 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         private final long[] values;
 
         LongsStatsDMessage(
-            String aspect, Message.Type type, long[] values, double sampleRate, long timestamp, TagsCardinality cardinality,
-            String[] tags)
-        {
+                String aspect,
+                Message.Type type,
+                long[] values,
+                double sampleRate,
+                long timestamp,
+                TagsCardinality cardinality,
+                String[] tags) {
             super(aspect, type, cardinality, tags, sampleRate, timestamp);
             this.values = values;
         }
@@ -141,9 +165,13 @@ class NonBlockingDirectStatsDClient extends NonBlockingStatsDClient implements D
         private final double[] values;
 
         DoublesStatsDMessage(
-            String aspect, Message.Type type, double[] values, double sampleRate, long timestamp, TagsCardinality card,
-            String[] tags)
-        {
+                String aspect,
+                Message.Type type,
+                double[] values,
+                double sampleRate,
+                long timestamp,
+                TagsCardinality card,
+                String[] tags) {
             super(aspect, type, card, tags, sampleRate, timestamp);
             this.values = values;
         }

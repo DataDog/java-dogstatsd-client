@@ -1,5 +1,10 @@
 package com.timgroup.statsd;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.comparesEqualTo;
+import static org.hamcrest.Matchers.hasItem;
+
+import java.io.IOException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -9,12 +14,6 @@ import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runners.MethodSorters;
 
-import java.io.IOException;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.comparesEqualTo;
-import static org.hamcrest.Matchers.hasItem;
-
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NonBlockingDirectStatsDClientTest {
 
@@ -23,20 +22,20 @@ public class NonBlockingDirectStatsDClientTest {
     private static DirectStatsDClient client;
     private static DummyStatsDServer server;
 
-    @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @BeforeClass
     public static void start() throws IOException {
         server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
-        client = new NonBlockingStatsDClientBuilder()
-                .prefix("my.prefix")
-                .hostname("localhost")
-                .port(STATSD_SERVER_PORT)
-                .enableTelemetry(false)
-                .originDetectionEnabled(false)
-                .maxPacketSizeBytes(MAX_PACKET_SIZE)
-                .buildDirectStatsDClient();
+        client =
+                new NonBlockingStatsDClientBuilder()
+                        .prefix("my.prefix")
+                        .hostname("localhost")
+                        .port(STATSD_SERVER_PORT)
+                        .enableTelemetry(false)
+                        .originDetectionEnabled(false)
+                        .maxPacketSizeBytes(MAX_PACKET_SIZE)
+                        .buildDirectStatsDClient();
     }
 
     @AfterClass
@@ -53,53 +52,69 @@ public class NonBlockingDirectStatsDClientTest {
         server.clear();
     }
 
-
     @Test(timeout = 5000L)
     public void sends_multivalued_distribution_to_statsd() {
-        client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, Double.NaN);
+        client.recordDistributionValues("mydistribution", new long[] {423L, 234L}, Double.NaN);
         server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d")));
     }
 
     @Test(timeout = 5000L)
     public void sends_double_multivalued_distribution_to_statsd() {
-        client.recordDistributionValues("mydistribution", new double[] { 0.423D, 0.234D }, Double.NaN);
+        client.recordDistributionValues(
+                "mydistribution", new double[] {0.423D, 0.234D}, Double.NaN);
         server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:0.423:0.234|d")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(comparesEqualTo("my.prefix.mydistribution:0.423:0.234|d")));
     }
 
     @Test(timeout = 5000L)
     public void sends_multivalued_distribution_to_statsd_with_tags() {
-        client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, Double.NaN, "foo:bar", "baz");
+        client.recordDistributionValues(
+                "mydistribution", new long[] {423L, 234L}, Double.NaN, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|#baz,foo:bar")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|#baz,foo:bar")));
     }
 
     @Test(timeout = 5000L)
     public void sends_multivalued_distribution_to_statsd_with_sampling_rate() {
-        client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, 1);
+        client.recordDistributionValues("mydistribution", new long[] {423L, 234L}, 1);
         server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@1.000000")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@1.000000")));
     }
 
     @Test(timeout = 5000L)
     public void sends_multivalued_distribution_to_statsd_with_non_1_sampling_rate() {
-        client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, 0.1);
+        client.recordDistributionValues("mydistribution", new long[] {423L, 234L}, 0.1);
         server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@0.100000")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@0.100000")));
     }
 
     @Test(timeout = 5000L)
     public void sends_multivalued_distribution_to_statsd_with_tags_and_sampling_rate() {
-        client.recordDistributionValues("mydistribution", new long[] { 423L, 234L }, 1, "foo:bar", "baz");
+        client.recordDistributionValues(
+                "mydistribution", new long[] {423L, 234L}, 1, "foo:bar", "baz");
         server.waitForMessage("my.prefix");
 
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234|d|@1.000000|#baz,foo:bar")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(
+                        comparesEqualTo(
+                                "my.prefix.mydistribution:423:234|d|@1.000000|#baz,foo:bar")));
     }
 
     @Test(timeout = 5000L)
@@ -108,16 +123,29 @@ public class NonBlockingDirectStatsDClientTest {
         client.recordDistributionValues("mydistribution", values, 0.4, "foo:bar", "baz");
 
         server.waitForMessage("my.prefix");
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:423:234:456|d|@0.400000|#baz,foo:bar")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(
+                        comparesEqualTo(
+                                "my.prefix.mydistribution:423:234:456|d|@0.400000|#baz,foo:bar")));
 
         server.waitForMessage("my.prefix");
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:512:345:898|d|@0.400000|#baz,foo:bar")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(
+                        comparesEqualTo(
+                                "my.prefix.mydistribution:512:345:898|d|@0.400000|#baz,foo:bar")));
 
         server.waitForMessage("my.prefix");
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:959876543123|d|@0.400000|#baz,foo:bar")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(
+                        comparesEqualTo(
+                                "my.prefix.mydistribution:959876543123|d|@0.400000|#baz,foo:bar")));
 
         server.waitForMessage("my.prefix");
-        assertThat(server.messagesReceived(), hasItem(comparesEqualTo("my.prefix.mydistribution:667|d|@0.400000|#baz,foo:bar")));
+        assertThat(
+                server.messagesReceived(),
+                hasItem(comparesEqualTo("my.prefix.mydistribution:667|d|@0.400000|#baz,foo:bar")));
     }
-
 }

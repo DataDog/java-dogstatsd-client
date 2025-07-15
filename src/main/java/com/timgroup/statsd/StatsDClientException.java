@@ -1,12 +1,9 @@
 package com.timgroup.statsd;
 
-
 /**
- * Signals that an exception has occurred when trying to start the
- * StatsD client.
+ * Signals that an exception has occurred when trying to start the StatsD client.
  *
  * @author Tom Denley
- *
  */
 public final class StatsDClientException extends RuntimeException {
 

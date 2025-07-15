@@ -1,7 +1,5 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,9 +34,11 @@ public class Telemetry {
     protected final String bytesDroppedMetric = "datadog.dogstatsd.client.bytes_dropped";
     protected final String packetsSentMetric = "datadog.dogstatsd.client.packets_sent";
     protected final String packetsDroppedMetric = "datadog.dogstatsd.client.packets_dropped";
-    protected final String packetsDroppedQueueMetric = "datadog.dogstatsd.client.packets_dropped_queue";
+    protected final String packetsDroppedQueueMetric =
+            "datadog.dogstatsd.client.packets_dropped_queue";
     protected final String aggregatedContextsMetric = "datadog.dogstatsd.client.aggregated_context";
-    protected final String aggregatedContextsByTypeMetric = "datadog.dogstatsd.client.aggregated_context_by_type";
+    protected final String aggregatedContextsByTypeMetric =
+            "datadog.dogstatsd.client.aggregated_context_by_type";
 
     protected Timer timer;
     NonBlockingStatsDClient client;
@@ -63,8 +63,7 @@ public class Telemetry {
     /**
      * Startsthe flush timer for the telemetry.
      *
-     * @param flushInterval
-     *     Telemetry flush interval, in milliseconds.
+     * @param flushInterval Telemetry flush interval, in milliseconds.
      */
     public void start(final long flushInterval) {
         // flush the telemetry at regualar interval
@@ -72,18 +71,14 @@ public class Telemetry {
         timer.scheduleAtFixedRate(new TelemetryTask(this), flushInterval, flushInterval);
     }
 
-    /**
-     * Stops the flush timer for the telemetry.
-     */
+    /** Stops the flush timer for the telemetry. */
     public void stop() {
         if (timer != null) {
             timer.cancel();
         }
     }
 
-    /**
-     * Sends Telemetry metrics to the processor. This function also reset the internal counters.
-     */
+    /** Sends Telemetry metrics to the processor. This function also reset the internal counters. */
     public void flush() {
         // all getAndSet will not be synchronous but it's ok since metrics will
         // be spread out among processor worker and we flush every 5s by
@@ -100,22 +95,37 @@ public class Telemetry {
         client.sendTelemetryMetric(aggregatedContextsMetric, aggregatedContexts.getAndSet(0));
 
         // developer metrics
-        client.sendTelemetryMetric(metricsByTypeSentMetric, gaugeSent.getAndSet(0), "metrics_type:gauge");
-        client.sendTelemetryMetric(metricsByTypeSentMetric, countSent.getAndSet(0), "metrics_type:count");
-        client.sendTelemetryMetric(metricsByTypeSentMetric, setSent.getAndSet(0), "metrics_type:set");
-        client.sendTelemetryMetric(metricsByTypeSentMetric, histogramSent.getAndSet(0), "metrics_type:histogram");
-        client.sendTelemetryMetric(metricsByTypeSentMetric, distributionSent.getAndSet(0), "metrics_type:distribution");
+        client.sendTelemetryMetric(
+                metricsByTypeSentMetric, gaugeSent.getAndSet(0), "metrics_type:gauge");
+        client.sendTelemetryMetric(
+                metricsByTypeSentMetric, countSent.getAndSet(0), "metrics_type:count");
+        client.sendTelemetryMetric(
+                metricsByTypeSentMetric, setSent.getAndSet(0), "metrics_type:set");
+        client.sendTelemetryMetric(
+                metricsByTypeSentMetric, histogramSent.getAndSet(0), "metrics_type:histogram");
+        client.sendTelemetryMetric(
+                metricsByTypeSentMetric,
+                distributionSent.getAndSet(0),
+                "metrics_type:distribution");
 
-        client.sendTelemetryMetric(aggregatedContextsByTypeMetric, aggregatedGaugeContexts.getAndSet(0), "metrics_type:gauge");
-        client.sendTelemetryMetric(aggregatedContextsByTypeMetric, aggregatedCountContexts.getAndSet(0), "metrics_type:count");
-        client.sendTelemetryMetric(aggregatedContextsByTypeMetric, aggregatedSetContexts.getAndSet(0), "metrics_type:set");
+        client.sendTelemetryMetric(
+                aggregatedContextsByTypeMetric,
+                aggregatedGaugeContexts.getAndSet(0),
+                "metrics_type:gauge");
+        client.sendTelemetryMetric(
+                aggregatedContextsByTypeMetric,
+                aggregatedCountContexts.getAndSet(0),
+                "metrics_type:count");
+        client.sendTelemetryMetric(
+                aggregatedContextsByTypeMetric,
+                aggregatedSetContexts.getAndSet(0),
+                "metrics_type:set");
     }
 
     /**
      * Increase Metrics Sent telemetry metric.
      *
-     * @param value
-     *     Value to increase metric with
+     * @param value Value to increase metric with
      */
     public void incrMetricsSent(final int value) {
         metricsSent.addAndGet(value);
@@ -124,10 +134,8 @@ public class Telemetry {
     /**
      * Increase Metrics Sent telemetry metric, and specific metric type counter.
      *
-     * @param value
-     *     Value to increase metric with
-     * @param type
-     *    Message type
+     * @param value Value to increase metric with
+     * @param type Message type
      */
     public void incrMetricsSent(final int value, Message.Type type) {
         incrMetricsSent(value);
@@ -216,9 +224,7 @@ public class Telemetry {
         aggregatedSetContexts.addAndGet(value);
     }
 
-    /**
-     * Resets all counter in the telemetry (this is useful for tests purposes).
-     */
+    /** Resets all counter in the telemetry (this is useful for tests purposes). */
     public void reset() {
         metricsSent.set(0);
         eventsSent.set(0);

@@ -44,7 +44,8 @@ public abstract class Message implements Comparable<Message> {
         this("", type, cardinality, null);
     }
 
-    protected Message(String aspect, Message.Type type, TagsCardinality cardinality, String[] tags) {
+    protected Message(
+            String aspect, Message.Type type, TagsCardinality cardinality, String[] tags) {
         if (cardinality == null) {
             throw new NullPointerException("cardinality");
         }
@@ -56,24 +57,22 @@ public abstract class Message implements Comparable<Message> {
     }
 
     /**
-     * Write this message to the provided {@link StringBuilder}. Will
-     * be called from the sender threads.
+     * Write this message to the provided {@link StringBuilder}. Will be called from the sender
+     * threads.
      *
-     * @param builder     StringBuilder the text representation will be written to.
-     * @param capacity    The capacity of the send buffer.
-     * @return boolean indicating whether the message was partially written to the builder.
-     *     If true, the method will be called again with the same arguments to continue writing.
+     * @param builder StringBuilder the text representation will be written to.
+     * @param capacity The capacity of the send buffer.
+     * @return boolean indicating whether the message was partially written to the builder. If true,
+     *     the method will be called again with the same arguments to continue writing.
      */
     abstract boolean writeTo(StringBuilder builder, int capacity);
 
     /**
      * Aggregate message.
      *
-     * @param message
-     *     Message to aggregate.
+     * @param message Message to aggregate.
      */
     public abstract void aggregate(Message message);
-
 
     /**
      * Return the message aspect.
@@ -123,9 +122,7 @@ public abstract class Message implements Comparable<Message> {
         return this.done;
     }
 
-    /**
-     * Messages must implement hashCode.
-     */
+    /** Messages must implement hashCode. */
     @Override
     public int hashCode() {
         int hash = 0;
@@ -136,21 +133,19 @@ public abstract class Message implements Comparable<Message> {
         return hash;
     }
 
-    /**
-     * Messages must implement hashCode.
-     */
+    /** Messages must implement hashCode. */
     @Override
     public boolean equals(Object object) {
         if (object == this) {
             return true;
         }
         if (object instanceof Message) {
-            final Message msg = (Message)object;
+            final Message msg = (Message) object;
 
             return (Objects.equals(this.getAspect(), msg.getAspect()))
-                && (this.getType() == msg.getType())
-                && (this.getTagsCardinality().equals(msg.getTagsCardinality()))
-                && Arrays.equals(this.tags, msg.getTags());
+                    && (this.getType() == msg.getType())
+                    && (this.getTagsCardinality().equals(msg.getTagsCardinality()))
+                    && Arrays.equals(this.tags, msg.getTags());
         }
 
         return false;

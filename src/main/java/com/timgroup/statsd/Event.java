@@ -4,7 +4,9 @@ import java.util.Date;
 
 /**
  * An event to send.
- * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#events">http://docs.datadoghq.com/guides/dogstatsd/#events</a>
+ *
+ * @see <a
+ *     href="http://docs.datadoghq.com/guides/dogstatsd/#events">http://docs.datadoghq.com/guides/dogstatsd/#events</a>
  */
 public class Event {
     private String title;
@@ -27,6 +29,7 @@ public class Event {
 
     /**
      * Get number of milliseconds since epoch started.
+     *
      * @return -1 if not set
      */
     public long getMillisSinceEpoch() {
@@ -61,18 +64,25 @@ public class Event {
         return new Builder();
     }
 
-    private Event(){}
+    private Event() {}
 
     public enum Priority {
-        LOW, NORMAL
+        LOW,
+        NORMAL
     }
 
     public enum AlertType {
-        ERROR, WARNING, INFO, SUCCESS
+        ERROR,
+        WARNING,
+        INFO,
+        SUCCESS
     }
 
-    @SuppressWarnings({"AccessingNonPublicFieldOfAnotherObject",
-            "PrivateMemberAccessBetweenOuterAndInnerClass", "ParameterHidesMemberVariable"})
+    @SuppressWarnings({
+        "AccessingNonPublicFieldOfAnotherObject",
+        "PrivateMemberAccessBetweenOuterAndInnerClass",
+        "ParameterHidesMemberVariable"
+    })
     public static class Builder {
         private final Event event = new Event();
 
@@ -80,6 +90,7 @@ public class Event {
 
         /**
          * Build factory method for the event.
+         *
          * @return Event built following specified options.
          */
         public Event build() {
@@ -91,8 +102,8 @@ public class Event {
 
         /**
          * Title for the event.
-         * @param title
-         *     Event title ; mandatory
+         *
+         * @param title Event title ; mandatory
          * @return Builder object being used.
          */
         public Builder withTitle(final String title) {
@@ -102,8 +113,8 @@ public class Event {
 
         /**
          * Text for the event.
-         * @param text
-         *     Event text ; supports line breaks ; mandatory
+         *
+         * @param text Event text ; supports line breaks ; mandatory
          * @return Builder object being used.
          */
         public Builder withText(final String text) {
@@ -113,8 +124,9 @@ public class Event {
 
         /**
          * Date for the event.
-         * @param date
-         *     Assign a timestamp to the event ; Default: none (Default is the current Unix epoch timestamp when not sent)
+         *
+         * @param date Assign a timestamp to the event ; Default: none (Default is the current Unix
+         *     epoch timestamp when not sent)
          * @return Builder object being used.
          */
         public Builder withDate(final Date date) {
@@ -124,8 +136,9 @@ public class Event {
 
         /**
          * Date for the event.
-         * @param millisSinceEpoch
-         *     Assign a timestamp to the event ; Default: none (Default is the current Unix epoch timestamp when not sent)
+         *
+         * @param millisSinceEpoch Assign a timestamp to the event ; Default: none (Default is the
+         *     current Unix epoch timestamp when not sent)
          * @return Builder object being used.
          */
         public Builder withDate(final long millisSinceEpoch) {
@@ -135,8 +148,8 @@ public class Event {
 
         /**
          * Source hostname for the event.
-         * @param hostname
-         *     Assign a hostname to the event ; Default: none
+         *
+         * @param hostname Assign a hostname to the event ; Default: none
          * @return Builder object being used.
          */
         public Builder withHostname(final String hostname) {
@@ -146,8 +159,9 @@ public class Event {
 
         /**
          * Aggregation key for the event.
-         * @param aggregationKey
-         *     Assign an aggregation key to the event, to group it with some others ; Default: none
+         *
+         * @param aggregationKey Assign an aggregation key to the event, to group it with some
+         *     others ; Default: none
          * @return Builder object being used.
          */
         public Builder withAggregationKey(final String aggregationKey) {
@@ -157,8 +171,8 @@ public class Event {
 
         /**
          * Priority for the event.
-         * @param priority
-         *     Can be "normal" or "low" ; Default: "normal"
+         *
+         * @param priority Can be "normal" or "low" ; Default: "normal"
          * @return Builder object being used.
          */
         public Builder withPriority(final Priority priority) {
@@ -169,8 +183,8 @@ public class Event {
 
         /**
          * Source Type name for the event.
-         * @param sourceTypeName
-         *     Assign a source type to the event ; Default: none
+         *
+         * @param sourceTypeName Assign a source type to the event ; Default: none
          * @return Builder object being used.
          */
         public Builder withSourceTypeName(final String sourceTypeName) {
@@ -180,8 +194,8 @@ public class Event {
 
         /**
          * Alert type for the event.
-         * @param alertType
-         *     Can be "error", "warning", "info" or "success" ; Default: "info"
+         *
+         * @param alertType Can be "error", "warning", "info" or "success" ; Default: "info"
          * @return Builder object being used.
          */
         public Builder withAlertType(final AlertType alertType) {
@@ -192,8 +206,8 @@ public class Event {
 
         /**
          * Set tags cardinality for this event.
-         * @param cardinality
-         *     specify cardinality for Kubernetes or Docker tags added by the Agent.
+         *
+         * @param cardinality specify cardinality for Kubernetes or Docker tags added by the Agent.
          * @return Builder object being used.
          */
         public Builder withTagsCardinality(final TagsCardinality cardinality) {

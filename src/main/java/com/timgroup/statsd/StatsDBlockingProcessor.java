@@ -1,9 +1,5 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
-import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
@@ -26,13 +22,26 @@ public class StatsDBlockingProcessor extends StatsDProcessor {
         }
     }
 
-    StatsDBlockingProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory) throws Exception {
+    StatsDBlockingProcessor(
+            final int queueSize,
+            final StatsDClientErrorHandler handler,
+            final int maxPacketSizeBytes,
+            final int poolSize,
+            final int workers,
+            final int aggregatorFlushInterval,
+            final int aggregatorShards,
+            final ThreadFactory threadFactory)
+            throws Exception {
 
-        super(queueSize, handler, maxPacketSizeBytes, poolSize, workers,
-                aggregatorFlushInterval, aggregatorShards, threadFactory);
+        super(
+                queueSize,
+                handler,
+                maxPacketSizeBytes,
+                poolSize,
+                workers,
+                aggregatorFlushInterval,
+                aggregatorShards,
+                threadFactory);
         this.messages = new ArrayBlockingQueue<>(queueSize);
     }
 

@@ -11,6 +11,7 @@ class DatagramClientChannel implements ClientChannel {
 
     /**
      * Creates a new DatagramClientChannel using the default DatagramChannel.
+     *
      * @param address Address to connect the channel to
      * @throws IOException if an I/O error occurs
      */
@@ -20,6 +21,7 @@ class DatagramClientChannel implements ClientChannel {
 
     /**
      * Creates a new DatagramClientChannel that wraps the delegate.
+     *
      * @param delegate Implementation this instance wraps
      * @param address Address to connect the channel to
      */

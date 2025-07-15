@@ -2,8 +2,7 @@ package com.timgroup.statsd;
 
 import java.util.ArrayList;
 
-public class TestHelpers
-{
+public class TestHelpers {
     static boolean isLinux() {
         return System.getProperty("os.name").toLowerCase().contains("linux");
     }
@@ -29,7 +28,7 @@ public class TestHelpers
     static Object[][] permutations(Object[][] in) {
         ArrayList<Object[]> out = new ArrayList<>();
         permutations(out, in, 0, new Object[in.length]);
-        return out.toArray(new Object[][]{});
+        return out.toArray(new Object[][] {});
     }
 
     static void permutations(ArrayList<Object[]> out, Object[][] in, int index, Object[] buf) {
