@@ -1021,6 +1021,20 @@ public interface StatsDClient extends Closeable {
     void distribution(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, long, String[])}.
      *
      * @param aspect
