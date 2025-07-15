@@ -53,7 +53,7 @@ public class NoOpStatsDClient implements StatsDClient {
 
     @Override public void recordGaugeValue(String aspect, double value, String... tags) { }
 
-    @Override public void recordGaugeValue(String aspect, double value, double sampleRate,String... tags) { }
+    @Override public void recordGaugeValue(String aspect, double value, double sampleRate, String... tags) { }
 
     @Override public void recordGaugeValue(String aspect, double value, double sampleRate, TagsCardinality cardinality,
         String... tags) { }
