@@ -5,7 +5,11 @@ package com.timgroup.statsd;
  * required.
  */
 public class NoOpDirectStatsDClient extends NoOpStatsDClient implements DirectStatsDClient {
-    @Override public void recordDistributionValues(String aspect, double[] values, double sampleRate, String... tags) { }
+    @Override
+    public void recordDistributionValues(
+            String aspect, double[] values, double sampleRate, String... tags) {}
 
-    @Override public void recordDistributionValues(String aspect, long[] values, double sampleRate, String... tags) { }
+    @Override
+    public void recordDistributionValues(
+            String aspect, long[] values, double sampleRate, String... tags) {}
 }

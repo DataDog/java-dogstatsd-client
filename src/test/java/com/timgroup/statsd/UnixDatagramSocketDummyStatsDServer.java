@@ -6,8 +6,6 @@ import java.nio.channels.DatagramChannel;
 import jnr.unixsocket.UnixDatagramChannel;
 import jnr.unixsocket.UnixSocketAddress;
 
-import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
-
 public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
     private final DatagramChannel server;
     UnixSocketAddress addr;
@@ -35,7 +33,7 @@ public class UnixDatagramSocketDummyStatsDServer extends DummyStatsDServer {
         thread.interrupt();
         // JNR doesn't interrupt syscalls when a thread is interrupted, so we send a dummy message
         // to wake the thread up.
-        int sent = server.send(ByteBuffer.wrap(new byte[]{1}), addr);
+        int sent = server.send(ByteBuffer.wrap(new byte[] {1}), addr);
         if (sent == 0) {
             throw new IOException("failed to send wake up call to the server thread");
         }

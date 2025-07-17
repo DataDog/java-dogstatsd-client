@@ -3,22 +3,17 @@ package com.timgroup.statsd;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
-import static org.hamcrest.Matchers.instanceOf;
-
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.logging.Logger;
-
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
-import static org.junit.Assert.assertEquals;
 
 public class NamedPipeTest implements StatsDClientErrorHandler {
     private static final Logger log = Logger.getLogger("NamedPipeTest");
@@ -28,8 +23,7 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
     private DummyStatsDServer server;
     private volatile Exception lastException = new Exception();
 
-    @Rule
-    public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     public synchronized void handle(Exception exception) {
         log.info("Got exception: " + exception.getMessage());
@@ -46,12 +40,14 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
         String pipeName = "testPipe-" + random.nextInt(10000);
 
         server = new NamedPipeDummyStatsDServer(pipeName);
-        client = new NonBlockingStatsDClientBuilder().prefix("my.prefix")
-            .namedPipe(pipeName)
-            .queueSize(1)
-            .enableAggregation(false)
-            .errorHandler(this)
-            .build();
+        client =
+                new NonBlockingStatsDClientBuilder()
+                        .prefix("my.prefix")
+                        .namedPipe(pipeName)
+                        .queueSize(1)
+                        .enableAggregation(false)
+                        .errorHandler(this)
+                        .build();
     }
 
     @After
@@ -66,7 +62,7 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
 
     @Test(timeout = 5000L)
     public void sends_to_statsd() {
-        for(long i = 0; i < 5 ; i++) {
+        for (long i = 0; i < 5; i++) {
             client.gauge("mycount", i);
             server.waitForMessage();
             String expected = String.format("my.prefix.mycount:%d|g", i);

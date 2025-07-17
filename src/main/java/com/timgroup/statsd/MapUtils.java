@@ -6,8 +6,8 @@ import java.lang.invoke.MethodType;
 import java.util.Map;
 
 /**
- * MethodHandle based bridge for using JDK8+ functionality at JDK7 language level.
- * Can be removed when support for JDK7 is dropped.
+ * MethodHandle based bridge for using JDK8+ functionality at JDK7 language level. Can be removed
+ * when support for JDK7 is dropped.
  */
 public class MapUtils {
 
@@ -15,12 +15,17 @@ public class MapUtils {
 
     /**
      * Emulates {@code Map.putIfAbsent} semantics. Replace when baselining at JDK8+.
-     * @return the previous value associated with the message, or null if the value was not seen before
+     *
+     * @return the previous value associated with the message, or null if the value was not seen
+     *     before
      */
     static Message putIfAbsent(Map<Message, Message> map, Message message) {
         if (MAP_PUT_IF_ABSENT != null) {
             try {
-                return (Message) (Object) MAP_PUT_IF_ABSENT.invokeExact(map, (Object) message, (Object) message);
+                return (Message)
+                        (Object)
+                                MAP_PUT_IF_ABSENT.invokeExact(
+                                        map, (Object) message, (Object) message);
             } catch (Throwable ignore) {
                 return putIfAbsentFallback(map, message);
             }
@@ -30,7 +35,9 @@ public class MapUtils {
 
     /**
      * Emulates {@code Map.putIfAbsent} semantics. Replace when baselining at JDK8+.
-     * @return the previous value associated with the message, or null if the value was not seen before
+     *
+     * @return the previous value associated with the message, or null if the value was not seen
+     *     before
      */
     private static Message putIfAbsentFallback(Map<Message, Message> map, Message message) {
         if (map.containsKey(message)) {
@@ -43,7 +50,9 @@ public class MapUtils {
     private static MethodHandle buildMapPutIfAbsent() {
         try {
             return MethodHandles.publicLookup()
-                    .findVirtual(Map.class, "putIfAbsent",
+                    .findVirtual(
+                            Map.class,
+                            "putIfAbsent",
                             MethodType.methodType(Object.class, Object.class, Object.class));
         } catch (Throwable ignore) {
             return null;

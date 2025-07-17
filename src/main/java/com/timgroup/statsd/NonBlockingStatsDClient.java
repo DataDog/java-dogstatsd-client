@@ -25,32 +25,34 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>Upon instantiation, this client will establish a socket connection to a StatsD instance
  * running on the specified host and port. Metrics are then sent over this connection as they are
  * received by the client.
- * </p>
  *
  * <p>Three key methods are provided for the submission of data-points for the application under
  * scrutiny:
+ *
  * <ul>
- *   <li>{@link #incrementCounter} - adds one to the value of the specified named counter</li>
- *   <li>{@link #recordGaugeValue} - records the latest fixed value for the specified named gauge</li>
- *   <li>{@link #recordExecutionTime} - records an execution time in milliseconds for the specified named operation</li>
- *   <li>{@link #recordHistogramValue} - records a value, to be tracked with average, maximum, and percentiles</li>
- *   <li>{@link #recordEvent} - records an event</li>
- *   <li>{@link #recordSetValue} - records a value in a set</li>
+ *   <li>{@link #incrementCounter} - adds one to the value of the specified named counter
+ *   <li>{@link #recordGaugeValue} - records the latest fixed value for the specified named gauge
+ *   <li>{@link #recordExecutionTime} - records an execution time in milliseconds for the specified
+ *       named operation
+ *   <li>{@link #recordHistogramValue} - records a value, to be tracked with average, maximum, and
+ *       percentiles
+ *   <li>{@link #recordEvent} - records an event
+ *   <li>{@link #recordSetValue} - records a value in a set
  * </ul>
- * From the perspective of the application, these methods are non-blocking, with the resulting
- * IO operations being carried out in a separate thread. Furthermore, these methods are guaranteed
- * not to throw an exception which may disrupt application execution.
  *
- * <p>Some methods allow recording a value for a specific point in time by taking an extra
- * timestamp parameter. Such values are exempt from aggregation and the value should indicate the
- * final metric value at the given time. Please refer to Datadog documentation for the range of
- * accepted timestamp values.
+ * From the perspective of the application, these methods are non-blocking, with the resulting IO
+ * operations being carried out in a separate thread. Furthermore, these methods are guaranteed not
+ * to throw an exception which may disrupt application execution.
  *
- * <p>As part of a clean system shutdown, the {@link #stop()} method should be invoked
- * on any StatsD clients.</p>
+ * <p>Some methods allow recording a value for a specific point in time by taking an extra timestamp
+ * parameter. Such values are exempt from aggregation and the value should indicate the final metric
+ * value at the given time. Please refer to Datadog documentation for the range of accepted
+ * timestamp values.
+ *
+ * <p>As part of a clean system shutdown, the {@link #stop()} method should be invoked on any StatsD
+ * clients.
  *
  * @author Tom Denley
- *
  */
 public class NonBlockingStatsDClient implements StatsDClient {
 
@@ -58,7 +60,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final String DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST";
     public static final String DD_NAMED_PIPE_ENV_VAR = "DD_DOGSTATSD_PIPE_NAME";
     public static final String DD_ENTITY_ID_ENV_VAR = "DD_ENTITY_ID";
-    private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id" ;
+    private static final String ENTITY_ID_TAG_NAME = "dd.internal.entity_id";
     public static final String ORIGIN_DETECTION_ENABLED_ENV_VAR = "DD_ORIGIN_DETECTION_ENABLED";
     public static final String DD_DOGSTATSD_URL_ENV_VAR = "DD_DOGSTATSD_URL";
 
@@ -67,9 +69,9 @@ public class NonBlockingStatsDClient implements StatsDClient {
     enum Literal {
         SERVICE,
         ENV,
-        VERSION
-        ;
+        VERSION;
         private static final String PREFIX = "dd";
+
         String envName() {
             return (PREFIX + "_" + toString()).toUpperCase();
         }
@@ -103,32 +105,33 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final String CLIENT_VERSION_TAG = "client_version:";
     public static final String CLIENT_TRANSPORT_TAG = "client_transport:";
 
-
-    /**
-     * UTF-8 is the expected encoding for data sent to the agent.
-     */
+    /** UTF-8 is the expected encoding for data sent to the agent. */
     public static final Charset UTF_8 = StandardCharsets.UTF_8;
 
-    private static final StatsDClientErrorHandler NO_OP_HANDLER = new StatsDClientErrorHandler() {
-        @Override public void handle(final Exception ex) { /* No-op */ }
-    };
+    private static final StatsDClientErrorHandler NO_OP_HANDLER =
+            new StatsDClientErrorHandler() {
+                @Override
+                public void handle(final Exception ex) {
+                    /* No-op */
+                }
+            };
 
-    /**
-     * The NumberFormat instances are not threadsafe and thus defined as ThreadLocal
-     * for safety.
-     */
-    protected static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<NumberFormat>() {
-        @Override
-        protected NumberFormat initialValue() {
-            return newFormatter(false);
-        }
-    };
-    protected static final ThreadLocal<NumberFormat> SAMPLE_RATE_FORMATTER = new ThreadLocal<NumberFormat>() {
-        @Override
-        protected NumberFormat initialValue() {
-            return newFormatter(true);
-        }
-    };
+    /** The NumberFormat instances are not threadsafe and thus defined as ThreadLocal for safety. */
+    protected static final ThreadLocal<NumberFormat> NUMBER_FORMATTER =
+            new ThreadLocal<NumberFormat>() {
+                @Override
+                protected NumberFormat initialValue() {
+                    return newFormatter(false);
+                }
+            };
+
+    protected static final ThreadLocal<NumberFormat> SAMPLE_RATE_FORMATTER =
+            new ThreadLocal<NumberFormat>() {
+                @Override
+                protected NumberFormat initialValue() {
+                    return newFormatter(true);
+                }
+            };
 
     static {
     }
@@ -181,16 +184,15 @@ public class NonBlockingStatsDClient implements StatsDClient {
     final TagsCardinality clientTagsCardinality;
 
     /**
-     * Create a new StatsD client communicating with a StatsD instance on the
-     * host and port specified by the given builder.
-     * The builder must be resolved before calling this internal constructor.
+     * Create a new StatsD client communicating with a StatsD instance on the host and port
+     * specified by the given builder. The builder must be resolved before calling this internal
+     * constructor.
      *
-     * @param builder
-     *     the resolved configuration builder
-     *
+     * @param builder the resolved configuration builder
      * @see NonBlockingStatsDClientBuilder#resolve()
      */
-    public NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder) throws StatsDClientException {
+    public NonBlockingStatsDClient(final NonBlockingStatsDClientBuilder builder)
+            throws StatsDClientException {
 
         if (builder.prefix != null && !builder.prefix.isEmpty()) {
             prefix = builder.prefix + ".";
@@ -209,71 +211,126 @@ public class NonBlockingStatsDClient implements StatsDClient {
         clientTagsCardinality = builder.tagsCardinality;
 
         {
-            List<String> costantPreTags = new ArrayList<>();
+            List<String> constantPreTags = new ArrayList<>();
             if (builder.constantTags != null) {
                 for (final String constantTag : builder.constantTags) {
-                    costantPreTags.add(constantTag);
+                    constantPreTags.add(constantTag);
                 }
             }
             // Support "dd.internal.entity_id" internal tag.
-            updateTagsWithEntityID(costantPreTags, builder.entityID);
+            updateTagsWithEntityID(constantPreTags, builder.entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
-                    costantPreTags.add(literal.tag() + ":" + envVal);
+                    constantPreTags.add(literal.tag() + ":" + envVal);
                 }
             }
-            if (costantPreTags.isEmpty()) {
+            if (constantPreTags.isEmpty()) {
                 constantTagsRendered = null;
             } else {
-                constantTagsRendered = tagString(
-                        costantPreTags.toArray(new String[costantPreTags.size()]), null, new StringBuilder()).toString();
+                constantTagsRendered =
+                        tagString(
+                                        constantPreTags.toArray(new String[constantPreTags.size()]),
+                                        null,
+                                        new StringBuilder())
+                                .toString();
             }
-            costantPreTags = null;
+            constantPreTags = null;
             containerID = getContainerID(builder.containerID, builder.originDetectionEnabled);
         }
 
         try {
-            clientChannel = createByteChannel(builder.addressLookup, builder.timeout, builder.connectionTimeout,
-                builder.socketBufferSize);
+            clientChannel =
+                    createByteChannel(
+                            builder.addressLookup,
+                            builder.timeout,
+                            builder.connectionTimeout,
+                            builder.socketBufferSize);
 
-            ThreadFactory threadFactory = builder.threadFactory != null ? builder.threadFactory : new StatsDThreadFactory();
+            ThreadFactory threadFactory =
+                    builder.threadFactory != null
+                            ? builder.threadFactory
+                            : new StatsDThreadFactory();
 
-            int aggregationFlushInterval =  builder.enableAggregation ? builder.aggregationFlushInterval : 0;
-            statsDProcessor = createProcessor(builder.queueSize, handler, getPacketSize(clientChannel), builder.bufferPoolSize,
-                builder.processorWorkers, builder.blocking, aggregationFlushInterval, builder.aggregationShards, threadFactory);
+            int aggregationFlushInterval =
+                    builder.enableAggregation ? builder.aggregationFlushInterval : 0;
+            statsDProcessor =
+                    createProcessor(
+                            builder.queueSize,
+                            handler,
+                            getPacketSize(clientChannel),
+                            builder.bufferPoolSize,
+                            builder.processorWorkers,
+                            builder.blocking,
+                            aggregationFlushInterval,
+                            builder.aggregationShards,
+                            threadFactory);
 
             Properties properties = new Properties();
-            properties.load(getClass().getClassLoader().getResourceAsStream(
-                "dogstatsd/version.properties"));
+            properties.load(
+                    getClass()
+                            .getClassLoader()
+                            .getResourceAsStream("dogstatsd/version.properties"));
 
-            telemetryTags = tagString(new String[]{CLIENT_TRANSPORT_TAG + clientChannel.getTransportType(),
-                                                   CLIENT_VERSION_TAG + properties.getProperty("dogstatsd_client_version"),
-                                                   CLIENT_TAG}, new StringBuilder()).toString();
+            telemetryTags =
+                    tagString(
+                                    new String[] {
+                                        CLIENT_TRANSPORT_TAG + clientChannel.getTransportType(),
+                                        CLIENT_VERSION_TAG
+                                                + properties.getProperty(
+                                                        "dogstatsd_client_version"),
+                                        CLIENT_TAG
+                                    },
+                                    new StringBuilder())
+                            .toString();
 
             if (builder.addressLookup == builder.telemetryAddressLookup) {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(builder.telemetryAddressLookup, builder.timeout,
-                    builder.connectionTimeout, builder.socketBufferSize);
+                telemetryClientChannel =
+                        createByteChannel(
+                                builder.telemetryAddressLookup,
+                                builder.timeout,
+                                builder.connectionTimeout,
+                                builder.socketBufferSize);
 
                 // similar settings, but a single worker and non-blocking.
-                telemetryStatsDProcessor = createProcessor(builder.queueSize, handler, getPacketSize(telemetryClientChannel),
-                        builder.bufferPoolSize, 1, false, 0, builder.aggregationShards, threadFactory);
+                telemetryStatsDProcessor =
+                        createProcessor(
+                                builder.queueSize,
+                                handler,
+                                getPacketSize(telemetryClientChannel),
+                                builder.bufferPoolSize,
+                                1,
+                                false,
+                                0,
+                                builder.aggregationShards,
+                                threadFactory);
             }
 
             telemetry = new Telemetry(this);
 
-            statsDSender = createSender(handler, clientChannel, statsDProcessor.getBufferPool(),
-                    statsDProcessor.getOutboundQueue(), builder.senderWorkers, threadFactory);
+            statsDSender =
+                    createSender(
+                            handler,
+                            clientChannel,
+                            statsDProcessor.getBufferPool(),
+                            statsDProcessor.getOutboundQueue(),
+                            builder.senderWorkers,
+                            threadFactory);
 
             telemetryStatsDSender = statsDSender;
             if (telemetryStatsDProcessor != statsDProcessor) {
                 // TODO: figure out why the hell telemetryClientChannel does not work here!
-                telemetryStatsDSender = createSender(handler, telemetryClientChannel,
-                        telemetryStatsDProcessor.getBufferPool(), telemetryStatsDProcessor.getOutboundQueue(),
-                        1, threadFactory);
+                telemetryStatsDSender =
+                        createSender(
+                                handler,
+                                telemetryClientChannel,
+                                telemetryStatsDProcessor.getBufferPool(),
+                                telemetryStatsDProcessor.getOutboundQueue(),
+                                1,
+                                threadFactory);
             }
 
             // set telemetry
@@ -296,28 +353,55 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
     }
 
-    protected StatsDProcessor createProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int bufferPoolSize, final int workers, final boolean blocking,
-            final int aggregationFlushInterval, final int aggregationShards, final ThreadFactory threadFactory)
+    protected StatsDProcessor createProcessor(
+            final int queueSize,
+            final StatsDClientErrorHandler handler,
+            final int maxPacketSizeBytes,
+            final int bufferPoolSize,
+            final int workers,
+            final boolean blocking,
+            final int aggregationFlushInterval,
+            final int aggregationShards,
+            final ThreadFactory threadFactory)
             throws Exception {
         if (blocking) {
-            return new StatsDBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
+            return new StatsDBlockingProcessor(
+                    queueSize,
+                    handler,
+                    maxPacketSizeBytes,
+                    bufferPoolSize,
+                    workers,
+                    aggregationFlushInterval,
+                    aggregationShards,
+                    threadFactory);
         } else {
-            return new StatsDNonBlockingProcessor(queueSize, handler, maxPacketSizeBytes, bufferPoolSize,
-                    workers, aggregationFlushInterval, aggregationShards, threadFactory);
+            return new StatsDNonBlockingProcessor(
+                    queueSize,
+                    handler,
+                    maxPacketSizeBytes,
+                    bufferPoolSize,
+                    workers,
+                    aggregationFlushInterval,
+                    aggregationShards,
+                    threadFactory);
         }
     }
 
-    protected StatsDSender createSender(final StatsDClientErrorHandler handler,
-            final WritableByteChannel clientChannel, BufferPool pool, BlockingQueue<ByteBuffer> buffers, final int senderWorkers,
-            final ThreadFactory threadFactory) throws Exception {
-        return new StatsDSender(clientChannel, handler, pool, buffers, senderWorkers, threadFactory);
+    protected StatsDSender createSender(
+            final StatsDClientErrorHandler handler,
+            final WritableByteChannel clientChannel,
+            BufferPool pool,
+            BlockingQueue<ByteBuffer> buffers,
+            final int senderWorkers,
+            final ThreadFactory threadFactory)
+            throws Exception {
+        return new StatsDSender(
+                clientChannel, handler, pool, buffers, senderWorkers, threadFactory);
     }
 
     /**
-     * Cleanly shut down this StatsD client. This method may throw an exception if
-     * the socket cannot be closed.
+     * Cleanly shut down this StatsD client. This method may throw an exception if the socket cannot
+     * be closed.
      *
      * <p>In blocking mode, this will block until all messages are sent to the server.
      */
@@ -360,10 +444,10 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     /**
-     * Return tag list as a tag string.
-     * Generate a suffix conveying the given tag list to the client
+     * Return tag list as a tag string. Generate a suffix conveying the given tag list to the client
      */
-    static StringBuilder tagString(final String[] tags, final String tagPrefix, final StringBuilder sb) {
+    static StringBuilder tagString(
+            final String[] tags, final String tagPrefix, final StringBuilder sb) {
         if (tagPrefix != null) {
             sb.append(tagPrefix);
             if ((tags == null) || (tags.length == 0)) {
@@ -386,15 +470,16 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sb;
     }
 
-    /**
-     * Generate a suffix conveying the given tag list to the client.
-     */
+    /** Generate a suffix conveying the given tag list to the client. */
     StringBuilder tagString(final String[] tags, StringBuilder builder) {
         return tagString(tags, constantTagsRendered, builder);
     }
 
     ClientChannel createByteChannel(
-            Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize)
+            Callable<SocketAddress> addressLookup,
+            int timeout,
+            int connectionTimeout,
+            int bufferSize)
             throws Exception {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
@@ -403,16 +488,20 @@ public class NonBlockingStatsDClient implements StatsDClient {
         if (address instanceof UnixSocketAddressWithTransport) {
             UnixSocketAddressWithTransport unixAddr = ((UnixSocketAddressWithTransport) address);
 
-            // TODO: Maybe introduce a `UnixClientChannel` that can handle both stream and datagram sockets? This would
+            // TODO: Maybe introduce a `UnixClientChannel` that can handle both stream and datagram
+            // sockets? This would
             // Allow us to support `unix://` for both kind of sockets like in go.
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
-                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, bufferSize);
+                    return new UnixStreamClientChannel(
+                            unixAddr.getAddress(), timeout, connectionTimeout, bufferSize);
                 case UDS_DATAGRAM:
                 case UDS:
-                    return new UnixDatagramClientChannel(unixAddr.getAddress(), timeout, bufferSize);
+                    return new UnixDatagramClientChannel(
+                            unixAddr.getAddress(), timeout, bufferSize);
                 default:
-                    throw new IllegalArgumentException("Unsupported transport type: " + unixAddr.getTransportType());
+                    throw new IllegalArgumentException(
+                            "Unsupported transport type: " + unixAddr.getTransportType());
             }
         }
         // We keep this for backward compatibility
@@ -431,9 +520,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
         final double sampleRate; // NaN for none
         final long timestamp; // zero for none
 
-        protected StatsDMessage(String aspect, Message.Type type, T value, double sampleRate, long timestamp,
-            TagsCardinality card, String[] tags)
-        {
+        protected StatsDMessage(
+                String aspect,
+                Message.Type type,
+                T value,
+                double sampleRate,
+                long timestamp,
+                TagsCardinality card,
+                String[] tags) {
             super(aspect, type, value, card, tags);
             this.sampleRate = sampleRate;
             this.timestamp = timestamp;
@@ -494,9 +588,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     // send double with sample rate and timestamp
     private void send(
-        String aspect, final double value, Message.Type type, double sampleRate, long timestamp, TagsCardinality cardinality,
-        String[] tags)
-    {
+            String aspect,
+            final double value,
+            Message.Type type,
+            double sampleRate,
+            long timestamp,
+            TagsCardinality cardinality,
+            String[] tags) {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -513,20 +611,39 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
 
-            sendMetric(new StatsDMessage<Double>(aspect, type, Double.valueOf(value), sampleRate, timestamp, cardinality, tags) {
-                @Override protected void writeValue(StringBuilder builder) {
-                    builder.append(format(NUMBER_FORMATTER, this.value));
-                }
-            });
+            sendMetric(
+                    new StatsDMessage<Double>(
+                            aspect,
+                            type,
+                            Double.valueOf(value),
+                            sampleRate,
+                            timestamp,
+                            cardinality,
+                            tags) {
+                        @Override
+                        protected void writeValue(StringBuilder builder) {
+                            builder.append(format(NUMBER_FORMATTER, this.value));
+                        }
+                    });
         }
     }
 
-    private void send(String aspect, final double value, Message.Type type, double sampleRate, final TagsCardinality cardinality,
-        String[] tags) {
+    private void send(
+            String aspect,
+            final double value,
+            Message.Type type,
+            double sampleRate,
+            final TagsCardinality cardinality,
+            String[] tags) {
         send(aspect, value, type, sampleRate, 0, cardinality, tags);
     }
 
-    private void send(String aspect, final double value, Message.Type type, double sampleRate, String[] tags) {
+    private void send(
+            String aspect,
+            final double value,
+            Message.Type type,
+            double sampleRate,
+            String[] tags) {
         send(aspect, value, type, sampleRate, 0, clientTagsCardinality, tags);
     }
 
@@ -537,9 +654,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
     // send long with sample rate
     private void send(
-        String aspect, final long value, Message.Type type, double sampleRate, long timestamp, TagsCardinality cardinality,
-        String[] tags)
-    {
+            String aspect,
+            final long value,
+            Message.Type type,
+            double sampleRate,
+            long timestamp,
+            TagsCardinality cardinality,
+            String[] tags) {
         if (statsDProcessor.getAggregator().getFlushInterval() != 0 && !Double.isNaN(sampleRate)) {
             switch (type) {
                 case COUNT:
@@ -555,20 +676,29 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         if (Double.isNaN(sampleRate) || !isInvalidSample(sampleRate)) {
-            sendMetric(new StatsDMessage<Long>(aspect, type, value, sampleRate, timestamp, cardinality, tags) {
-                @Override protected void writeValue(StringBuilder builder) {
-                    builder.append(this.value.longValue());
-                }
-            });
+            sendMetric(
+                    new StatsDMessage<Long>(
+                            aspect, type, value, sampleRate, timestamp, cardinality, tags) {
+                        @Override
+                        protected void writeValue(StringBuilder builder) {
+                            builder.append(this.value.longValue());
+                        }
+                    });
         }
     }
 
-    private void send(String aspect, final long value, Message.Type type, double sampleRate, final TagsCardinality cardinality,
-        String[] tags) {
+    private void send(
+            String aspect,
+            final long value,
+            Message.Type type,
+            double sampleRate,
+            final TagsCardinality cardinality,
+            String[] tags) {
         send(aspect, value, type, sampleRate, 0, cardinality, tags);
     }
 
-    private void send(String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
+    private void send(
+            String aspect, final long value, Message.Type type, double sampleRate, String[] tags) {
         send(aspect, value, type, sampleRate, 0, clientTagsCardinality, tags);
     }
 
@@ -577,22 +707,29 @@ public class NonBlockingStatsDClient implements StatsDClient {
         send(aspect, value, type, Double.NaN, 0, clientTagsCardinality, tags);
     }
 
-    private void sendWithTimestamp(String aspect, final double value, Message.Type type, long timestamp, String[] tags) {
+    private void sendWithTimestamp(
+            String aspect, final double value, Message.Type type, long timestamp, String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
         send(aspect, value, type, Double.NaN, timestamp, clientTagsCardinality, tags);
     }
 
-    private void sendWithTimestamp(String aspect, final double value, Message.Type type, long timestamp,
-        final TagsCardinality cardinality, String[] tags) {
+    private void sendWithTimestamp(
+            String aspect,
+            final double value,
+            Message.Type type,
+            long timestamp,
+            final TagsCardinality cardinality,
+            String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
         send(aspect, value, type, Double.NaN, timestamp, cardinality, tags);
     }
 
-    private void sendWithTimestamp(String aspect, final long value, Message.Type type, long timestamp, String[] tags) {
+    private void sendWithTimestamp(
+            String aspect, final long value, Message.Type type, long timestamp, String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
@@ -600,8 +737,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
         send(aspect, value, type, Double.NaN, timestamp, clientTagsCardinality, tags);
     }
 
-    private void sendWithTimestamp(String aspect, final long value, Message.Type type, long timestamp,
-        final TagsCardinality cardinality, String[] tags) {
+    private void sendWithTimestamp(
+            String aspect,
+            final long value,
+            Message.Type type,
+            long timestamp,
+            final TagsCardinality cardinality,
+            String[] tags) {
         if (timestamp < MIN_TIMESTAMP) {
             timestamp = MIN_TIMESTAMP;
         }
@@ -612,178 +754,164 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Adjusts the specified counter by a given delta.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the counter to adjust
-     * @param delta
-     *     the amount to adjust the counter by
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the counter to adjust
+     * @param delta the amount to adjust the counter by
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void count(final String aspect, final long delta, final String... tags) {
         send(aspect, delta, Message.Type.COUNT, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void count(final String aspect, final long delta, final double sampleRate, final String...tags) {
+    public void count(
+            final String aspect, final long delta, final double sampleRate, final String... tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void count(final String aspect, final long delta, final double sampleRate, final TagsCardinality cardinality,
-        final String...tags) {
+    public void count(
+            final String aspect,
+            final long delta,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, cardinality, tags);
     }
 
     /**
      * Adjusts the specified counter by a given delta.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the counter to adjust
-     * @param delta
-     *     the amount to adjust the counter by
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the counter to adjust
+     * @param delta the amount to adjust the counter by
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void count(final String aspect, final double delta, final String... tags) {
         send(aspect, delta, Message.Type.COUNT, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void count(final String aspect, final double delta, final double sampleRate, final String...tags) {
+    public void count(
+            final String aspect,
+            final double delta,
+            final double sampleRate,
+            final String... tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void count(final String aspect, final double delta, final double sampleRate, final TagsCardinality cardinality,
-        final String...tags) {
+    public void count(
+            final String aspect,
+            final double delta,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, delta, Message.Type.COUNT, sampleRate, cardinality, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void countWithTimestamp(final String aspect, final long value, final long timestamp, final String...tags) {
+    public void countWithTimestamp(
+            final String aspect, final long value, final long timestamp, final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.COUNT, timestamp, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void countWithTimestamp(final String aspect, final long value, final long timestamp, final TagsCardinality cardinality,
-        final String...tags) {
+    public void countWithTimestamp(
+            final String aspect,
+            final long value,
+            final long timestamp,
+            final TagsCardinality cardinality,
+            final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.COUNT, timestamp, cardinality, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void countWithTimestamp(final String aspect, final double value, final long timestamp, final String...tags) {
+    public void countWithTimestamp(
+            final String aspect, final double value, final long timestamp, final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.COUNT, timestamp, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void countWithTimestamp(final String aspect, final double value, final long timestamp,
-        final TagsCardinality cardinality, final String...tags) {
+    public void countWithTimestamp(
+            final String aspect,
+            final double value,
+            final long timestamp,
+            final TagsCardinality cardinality,
+            final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.COUNT, timestamp, cardinality, tags);
     }
 
     /**
      * Increments the specified counter by one.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the counter to increment
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the counter to increment
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void incrementCounter(final String aspect, final String... tags) {
         count(aspect, 1, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void incrementCounter(final String aspect, final double sampleRate, final String... tags) {
+    public void incrementCounter(
+            final String aspect, final double sampleRate, final String... tags) {
         count(aspect, 1, sampleRate, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #incrementCounter(String, String[])}.
-     */
+    /** Convenience method equivalent to {@link #incrementCounter(String, String[])}. */
     @Override
     public void increment(final String aspect, final String... tags) {
         incrementCounter(aspect, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void increment(final String aspect, final double sampleRate, final String...tags ) {
+    public void increment(final String aspect, final double sampleRate, final String... tags) {
         incrementCounter(aspect, sampleRate, tags);
     }
 
     /**
      * Decrements the specified counter by one.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the counter to decrement
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the counter to decrement
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void decrementCounter(final String aspect, final String... tags) {
         count(aspect, -1, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public void decrementCounter(String aspect, final double sampleRate, final String... tags) {
         count(aspect, -1, sampleRate, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #decrementCounter(String, String[])}.
-     */
+    /** Convenience method equivalent to {@link #decrementCounter(String, String[])}. */
     @Override
     public void decrement(final String aspect, final String... tags) {
         decrementCounter(aspect, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public void decrement(final String aspect, final double sampleRate, final String... tags) {
         decrementCounter(aspect, sampleRate, tags);
@@ -792,397 +920,402 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Records the latest fixed value for the specified named gauge.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the gauge
-     * @param value
-     *     the new reading of the gauge
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the gauge
+     * @param value the new reading of the gauge
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void recordGaugeValue(final String aspect, final double value, final String... tags) {
         send(aspect, value, Message.Type.GAUGE, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordGaugeValue(final String aspect, final double value, final double sampleRate, final String... tags) {
+    public void recordGaugeValue(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordGaugeValue(final String aspect, final double value, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordGaugeValue(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, cardinality, tags);
     }
 
     /**
      * Records the latest fixed value for the specified named gauge.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the gauge
-     * @param value
-     *     the new reading of the gauge
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the gauge
+     * @param value the new reading of the gauge
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void recordGaugeValue(final String aspect, final long value, final String... tags) {
         send(aspect, value, Message.Type.GAUGE, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordGaugeValue(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void recordGaugeValue(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordGaugeValue(final String aspect, final long value, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordGaugeValue(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, value, Message.Type.GAUGE, sampleRate, cardinality, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
-     */
+    /** Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}. */
     @Override
     public void gauge(final String aspect, final double value, final String... tags) {
         recordGaugeValue(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gauge(final String aspect, final double value, final double sampleRate, final String... tags) {
+    public void gauge(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gauge(final String aspect, final double value, final double sampleRate,final TagsCardinality cardinality,
-        final String... tags) {
+    public void gauge(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, cardinality, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
-     */
+    /** Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}. */
     @Override
     public void gauge(final String aspect, final long value, final String... tags) {
         recordGaugeValue(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gauge(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void gauge(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gauge(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
-        final String... tags) {
+    public void gauge(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordGaugeValue(aspect, value, sampleRate, cardinality, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gaugeWithTimestamp(final String aspect, final double value, final long timestamp, final String... tags) {
+    public void gaugeWithTimestamp(
+            final String aspect, final double value, final long timestamp, final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.GAUGE, timestamp, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gaugeWithTimestamp(final String aspect, final double value, final long timestamp,
-        final TagsCardinality cardinality, final String... tags) {
+    public void gaugeWithTimestamp(
+            final String aspect,
+            final double value,
+            final long timestamp,
+            final TagsCardinality cardinality,
+            final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.GAUGE, timestamp, cardinality, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gaugeWithTimestamp(final String aspect, final long value, final long timestamp, final String... tags) {
+    public void gaugeWithTimestamp(
+            final String aspect, final long value, final long timestamp, final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.GAUGE, timestamp, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void gaugeWithTimestamp(final String aspect, final long value, final long timestamp, final TagsCardinality cardinality,
-        final String... tags) {
+    public void gaugeWithTimestamp(
+            final String aspect,
+            final long value,
+            final long timestamp,
+            final TagsCardinality cardinality,
+            final String... tags) {
         sendWithTimestamp(aspect, value, Message.Type.GAUGE, timestamp, cardinality, tags);
     }
 
     /**
      * Records an execution time in milliseconds for the specified named operation.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the timed operation
-     * @param timeInMs
-     *     the time in milliseconds
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the timed operation
+     * @param timeInMs the time in milliseconds
+     * @param tags array of tags to be added to the data
      */
     @Override
-    public void recordExecutionTime(final String aspect, final long timeInMs, final String... tags) {
+    public void recordExecutionTime(
+            final String aspect, final long timeInMs, final String... tags) {
         send(aspect, timeInMs, Message.Type.TIME, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordExecutionTime(final String aspect, final long timeInMs, final double sampleRate, final String... tags) {
+    public void recordExecutionTime(
+            final String aspect,
+            final long timeInMs,
+            final double sampleRate,
+            final String... tags) {
         send(aspect, timeInMs, Message.Type.TIME, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordExecutionTime(final String aspect, final long timeInMs, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordExecutionTime(
+            final String aspect,
+            final long timeInMs,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, timeInMs, Message.Type.TIME, sampleRate, cardinality, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #recordExecutionTime(String, long, String[])}.
-     */
+    /** Convenience method equivalent to {@link #recordExecutionTime(String, long, String[])}. */
     @Override
     public void time(final String aspect, final long value, final String... tags) {
         recordExecutionTime(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void time(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void time(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         recordExecutionTime(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void time(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
-        final String... tags) {
+    public void time(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordExecutionTime(aspect, value, sampleRate, cardinality, tags);
     }
 
     /**
      * Records a value for the specified named histogram.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the histogram
-     * @param value
-     *     the value to be incorporated in the histogram
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the histogram
+     * @param value the value to be incorporated in the histogram
+     * @param tags array of tags to be added to the data
      */
     @Override
-    public void recordHistogramValue(final String aspect, final double value, final String... tags) {
+    public void recordHistogramValue(
+            final String aspect, final double value, final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordHistogramValue(final String aspect, final double value, final double sampleRate, final String... tags) {
+    public void recordHistogramValue(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordHistogramValue(final String aspect, final double value, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordHistogramValue(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, sampleRate, cardinality, tags);
     }
 
     /**
      * Records a value for the specified named histogram.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the histogram
-     * @param value
-     *     the value to be incorporated in the histogram
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the histogram
+     * @param value the value to be incorporated in the histogram
+     * @param tags array of tags to be added to the data
      */
     @Override
     public void recordHistogramValue(final String aspect, final long value, final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordHistogramValue(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void recordHistogramValue(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordHistogramValue(final String aspect, final long value, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordHistogramValue(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, value, Message.Type.HISTOGRAM, sampleRate, cardinality, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
-     */
+    /** Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}. */
     @Override
     public void histogram(final String aspect, final double value, final String... tags) {
         recordHistogramValue(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void histogram(final String aspect, final double value, final double sampleRate, final String... tags) {
+    public void histogram(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final String... tags) {
         recordHistogramValue(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void histogram(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality,
-        final String... tags) {
+    public void histogram(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordHistogramValue(aspect, value, sampleRate, cardinality, tags);
     }
 
-    /**
-     * Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}.
-     */
+    /** Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}. */
     @Override
     public void histogram(final String aspect, final long value, final String... tags) {
         recordHistogramValue(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void histogram(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void histogram(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         recordHistogramValue(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void histogram(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
-        final String... tags) {
+    public void histogram(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordHistogramValue(aspect, value, sampleRate, cardinality, tags);
     }
 
     /**
      * Records a value for the specified named distribution.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the distribution
-     * @param value
-     *     the value to be incorporated in the distribution
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the distribution
+     * @param value the value to be incorporated in the distribution
+     * @param tags array of tags to be added to the data
      */
     @Override
-    public void recordDistributionValue(final String aspect, final double value, final String... tags) {
+    public void recordDistributionValue(
+            final String aspect, final double value, final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordDistributionValue(final String aspect, final double value, final double sampleRate, final String... tags) {
+    public void recordDistributionValue(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordDistributionValue(final String aspect, final double value, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordDistributionValue(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, cardinality, tags);
     }
 
     /**
      * Records a value for the specified named distribution.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the distribution
-     * @param value
-     *     the value to be incorporated in the distribution
-     * @param tags
-     *     array of tags to be added to the data
+     * @param aspect the name of the distribution
+     * @param value the value to be incorporated in the distribution
+     * @param tags array of tags to be added to the data
      */
     @Override
-    public void recordDistributionValue(final String aspect, final long value, final String... tags) {
+    public void recordDistributionValue(
+            final String aspect, final long value, final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordDistributionValue(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void recordDistributionValue(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void recordDistributionValue(final String aspect, final long value, final double sampleRate,
-        final TagsCardinality cardinality, final String... tags) {
+    public void recordDistributionValue(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         send(aspect, value, Message.Type.DISTRIBUTION, sampleRate, cardinality, tags);
     }
 
@@ -1194,20 +1327,24 @@ public class NonBlockingStatsDClient implements StatsDClient {
         recordDistributionValue(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void distribution(final String aspect, final double value, final double sampleRate, final String... tags) {
+    public void distribution(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final String... tags) {
         recordDistributionValue(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void distribution(final String aspect, final double value, final double sampleRate, final TagsCardinality cardinality,
-        final String... tags) {
+    public void distribution(
+            final String aspect,
+            final double value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordDistributionValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -1219,20 +1356,21 @@ public class NonBlockingStatsDClient implements StatsDClient {
         recordDistributionValue(aspect, value, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void distribution(final String aspect, final long value, final double sampleRate, final String... tags) {
+    public void distribution(
+            final String aspect, final long value, final double sampleRate, final String... tags) {
         recordDistributionValue(aspect, value, sampleRate, tags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
-    public void distribution(final String aspect, final long value, final double sampleRate, final TagsCardinality cardinality,
-        final String... tags) {
+    public void distribution(
+            final String aspect,
+            final long value,
+            final double sampleRate,
+            final TagsCardinality cardinality,
+            final String... tags) {
         recordDistributionValue(aspect, value, sampleRate, cardinality, tags);
     }
 
@@ -1273,15 +1411,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Records an event.
      *
-     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     * <p>This method is a DataDog extension, and may not work with other servers.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param event
-     *     The event to record
-     * @param eventTags
-     *     array of tags to be added to the data
-     *
+     * @param event The event to record
+     * @param eventTags array of tags to be added to the data
      * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#events-1">
      *     http://docs.datadoghq.com/guides/dogstatsd/#events-1</a>
      */
@@ -1291,29 +1426,31 @@ public class NonBlockingStatsDClient implements StatsDClient {
         if (cardinality == null) {
             cardinality = clientTagsCardinality;
         }
-        statsDProcessor.send(new AlphaNumericMessage(Message.Type.EVENT, "", cardinality) {
-            @Override public boolean writeTo(StringBuilder builder, int capacity) {
-                final String title = escapeEventString(prefix + event.getTitle());
-                final String text = escapeEventString(event.getText());
-                builder.append(Message.Type.EVENT.toString())
-                    .append("{")
-                    .append(getUtf8Length(title))
-                    .append(",")
-                    .append(getUtf8Length(text))
-                    .append("}:")
-                    .append(title)
-                    .append("|");
+        statsDProcessor.send(
+                new AlphaNumericMessage(Message.Type.EVENT, "", cardinality) {
+                    @Override
+                    public boolean writeTo(StringBuilder builder, int capacity) {
+                        final String title = escapeEventString(prefix + event.getTitle());
+                        final String text = escapeEventString(event.getText());
+                        builder.append(Message.Type.EVENT.toString())
+                                .append("{")
+                                .append(getUtf8Length(title))
+                                .append(",")
+                                .append(getUtf8Length(text))
+                                .append("}:")
+                                .append(title)
+                                .append("|");
 
-                if (text != null) {
-                    builder.append(text);
-                }
+                        if (text != null) {
+                            builder.append(text);
+                        }
 
-                eventMap(event, builder);
-                tagString(eventTags, builder);
-                writeMessageTail(builder, tagsCardinality);
-                return false;
-            }
-        });
+                        eventMap(event, builder);
+                        tagString(eventTags, builder);
+                        writeMessageTail(builder, tagsCardinality);
+                        return false;
+                    }
+                });
         this.telemetry.incrEventsSent(1);
     }
 
@@ -1334,12 +1471,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Records a run status for the specified named service check.
      *
-     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     * <p>This method is a DataDog extension, and may not work with other servers.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param sc
-     *     the service check object
+     * @param sc the service check object
      */
     @Override
     public void recordServiceCheckRun(final ServiceCheck sc) {
@@ -1348,29 +1484,30 @@ public class NonBlockingStatsDClient implements StatsDClient {
             cardinality = clientTagsCardinality;
         }
 
-        statsDProcessor.send(new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "", cardinality) {
-            @Override
-            public boolean writeTo(StringBuilder sb, int capacity) {
-                // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
-                sb.append(Message.Type.SERVICE_CHECK.toString())
-                        .append("|")
-                        .append(sc.getName())
-                        .append("|")
-                        .append(sc.getStatus());
-                if (sc.getTimestamp() > 0) {
-                    sb.append("|d:").append(sc.getTimestamp());
-                }
-                if (sc.getHostname() != null) {
-                    sb.append("|h:").append(sc.getHostname());
-                }
-                tagString(sc.getTags(), sb);
-                if (sc.getMessage() != null) {
-                    sb.append("|m:").append(sc.getEscapedMessage());
-                }
-                writeMessageTail(sb, tagsCardinality);
-                return false;
-            }
-        });
+        statsDProcessor.send(
+                new AlphaNumericMessage(Message.Type.SERVICE_CHECK, "", cardinality) {
+                    @Override
+                    public boolean writeTo(StringBuilder sb, int capacity) {
+                        // see http://docs.datadoghq.com/guides/dogstatsd/#service-checks
+                        sb.append(Message.Type.SERVICE_CHECK.toString())
+                                .append("|")
+                                .append(sc.getName())
+                                .append("|")
+                                .append(sc.getStatus());
+                        if (sc.getTimestamp() > 0) {
+                            sb.append("|d:").append(sc.getTimestamp());
+                        }
+                        if (sc.getHostname() != null) {
+                            sb.append("|h:").append(sc.getHostname());
+                        }
+                        tagString(sc.getTags(), sb);
+                        if (sc.getMessage() != null) {
+                            sb.append("|m:").append(sc.getEscapedMessage());
+                        }
+                        writeMessageTail(sb, tagsCardinality);
+                        return false;
+                    }
+                });
         this.telemetry.incrServiceChecksSent(1);
     }
 
@@ -1378,9 +1515,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * Updates and returns tags completed with the entityID tag if needed.
      *
      * @param tags the current constant tags list
-     *
      * @param entityID the entityID string provided by argument
-     *
      * @return true if tags was modified
      */
     private static boolean updateTagsWithEntityID(final List<String> tags, String entityID) {
@@ -1396,9 +1531,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return false;
     }
 
-    /**
-     * Convenience method equivalent to {@link #recordServiceCheckRun(ServiceCheck sc)}.
-     */
+    /** Convenience method equivalent to {@link #recordServiceCheckRun(ServiceCheck sc)}. */
     @Override
     public void serviceCheck(final ServiceCheck sc) {
         recordServiceCheckRun(sc);
@@ -1412,41 +1545,43 @@ public class NonBlockingStatsDClient implements StatsDClient {
     /**
      * Records a value for the specified set.
      *
-     * <p>Sets are used to count the number of unique elements in a group. If you want to track the number of
-     * unique visitor to your site, sets are a great way to do that.</p>
+     * <p>Sets are used to count the number of unique elements in a group. If you want to track the
+     * number of unique visitor to your site, sets are a great way to do that.
      *
-     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     * <p>This method is a DataDog extension, and may not work with other servers.
      *
-     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.
      *
-     * @param aspect
-     *     the name of the set
-     * @param val
-     *     the value to track
-     * @param tags
-     *     array of tags to be added to the data
-     *
-     * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#sets">http://docs.datadoghq.com/guides/dogstatsd/#sets</a>
+     * @param aspect the name of the set
+     * @param val the value to track
+     * @param tags array of tags to be added to the data
+     * @see <a
+     *     href="http://docs.datadoghq.com/guides/dogstatsd/#sets">http://docs.datadoghq.com/guides/dogstatsd/#sets</a>
      */
     @Override
-    public void recordSetValue(final String aspect, final String val, final TagsCardinality cardinality, final String... tags) {
+    public void recordSetValue(
+            final String aspect,
+            final String val,
+            final TagsCardinality cardinality,
+            final String... tags) {
         // documentation is light, but looking at dogstatsd source, we can send string values
         // here instead of numbers
-        statsDProcessor.send(new AlphaNumericMessage(aspect, Message.Type.SET, val, cardinality, tags) {
-            protected void writeValue(StringBuilder builder) {
-                builder.append(getValue());
-            }
+        statsDProcessor.send(
+                new AlphaNumericMessage(aspect, Message.Type.SET, val, cardinality, tags) {
+                    protected void writeValue(StringBuilder builder) {
+                        builder.append(getValue());
+                    }
 
-            @Override
-            protected final boolean writeTo(StringBuilder builder, int capacity) {
-                builder.append(prefix).append(aspect).append(':');
-                writeValue(builder);
-                builder.append('|').append(type);
-                tagString(this.tags, builder);
-                writeMessageTail(builder, tagsCardinality);
-                return false;
-            }
-        });
+                    @Override
+                    protected final boolean writeTo(StringBuilder builder, int capacity) {
+                        builder.append(prefix).append(aspect).append(':');
+                        writeValue(builder);
+                        builder.append('|').append(type);
+                        tagString(this.tags, builder);
+                        writeMessageTail(builder, tagsCardinality);
+                        return false;
+                    }
+                });
     }
 
     protected boolean isInvalidSample(double sampleRate) {
@@ -1489,22 +1624,22 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     class TelemetryMessage extends NumericMessage<Integer> {
-        private final String tagsString;  // pre-baked comma separeated tags string
+        private final String tagsString; // pre-baked comma separeated tags string
 
         protected TelemetryMessage(String metric, Integer value, String tags) {
             super(metric, Message.Type.COUNT, value, clientTagsCardinality, null);
             this.tagsString = tags;
-            this.done = true;  // dont aggregate telemetry messages for now
+            this.done = true; // dont aggregate telemetry messages for now
         }
 
         @Override
         public final boolean writeTo(StringBuilder builder, int capacity) {
             builder.append(aspect)
-                .append(':')
-                .append(this.value)
-                .append('|')
-                .append(type)
-                .append(tagsString);
+                    .append(':')
+                    .append(this.value)
+                    .append('|')
+                    .append(type)
+                    .append(tagsString);
             writeMessageTail(builder, tagsCardinality);
             return false;
         }

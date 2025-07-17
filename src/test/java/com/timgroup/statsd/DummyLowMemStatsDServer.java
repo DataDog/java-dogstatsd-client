@@ -1,9 +1,7 @@
-
 package com.timgroup.statsd;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 class DummyLowMemStatsDServer extends UDPDummyStatsDServer {
     private final AtomicInteger messageCount = new AtomicInteger(0);

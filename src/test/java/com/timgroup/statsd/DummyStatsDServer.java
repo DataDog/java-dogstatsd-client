@@ -1,5 +1,6 @@
-
 package com.timgroup.statsd;
+
+import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -10,8 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.timgroup.statsd.NonBlockingStatsDClient.DEFAULT_UDS_MAX_PACKET_SIZE_BYTES;
-
 abstract class DummyStatsDServer implements Closeable {
     private final List<String> messagesReceived = new ArrayList<String>();
     private AtomicInteger packetsReceived = new AtomicInteger(0);
@@ -20,29 +19,35 @@ abstract class DummyStatsDServer implements Closeable {
     Thread thread;
 
     protected void listen() {
-        thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
+        thread =
+                new Thread(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                final ByteBuffer packet =
+                                        ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
 
-                while(isOpen() && !Thread.interrupted()) {
-                    if (freeze) {
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
-                        }
-                    } else {
-                        try {
-                            ((Buffer)packet).clear();  // Cast necessary to handle Java9 covariant return types
-                                                       // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
-                            receive(packet);
-                            handlePacket(packet);
-                        } catch (IOException e) {
-                        }
-                    }
-                }
-            }
-        });
+                                while (isOpen() && !Thread.interrupted()) {
+                                    if (freeze) {
+                                        try {
+                                            Thread.sleep(10);
+                                        } catch (InterruptedException e) {
+                                        }
+                                    } else {
+                                        try {
+                                            ((Buffer) packet)
+                                                    .clear(); // Cast necessary to handle Java9
+                                            // covariant return types
+                                            // see: https://jira.mongodb.org/browse/JAVA-2559 for
+                                            // ref.
+                                            receive(packet);
+                                            handlePacket(packet);
+                                        } catch (IOException e) {
+                                        }
+                                    }
+                                }
+                            }
+                        });
         thread.setDaemon(true);
         thread.start();
     }
@@ -75,7 +80,7 @@ abstract class DummyStatsDServer implements Closeable {
 
         while (!done) {
             try {
-                synchronized(messagesReceived) {
+                synchronized (messagesReceived) {
                     done = !messagesReceived.isEmpty();
                 }
 
@@ -83,7 +88,7 @@ abstract class DummyStatsDServer implements Closeable {
                     done = false;
                     List<String> messages = this.messagesReceived();
                     for (String message : messages) {
-                        if(message.contains(prefix)) {
+                        if (message.contains(prefix)) {
                             return;
                         }
                     }
@@ -95,7 +100,7 @@ abstract class DummyStatsDServer implements Closeable {
     }
 
     public List<String> messagesReceived() {
-        synchronized(messagesReceived) {
+        synchronized (messagesReceived) {
             return new ArrayList<String>(messagesReceived);
         }
     }
@@ -122,12 +127,11 @@ abstract class DummyStatsDServer implements Closeable {
     protected abstract void receive(ByteBuffer packet) throws IOException;
 
     protected void addMessage(String msg) {
-        synchronized(messagesReceived) {
+        synchronized (messagesReceived) {
             String trimmed = msg.trim();
             if (!trimmed.isEmpty()) {
                 messagesReceived.add(msg.trim());
             }
         }
     }
-
 }

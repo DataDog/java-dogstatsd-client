@@ -9,7 +9,7 @@ import java.util.TimerTask;
 
 public class StatsDAggregator {
     public static int DEFAULT_FLUSH_INTERVAL = 2000; // 2s
-    public static int DEFAULT_SHARDS = 4;  // 4 partitions to reduce contention.
+    public static int DEFAULT_SHARDS = 4; // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
@@ -33,12 +33,13 @@ public class StatsDAggregator {
     /**
      * StatsDAggregtor constructor.
      *
-     * @param processor     the message processor, aggregated messages will be queued in the high priority queue.
-     * @param shards        number of shards for the aggregation map.
+     * @param processor the message processor, aggregated messages will be queued in the high
+     *     priority queue.
+     * @param shards number of shards for the aggregation map.
      * @param flushInterval flush interval in miliseconds, 0 disables message aggregation.
-     *
-     * */
-    public StatsDAggregator(final StatsDProcessor processor, final int shards, final long flushInterval) {
+     */
+    public StatsDAggregator(
+            final StatsDProcessor processor, final int shards, final long flushInterval) {
         this.processor = processor;
         this.flushInterval = flushInterval;
         this.shardGranularity = shards;
@@ -48,15 +49,12 @@ public class StatsDAggregator {
             this.scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
         }
 
-        for (int i = 0 ; i < this.shardGranularity ; i++) {
+        for (int i = 0; i < this.shardGranularity; i++) {
             this.aggregateMetrics.add(i, new HashMap<Message, Message>());
         }
     }
 
-    /**
-     * Start the aggregator flushing scheduler.
-     *
-     * */
+    /** Start the aggregator flushing scheduler. */
     public void start() {
         if (flushInterval > 0) {
             // snapshot of processor telemetry - avoid volatile reference to harness CPU cache
@@ -66,10 +64,7 @@ public class StatsDAggregator {
         }
     }
 
-    /**
-     * Stop the aggregator flushing scheduler.
-     *
-     * */
+    /** Stop the aggregator flushing scheduler. */
     public void stop() {
         if (flushInterval > 0) {
             scheduler.cancel();
@@ -80,9 +75,8 @@ public class StatsDAggregator {
      * Aggregate a message if possible.
      *
      * @param message the dogstatsd Message we wish to aggregate.
-     * @return        a boolean reflecting if the message was aggregated.
-     *
-     * */
+     * @return a boolean reflecting if the message was aggregated.
+     */
     public boolean aggregateMessage(Message message) {
         if (flushInterval == 0 || !message.canAggregate() || message.getDone()) {
             return false;
@@ -130,7 +124,7 @@ public class StatsDAggregator {
     }
 
     protected void flush() {
-        for (int i = 0 ; i < shardGranularity ; i++) {
+        for (int i = 0; i < shardGranularity; i++) {
             Map<Message, Message> map = aggregateMetrics.get(i);
 
             synchronized (map) {

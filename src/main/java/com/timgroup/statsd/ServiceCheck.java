@@ -1,15 +1,18 @@
 package com.timgroup.statsd;
 
 /**
- * A service check model, which is used to format a service check message
- * sent to the datadog agent.
+ * A service check model, which is used to format a service check message sent to the datadog agent.
  */
 public class ServiceCheck {
 
     public enum Status {
-        OK(0), WARNING(1), CRITICAL(2), UNKNOWN(3);
+        OK(0),
+        WARNING(1),
+        CRITICAL(2),
+        UNKNOWN(3);
 
         private final int val;
+
         Status(final int val) {
             this.val = val;
         }
@@ -79,8 +82,7 @@ public class ServiceCheck {
         }
     }
 
-    private ServiceCheck() {
-    }
+    private ServiceCheck() {}
 
     public String getName() {
         return name;

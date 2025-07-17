@@ -21,17 +21,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
- * This class is a partial copy of the {@code com.google.common.base.Utf8}
- * <a href="https://github.com/google/guava/blob/v33.0.0/guava/src/com/google/common/base/Utf8.java">class</a>
- * from the Guava library.
- * It is copied here to avoid a dependency on Guava.
+ * This class is a partial copy of the {@code com.google.common.base.Utf8} <a
+ * href="https://github.com/google/guava/blob/v33.0.0/guava/src/com/google/common/base/Utf8.java">class</a>
+ * from the Guava library. It is copied here to avoid a dependency on Guava.
  */
 final class Utf8 {
 
-    private static final int UTF8_REPLACEMENT_LENGTH = StandardCharsets.UTF_8.newEncoder().replacement().length;
+    private static final int UTF8_REPLACEMENT_LENGTH =
+            StandardCharsets.UTF_8.newEncoder().replacement().length;
 
-    private Utf8() {
-    }
+    private Utf8() {}
 
     /**
      * Returns the number of bytes in the UTF-8-encoded form of {@code sequence}. For a string, this
@@ -39,7 +38,7 @@ final class Utf8 {
      * time and space.
      *
      * @throws IllegalArgumentException if {@code sequence} contains ill-formed UTF-16 (unpaired
-     *                                  surrogates)
+     *     surrogates)
      */
     public static int encodedLength(CharSequence sequence) {
         // Warning to maintainers: this implementation is highly optimized.
@@ -84,7 +83,8 @@ final class Utf8 {
                 if (MIN_SURROGATE <= character && character <= MAX_SURROGATE) {
                     // Check that we have a well-formed surrogate pair.
                     if (Character.codePointAt(sequence, index) == character) {
-                        // Bad input so deduct char length and account for the replacement characters
+                        // Bad input so deduct char length and account for the replacement
+                        // characters
                         utf8Length += -2 + UTF8_REPLACEMENT_LENGTH - 1;
                     } else {
                         index++;

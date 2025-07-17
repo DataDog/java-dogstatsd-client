@@ -14,19 +14,15 @@ public class NamedPipeSocketAddress extends SocketAddress {
         return pipe;
     }
 
-    /**
-     * Return true if object is a NamedPipeSocketAddress referring to the same path.
-     */
+    /** Return true if object is a NamedPipeSocketAddress referring to the same path. */
     public boolean equals(Object object) {
         if (object instanceof NamedPipeSocketAddress) {
-            return pipe.equals(((NamedPipeSocketAddress)object).pipe);
+            return pipe.equals(((NamedPipeSocketAddress) object).pipe);
         }
         return false;
     }
 
-    /**
-     * A normalized version of the pipe name that includes the `\\.\pipe\` prefix
-     */
+    /** A normalized version of the pipe name that includes the `\\.\pipe\` prefix */
     static String normalizePipeName(String pipeName) {
         if (pipeName.startsWith(NAMED_PIPE_PREFIX)) {
             return pipeName;

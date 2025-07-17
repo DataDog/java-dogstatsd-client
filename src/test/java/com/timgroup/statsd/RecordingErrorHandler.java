@@ -1,10 +1,9 @@
 package com.timgroup.statsd;
 
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.List;
 import java.util.Queue;
-
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * @author Taylor Schilling

@@ -1,18 +1,15 @@
 package com.timgroup.statsd;
 
-import jnr.unixsocket.UnixSocketAddress;
-import jnr.unixsocket.UnixSocketChannel;
-import jnr.unixsocket.UnixSocketOptions;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
+import jnr.unixsocket.UnixSocketAddress;
+import jnr.unixsocket.UnixSocketChannel;
+import jnr.unixsocket.UnixSocketOptions;
 
-/**
- * A ClientChannel for Unix domain sockets.
- */
+/** A ClientChannel for Unix domain sockets. */
 public class UnixStreamClientChannel implements ClientChannel {
     private final UnixSocketAddress address;
     private final int timeout;
@@ -20,14 +17,17 @@ public class UnixStreamClientChannel implements ClientChannel {
     private final int bufferSize;
 
     private SocketChannel delegate;
-    private final ByteBuffer delimiterBuffer = ByteBuffer.allocateDirect(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
+    private final ByteBuffer delimiterBuffer =
+            ByteBuffer.allocateDirect(Integer.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
 
     /**
      * Creates a new NamedPipeClientChannel with the given address.
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize) throws IOException {
+    UnixStreamClientChannel(
+            SocketAddress address, int timeout, int connectionTimeout, int bufferSize)
+            throws IOException {
         this.delegate = null;
         this.address = (UnixSocketAddress) address;
         this.timeout = timeout;
@@ -75,13 +75,16 @@ public class UnixStreamClientChannel implements ClientChannel {
 
     /**
      * Writes all bytes from the given buffer to the channel.
+     *
      * @param bb buffer to write
-     * @param canReturnOnTimeout if true, we return if the channel is blocking and we haven't written anything yet
+     * @param canReturnOnTimeout if true, we return if the channel is blocking and we haven't
+     *     written anything yet
      * @param deadline deadline for the write
      * @return number of bytes written
      * @throws IOException if the channel is closed or an error occurs
      */
-    public int writeAll(ByteBuffer bb, boolean canReturnOnTimeout, long deadline) throws IOException {
+    public int writeAll(ByteBuffer bb, boolean canReturnOnTimeout, long deadline)
+            throws IOException {
         int remaining = bb.remaining();
         int written = 0;
         while (remaining > 0) {
@@ -130,7 +133,8 @@ public class UnixStreamClientChannel implements ClientChannel {
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux
             // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
-            // We'd have better timeout support if we used Java 16's native Unix domain socket support (JEP 380)
+            // We'd have better timeout support if we used Java 16's native Unix domain socket
+            // support (JEP 380)
             delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
         try {

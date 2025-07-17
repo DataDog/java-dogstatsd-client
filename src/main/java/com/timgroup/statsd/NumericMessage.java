@@ -3,7 +3,8 @@ package com.timgroup.statsd;
 public abstract class NumericMessage<T extends Number> extends Message {
     protected Number value;
 
-    protected NumericMessage(String aspect, Message.Type type, T value, TagsCardinality cardinality, String[] tags) {
+    protected NumericMessage(
+            String aspect, Message.Type type, T value, TagsCardinality cardinality, String[] tags) {
         super(aspect, type, cardinality, tags);
         this.value = value;
     }
@@ -11,12 +12,11 @@ public abstract class NumericMessage<T extends Number> extends Message {
     /**
      * Aggregate message.
      *
-     * @param message
-     *     Message to aggregate.
+     * @param message Message to aggregate.
      */
     @Override
     public void aggregate(Message message) {
-        NumericMessage msg = (NumericMessage)message;
+        NumericMessage msg = (NumericMessage) message;
         Number value = msg.getValue();
         switch (msg.getType()) {
             case GAUGE:

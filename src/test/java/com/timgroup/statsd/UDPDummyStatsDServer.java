@@ -28,11 +28,11 @@ public class UDPDummyStatsDServer extends DummyStatsDServer {
         try {
             server.close();
         } catch (Exception e) {
-            //ignore
+            // ignore
         }
     }
 
     int getPort() throws IOException {
-        return ((InetSocketAddress)server.getLocalAddress()).getPort();
+        return ((InetSocketAddress) server.getLocalAddress()).getPort();
     }
 }

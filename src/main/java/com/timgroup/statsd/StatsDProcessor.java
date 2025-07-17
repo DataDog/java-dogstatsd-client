@@ -1,22 +1,17 @@
 package com.timgroup.statsd;
 
-import com.timgroup.statsd.Message;
-
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class StatsDProcessor {
     protected static final String MESSAGE_TOO_LONG = "Message longer than size of sendBuffer";
-    protected static final int WAIT_SLEEP_MS = 10;  // 10 ms would be a 100HZ slice
+    protected static final int WAIT_SLEEP_MS = 10; // 10 ms would be a 100HZ slice
 
     protected final StatsDClientErrorHandler handler;
 
@@ -116,8 +111,7 @@ public abstract class StatsDProcessor {
                             sendBuffer = bufferPool.borrow();
                             writeBuilderToSendBuffer(sendBuffer);
                         }
-                    }
-                    while (partialWrite);
+                    } while (partialWrite);
 
                     if (!haveMessages()) {
                         outboundQueue.put(sendBuffer);
@@ -153,21 +147,21 @@ public abstract class StatsDProcessor {
                 // https://en.wikipedia.org/wiki/UTF-8#Description
                 // https://en.wikipedia.org/wiki/UTF-16#Description
                 if (ch < 0x80) {
-                    byteBuffer[blen++] = (byte)ch;
+                    byteBuffer[blen++] = (byte) ch;
                 } else if (ch < 0x800) {
-                    byteBuffer[blen++] = (byte)(192 | (ch >> 6));
-                    byteBuffer[blen++] = (byte)(128 | (ch & 63));
+                    byteBuffer[blen++] = (byte) (192 | (ch >> 6));
+                    byteBuffer[blen++] = (byte) (128 | (ch & 63));
                 } else if (ch < 0xd800 || ch >= 0xe000) {
-                    byteBuffer[blen++] = (byte)(224 | (ch >> 12));
-                    byteBuffer[blen++] = (byte)(128 | ((ch >> 6) & 63));
-                    byteBuffer[blen++] = (byte)(128 | (ch & 63));
+                    byteBuffer[blen++] = (byte) (224 | (ch >> 12));
+                    byteBuffer[blen++] = (byte) (128 | ((ch >> 6) & 63));
+                    byteBuffer[blen++] = (byte) (128 | (ch & 63));
                 } else {
                     // surrogate pair
                     int decoded = ((ch & 0x3ff) << 10) | (charBuffer[++i] & 0x3ff) | 0x10000;
-                    byteBuffer[blen++] = (byte)(240 | (decoded >> 18));
-                    byteBuffer[blen++] = (byte)(128 | ((decoded >> 12) & 63));
-                    byteBuffer[blen++] = (byte)(128 | ((decoded >> 6) & 63));
-                    byteBuffer[blen++] = (byte)(128 | (decoded & 63));
+                    byteBuffer[blen++] = (byte) (240 | (decoded >> 18));
+                    byteBuffer[blen++] = (byte) (128 | ((decoded >> 12) & 63));
+                    byteBuffer[blen++] = (byte) (128 | ((decoded >> 6) & 63));
+                    byteBuffer[blen++] = (byte) (128 | (decoded & 63));
                 }
 
                 if (blen >= maxPacketSizeBytes) {
@@ -180,10 +174,16 @@ public abstract class StatsDProcessor {
         }
     }
 
-    StatsDProcessor(final int queueSize, final StatsDClientErrorHandler handler,
-            final int maxPacketSizeBytes, final int poolSize, final int workers,
-            final int aggregatorFlushInterval, final int aggregatorShards,
-            final ThreadFactory threadFactory) throws Exception {
+    StatsDProcessor(
+            final int queueSize,
+            final StatsDClientErrorHandler handler,
+            final int maxPacketSizeBytes,
+            final int poolSize,
+            final int workers,
+            final int aggregatorFlushInterval,
+            final int aggregatorShards,
+            final ThreadFactory threadFactory)
+            throws Exception {
 
         this.handler = handler;
         this.threadFactory = threadFactory;
@@ -222,8 +222,9 @@ public abstract class StatsDProcessor {
 
     void startWorkers(final String namePrefix) {
         aggregator.start();
-        // each task is a busy loop taking up one thread, so keep it simple and use an array of threads
-        for (int i = 0 ; i < workers.length ; i++) {
+        // each task is a busy loop taking up one thread, so keep it simple and use an array of
+        // threads
+        for (int i = 0; i < workers.length; i++) {
             workers[i] = threadFactory.newThread(createProcessingTask());
             workers[i].setName(namePrefix + (i + 1));
             workers[i].start();
@@ -262,7 +263,7 @@ public abstract class StatsDProcessor {
             endSignal.await();
         } else {
             // Stop all workers immediately.
-            for (int i = 0 ; i < workers.length ; i++) {
+            for (int i = 0; i < workers.length; i++) {
                 workers[i].interrupt();
             }
         }

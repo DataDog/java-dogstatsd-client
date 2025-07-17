@@ -38,7 +38,8 @@ public class UnixSocketAddressWithTransport extends SocketAddress {
         }
     }
 
-    public UnixSocketAddressWithTransport(final SocketAddress address, final TransportType transportType) {
+    public UnixSocketAddressWithTransport(
+            final SocketAddress address, final TransportType transportType) {
         this.address = address;
         this.transportType = transportType;
     }
