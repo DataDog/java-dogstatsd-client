@@ -211,31 +211,31 @@ public class NonBlockingStatsDClient implements StatsDClient {
         clientTagsCardinality = builder.tagsCardinality;
 
         {
-            List<String> costantPreTags = new ArrayList<>();
+            List<String> constantPreTags = new ArrayList<>();
             if (builder.constantTags != null) {
                 for (final String constantTag : builder.constantTags) {
-                    costantPreTags.add(constantTag);
+                    constantPreTags.add(constantTag);
                 }
             }
             // Support "dd.internal.entity_id" internal tag.
-            updateTagsWithEntityID(costantPreTags, builder.entityID);
+            updateTagsWithEntityID(constantPreTags, builder.entityID);
             for (final Literal literal : Literal.values()) {
                 final String envVal = literal.envVal();
                 if (envVal != null && !envVal.trim().isEmpty()) {
-                    costantPreTags.add(literal.tag() + ":" + envVal);
+                    constantPreTags.add(literal.tag() + ":" + envVal);
                 }
             }
-            if (costantPreTags.isEmpty()) {
+            if (constantPreTags.isEmpty()) {
                 constantTagsRendered = null;
             } else {
                 constantTagsRendered =
                         tagString(
-                                        costantPreTags.toArray(new String[costantPreTags.size()]),
+                                        constantPreTags.toArray(new String[constantPreTags.size()]),
                                         null,
                                         new StringBuilder())
                                 .toString();
             }
-            costantPreTags = null;
+            constantPreTags = null;
             containerID = getContainerID(builder.containerID, builder.originDetectionEnabled);
         }
 
