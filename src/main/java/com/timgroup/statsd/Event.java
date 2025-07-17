@@ -15,6 +15,7 @@ public class Event {
     private String priority;
     private String sourceTypeName;
     private String alertType;
+    private TagsCardinality tagsCardinality;
 
     public String getTitle() {
         return title;
@@ -50,6 +51,10 @@ public class Event {
 
     public String getAlertType() {
         return alertType;
+    }
+
+    public TagsCardinality getTagsCardinality() {
+        return tagsCardinality;
     }
 
     public static Builder builder() {
@@ -182,6 +187,17 @@ public class Event {
         public Builder withAlertType(final AlertType alertType) {
             //noinspection StringToUpperCaseOrToLowerCaseWithoutLocale
             event.alertType = alertType.name().toLowerCase();
+            return this;
+        }
+
+        /**
+         * Set tags cardinality for this event.
+         * @param cardinality
+         *     specify cardinality for Kubernetes or Docker tags added by the Agent.
+         * @return Builder object being used.
+         */
+        public Builder withTagsCardinality(final TagsCardinality cardinality) {
+            event.tagsCardinality = cardinality;
             return this;
         }
     }

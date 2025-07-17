@@ -17,13 +17,23 @@ public class NoOpStatsDClient implements StatsDClient {
 
     @Override public void count(String aspect, long delta, double sampleRate, String... tags) { }
 
+    @Override public void count(String aspect, long delta, double sampleRate, TagsCardinality cardinality, String... tags) { }
+
     @Override public void count(String aspect, double delta, String... tags) { }
 
     @Override public void count(String aspect, double delta, double sampleRate, String... tags) { }
 
+    @Override public void count(String aspect, double delta, double sampleRate, TagsCardinality cardinality, String... tags) { }
+
     @Override public void countWithTimestamp(String aspect, long delta, long timestamp, String... tags) { }
 
+    @Override public void countWithTimestamp(String aspect, long delta, long timestamp, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void countWithTimestamp(String aspect, double delta, long timestamp, String... tags) { }
+
+    @Override public void countWithTimestamp(String aspect, double delta, long timestamp, TagsCardinality cardinality,
+        String... tags) { }
 
     @Override public void incrementCounter(String aspect, String... tags) { }
 
@@ -45,61 +55,105 @@ public class NoOpStatsDClient implements StatsDClient {
 
     @Override public void recordGaugeValue(String aspect, double value, double sampleRate, String... tags) { }
 
+    @Override public void recordGaugeValue(String aspect, double value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void recordGaugeValue(String aspect, long value, String... tags) { }
 
     @Override public void recordGaugeValue(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void recordGaugeValue(String aspect, long value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
 
     @Override public void gauge(String aspect, double value, String... tags) { }
 
     @Override public void gauge(String aspect, double value, double sampleRate, String... tags) { }
 
+    @Override public void gauge(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags) { }
+
     @Override public void gauge(String aspect, long value, String... tags) { }
 
     @Override public void gauge(String aspect, long value, double sampleRate, String... tags) { }
 
+    @Override public void gauge(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags) { }
+
     @Override public void gaugeWithTimestamp(String aspect, double value, long timestamp, String... tags) { }
 
+    @Override public void gaugeWithTimestamp(String aspect, double value, long timestamp, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void gaugeWithTimestamp(String aspect, long value, long timestamp, String... tags) { }
+
+    @Override public void gaugeWithTimestamp(String aspect, long value, long timestamp, TagsCardinality cardinality,
+        String... tags) { }
 
     @Override public void recordExecutionTime(String aspect, long timeInMs, String... tags) { }
 
     @Override public void recordExecutionTime(String aspect, long timeInMs, double sampleRate, String... tags) { }
 
+    @Override public void recordExecutionTime(String aspect, long timeInMs, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void time(String aspect, long value, String... tags) { }
 
     @Override public void time(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void time(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags) { }
 
     @Override public void recordHistogramValue(String aspect, double value, String... tags) { }
 
     @Override public void recordHistogramValue(String aspect, double value, double sampleRate, String... tags) { }
 
+    @Override public void recordHistogramValue(String aspect, double value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void recordHistogramValue(String aspect, long value, String... tags) { }
 
     @Override public void recordHistogramValue(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void recordHistogramValue(String aspect, long value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
 
     @Override public void histogram(String aspect, double value, String... tags) { }
 
     @Override public void histogram(String aspect, double value, double sampleRate, String... tags) { }
 
+    @Override public void histogram(String aspect, double value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void histogram(String aspect, long value, String... tags) { }
 
     @Override public void histogram(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void histogram(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags) { }
 
     @Override public void recordDistributionValue(String aspect, double value, String... tags) { }
 
     @Override public void recordDistributionValue(String aspect, double value, double sampleRate, String... tags) { }
 
+    @Override public void recordDistributionValue(String aspect, double value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void recordDistributionValue(String aspect, long value, String... tags) { }
 
     @Override public void recordDistributionValue(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void recordDistributionValue(String aspect, long value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
 
     @Override public void distribution(String aspect, double value, String... tags) { }
 
     @Override public void distribution(String aspect, double value, double sampleRate, String... tags) { }
 
+    @Override public void distribution(String aspect, double value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
+
     @Override public void distribution(String aspect, long value, String... tags) { }
 
     @Override public void distribution(String aspect, long value, double sampleRate, String... tags) { }
+
+    @Override public void distribution(String aspect, long value, double sampleRate, TagsCardinality cardinality,
+        String... tags) { }
 
     @Override public void recordEvent(final Event event, final String... tags) { }
 
@@ -108,4 +162,6 @@ public class NoOpStatsDClient implements StatsDClient {
     @Override public void serviceCheck(ServiceCheck sc) { }
 
     @Override public void recordSetValue(String aspect, String value, String... tags) { }
+
+    @Override public void recordSetValue(String aspect, String value, TagsCardinality cardinality, String... tags) { }
 }

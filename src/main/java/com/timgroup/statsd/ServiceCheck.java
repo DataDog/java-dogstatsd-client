@@ -24,6 +24,7 @@ public class ServiceCheck {
 
     private Status status;
 
+    private TagsCardinality tagsCardinality;
     private String[] tags;
 
     public static Builder builder() {
@@ -68,6 +69,11 @@ public class ServiceCheck {
             return this;
         }
 
+        public Builder withTagsCardinality(final TagsCardinality cardinality) {
+            res.tagsCardinality = cardinality;
+            return this;
+        }
+
         public ServiceCheck build() {
             return res;
         }
@@ -98,6 +104,10 @@ public class ServiceCheck {
 
     public int getTimestamp() {
         return timestamp;
+    }
+
+    public TagsCardinality getTagsCardinality() {
+        return tagsCardinality;
     }
 
     public String[] getTags() {

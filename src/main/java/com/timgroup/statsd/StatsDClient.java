@@ -78,6 +78,26 @@ public interface StatsDClient extends Closeable {
      *     the name of the counter to adjust
      * @param delta
      *     the amount to adjust the counter by
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, long delta, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
+     * Adjusts the specified counter by a given delta.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param delta
+     *     the amount to adjust the counter by
      * @param tags
      *     array of tags to be added to the data
      */
@@ -100,6 +120,26 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void count(String aspect, double delta, double sampleRate, String... tags);
+
+    /**
+     * Adjusts the specified counter by a given delta.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param delta
+     *     the amount to adjust the counter by
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void count(String aspect, double delta, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Set the counter metric at the given time to the specified value.
@@ -138,10 +178,56 @@ public interface StatsDClient extends Closeable {
      *     the amount to adjust the counter by
      * @param timestamp
      *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void countWithTimestamp(String aspect, long value, long timestamp, TagsCardinality cardinality, String... tags);
+
+    /**
+     * Set the counter metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param value
+     *     the amount to adjust the counter by
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
      * @param tags
      *     array of tags to be added to the data
      */
     void countWithTimestamp(String aspect, double value, long timestamp, String... tags);
+
+    /**
+     * Set the counter metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the counter to adjust
+     * @param value
+     *     the amount to adjust the counter by
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void countWithTimestamp(String aspect, double value, long timestamp, TagsCardinality cardinality, String... tags);
 
     /**
      * Increments the specified counter by one.
@@ -292,6 +378,26 @@ public interface StatsDClient extends Closeable {
      *     the name of the gauge
      * @param value
      *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordGaugeValue(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
+     * Records the latest fixed value for the specified named gauge.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
      * @param tags
      *     array of tags to be added to the data
      */
@@ -314,6 +420,26 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void recordGaugeValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Records the latest fixed value for the specified named gauge.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordGaugeValue(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, double, String[])}.
@@ -342,6 +468,22 @@ public interface StatsDClient extends Closeable {
     void gauge(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, double, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gauge(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordGaugeValue(String, long, String[])}.
      *
      * @param aspect
@@ -365,8 +507,23 @@ public interface StatsDClient extends Closeable {
      * @param tags
      *     array of tags to be added to the data
      */
-
     void gauge(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordGaugeValue(String, long, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gauge(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Set the gauge metric at the given time to the specified value.
@@ -397,10 +554,48 @@ public interface StatsDClient extends Closeable {
      *     the new reading of the gauge
      * @param timestamp
      *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gaugeWithTimestamp(String aspect, double value, long timestamp, TagsCardinality cardinality, String... tags);
+
+    /**
+     * Set the gauge metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
      * @param tags
      *     array of tags to be added to the data
      */
     void gaugeWithTimestamp(String aspect, long value, long timestamp, String... tags);
+
+    /**
+     * Set the gauge metric at the given time to the specified value.
+     *
+     * <p>Values with an explicit timestamp are never aggregated and
+     * will be recorded as the metric value at the given time.</p>
+     *
+     * @param aspect
+     *     the name of the gauge
+     * @param value
+     *     the new reading of the gauge
+     * @param timestamp
+     *     timestamp of the value, as seconds from the epoch of 1970-01-01T00:00:00Z
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void gaugeWithTimestamp(String aspect, long value, long timestamp, TagsCardinality cardinality, String... tags);
 
     /**
      * Records an execution time in milliseconds for the specified named operation.
@@ -437,6 +632,27 @@ public interface StatsDClient extends Closeable {
     void recordExecutionTime(String aspect, long timeInMs, double sampleRate, String... tags);
 
     /**
+     * Records an execution time in milliseconds for the specified named operation.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the timed operation
+     * @param timeInMs
+     *     the time in milliseconds
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+
+    void recordExecutionTime(String aspect, long timeInMs, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordExecutionTime(String, long, String[])}.
      *
      * @param aspect
@@ -461,6 +677,22 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void time(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordExecutionTime(String, long, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the timed operation
+     * @param value
+     *     the time in milliseconds
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void time(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Records a value for the specified named histogram.
@@ -507,6 +739,26 @@ public interface StatsDClient extends Closeable {
      *     the name of the histogram
      * @param value
      *     the value to be incorporated in the histogram
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordHistogramValue(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
+     * Records a value for the specified named histogram.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
      * @param tags
      *     array of tags to be added to the data
      */
@@ -529,6 +781,26 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void recordHistogramValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Records a value for the specified named histogram.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordHistogramValue(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, double, String[])}.
@@ -557,6 +829,22 @@ public interface StatsDClient extends Closeable {
     void histogram(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Convenience method equivalent to {@link #recordHistogramValue(String, double, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void histogram(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordHistogramValue(String, long, String[])}.
      *
      * @param aspect
@@ -581,6 +869,22 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void histogram(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordHistogramValue(String, long, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the histogram
+     * @param value
+     *     the value to be incorporated in the histogram
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void histogram(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Records a value for the specified named distribution.
@@ -627,6 +931,26 @@ public interface StatsDClient extends Closeable {
      *     the name of the distribution
      * @param value
      *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
      * @param tags
      *     array of tags to be added to the data
      */
@@ -649,6 +973,26 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void recordDistributionValue(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Records a value for the specified named distribution.
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void recordDistributionValue(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, double, String[])}.
@@ -677,6 +1021,20 @@ public interface StatsDClient extends Closeable {
     void distribution(String aspect, double value, double sampleRate, String... tags);
 
     /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, double, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, double value, double sampleRate, TagsCardinality cardinality, String... tags);
+
+    /**
      * Convenience method equivalent to {@link #recordDistributionValue(String, long, String[])}.
      *
      * @param aspect
@@ -701,6 +1059,22 @@ public interface StatsDClient extends Closeable {
      *     array of tags to be added to the data
      */
     void distribution(String aspect, long value, double sampleRate, String... tags);
+
+    /**
+     * Convenience method equivalent to {@link #recordDistributionValue(String, long, double, TagsCardinality, String[])}.
+     *
+     * @param aspect
+     *     the name of the distribution
+     * @param value
+     *     the value to be incorporated in the distribution
+     * @param sampleRate
+     *     percentage of time metric to be sent
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     */
+    void distribution(String aspect, long value, double sampleRate, TagsCardinality cardinality, String... tags);
 
     /**
      * Records an event.
@@ -756,4 +1130,26 @@ public interface StatsDClient extends Closeable {
      */
     void recordSetValue(String aspect, String value, String... tags);
 
+    /**
+     * Records a value for the specified set.
+     *
+     * <p>Sets are used to count the number of unique elements in a group. If you want to track the number of
+     * unique visitor to your site, sets are a great way to do that.</p>
+     *
+     * <p>This method is a DataDog extension, and may not work with other servers.</p>
+     *
+     * <p>This method is non-blocking and is guaranteed not to throw an exception.</p>
+     *
+     * @param aspect
+     *     the name of the set
+     * @param value
+     *     the value to track
+     * @param cardinality
+     *     specify cardinality for Kubernetes or Docker tags added by the Agent
+     * @param tags
+     *     array of tags to be added to the data
+     *
+     * @see <a href="http://docs.datadoghq.com/guides/dogstatsd/#sets">http://docs.datadoghq.com/guides/dogstatsd/#sets</a>
+     */
+    void recordSetValue(String aspect, String value, TagsCardinality cardinality, String... tags);
 }
