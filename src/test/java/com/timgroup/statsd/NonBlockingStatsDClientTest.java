@@ -1311,6 +1311,7 @@ public class NonBlockingStatsDClientTest {
                 builder.hostname("localhost")
                         .port(port)
                         .blocking(true)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         client.gauge("test", 1);
