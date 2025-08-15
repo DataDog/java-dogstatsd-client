@@ -17,7 +17,7 @@ deploy_to_sonatype:
   tags:
     - "runner:docker"
 
-  image: maven:3.6.3-jdk-8-slim
+  image: maven:3.9-eclipse-temurin-8
 
   script:
     # Ensure we don't print commands being run to the logs during credential
