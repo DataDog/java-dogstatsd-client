@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 4.4.5 / 2025.08.15
+
+* [IMPROVEMENT] Only send externalEnv when origin detection is enabled. See [#278][]
+* [FEATURE] Add per-metric tags cardinality setting. See [#277][]
+* [FEATURE] Add global tags cardinality setting. See [#276][]
+* [FEATURE] Use mountinfo for origin detection. See [#275][]
+* [FEATURE] Add support for externalEnv field. See [#274][]
+
 ## 4.4.4 / 2025.03.27
 
 * [IMPROVEMENT] Performance improvements. See [#263][]
