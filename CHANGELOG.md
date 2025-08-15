@@ -272,7 +272,11 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#249]: https://github.com/DataDog/java-dogstatsd-client/issues/249
 [#256]: https://github.com/DataDog/java-dogstatsd-client/issues/256
 [#263]: https://github.com/DataDog/java-dogstatsd-client/issues/263
-
+[#274]: https://github.com/DataDog/java-dogstatsd-client/issues/274
+[#275]: https://github.com/DataDog/java-dogstatsd-client/issues/275
+[#276]: https://github.com/DataDog/java-dogstatsd-client/issues/276
+[#277]: https://github.com/DataDog/java-dogstatsd-client/issues/277
+[#278]: https://github.com/DataDog/java-dogstatsd-client/issues/278
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
