@@ -47,6 +47,7 @@ public class NonBlockingStatsDClientTest {
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
 
+    private boolean originDetectionEnabled;
     private String containerID;
     private String externalEnv;
     private String tagsCardinality;
@@ -64,6 +65,14 @@ public class NonBlockingStatsDClientTest {
 
     public NonBlockingStatsDClientTest(
             String containerID, String externalEnv, String tagsCardinality) {
+
+        // externalEnv requires origin detection to be enabled, however we don't want the code to
+        // actually detect container id from the environment that runs the test.
+        if (externalEnv != null) {
+            originDetectionEnabled = true;
+            containerID = "fake-container-id";
+        }
+
         this.containerID = containerID;
         this.externalEnv = externalEnv;
         this.tagsCardinality = tagsCardinality;
@@ -99,7 +108,7 @@ public class NonBlockingStatsDClientTest {
                         .hostname("localhost")
                         .port(server.getPort())
                         .enableTelemetry(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .aggregationFlushInterval(100)
                         .containerID(containerID)
                         .build();
@@ -110,7 +119,7 @@ public class NonBlockingStatsDClientTest {
                         .port(server.getPort())
                         .enableTelemetry(false)
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
     }
@@ -303,7 +312,7 @@ public class NonBlockingStatsDClientTest {
                         .port(server.getPort())
                         .errorHandler(errorHandler)
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
 
@@ -611,7 +620,7 @@ public class NonBlockingStatsDClientTest {
                         .queueSize(Integer.MAX_VALUE)
                         .constantTags("instance:foo", "app:bar")
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -635,7 +644,7 @@ public class NonBlockingStatsDClientTest {
                         .queueSize(Integer.MAX_VALUE)
                         .constantTags("instance:foo", "app:bar")
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -659,7 +668,7 @@ public class NonBlockingStatsDClientTest {
                         .queueSize(Integer.MAX_VALUE)
                         .constantTags("instance:foo", "app:bar")
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -684,7 +693,7 @@ public class NonBlockingStatsDClientTest {
                         .queueSize(Integer.MAX_VALUE)
                         .containerID(containerID)
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .build();
         try {
             client.gauge("value", 423);
@@ -709,7 +718,7 @@ public class NonBlockingStatsDClientTest {
                         .constantTags(constantTags)
                         .enableAggregation(false)
                         .containerID(containerID)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .build();
         try {
             client.gauge("value", 423);
@@ -734,7 +743,7 @@ public class NonBlockingStatsDClientTest {
                         .entityID(entity_value + "-arg")
                         .containerID(containerID)
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .build();
         try {
             client.gauge("value", 423);
@@ -757,7 +766,7 @@ public class NonBlockingStatsDClientTest {
                 new NonBlockingStatsDClientBuilder()
                         .prefix("my.prefix")
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -783,7 +792,7 @@ public class NonBlockingStatsDClientTest {
                             .prefix("checkEnvVars")
                             .hostname("localhost")
                             .port(server.getPort())
-                            .originDetectionEnabled(false)
+                            .originDetectionEnabled(originDetectionEnabled)
                             .aggregationFlushInterval(100)
                             .containerID(containerID)
                             .build();
@@ -814,7 +823,7 @@ public class NonBlockingStatsDClientTest {
                         .hostname("localhost")
                         .port(server.getPort())
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -836,7 +845,7 @@ public class NonBlockingStatsDClientTest {
                         .hostname("localhost")
                         .port(server.getPort())
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -857,7 +866,7 @@ public class NonBlockingStatsDClientTest {
                         .hostname("localhost")
                         .port(server.getPort())
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         try {
@@ -958,7 +967,7 @@ public class NonBlockingStatsDClientTest {
                         .hostname("localhost")
                         .port(server.getPort())
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
 
@@ -1064,7 +1073,7 @@ public class NonBlockingStatsDClientTest {
                         .port(server.getPort())
                         .errorHandler(errorHandler)
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build()) {
 
@@ -1114,7 +1123,7 @@ public class NonBlockingStatsDClientTest {
                         .telemetryFlushInterval(500)
                         .errorHandler(errorHandler)
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
 
@@ -1167,7 +1176,7 @@ public class NonBlockingStatsDClientTest {
                         .prefix("")
                         .hostname("localhost")
                         .aggregationFlushInterval(100)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .port(port);
         final SlowStatsDNonBlockingStatsDClient client =
                 ((SlowStatsDNonBlockingStatsDClientBuilder) builder).build();
@@ -1241,7 +1250,7 @@ public class NonBlockingStatsDClientTest {
                         .prefix("")
                         .hostname("localhost")
                         .enableAggregation(false)
-                        .originDetectionEnabled(false)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .port(server.getPort());
 
@@ -1269,7 +1278,7 @@ public class NonBlockingStatsDClientTest {
                 new NonBlockingStatsDClientBuilder() {
                     @Override
                     public NonBlockingStatsDClient build() {
-                        this.originDetectionEnabled(false);
+                        this.originDetectionEnabled(originDetectionEnabled);
                         return new NonBlockingStatsDClient(resolve()) {
                             @Override
                             ClientChannel createByteChannel(
@@ -1302,6 +1311,7 @@ public class NonBlockingStatsDClientTest {
                 builder.hostname("localhost")
                         .port(port)
                         .blocking(true)
+                        .originDetectionEnabled(originDetectionEnabled)
                         .containerID(containerID)
                         .build();
         client.gauge("test", 1);
@@ -1318,7 +1328,7 @@ public class NonBlockingStatsDClientTest {
                     @Override
                     public NonBlockingStatsDClient build() {
                         this.enableAggregation(false);
-                        this.originDetectionEnabled(false);
+                        this.originDetectionEnabled(originDetectionEnabled);
                         this.bufferPoolSize(1);
                         return new NonBlockingStatsDClient(resolve()) {
                             @Override

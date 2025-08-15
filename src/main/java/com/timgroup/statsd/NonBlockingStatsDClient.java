@@ -180,7 +180,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final int maxPacketSizeBytes;
     private final boolean blocking;
     private final String containerID;
-    private final String externalEnv = Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV"));
+    private final String externalEnv;
     final TagsCardinality clientTagsCardinality;
 
     /**
@@ -236,8 +236,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
                                 .toString();
             }
             constantPreTags = null;
-            containerID = getContainerID(builder.containerID, builder.originDetectionEnabled);
         }
+
+        boolean originDetectionEnabled = isOriginDetectionEnabled(builder.originDetectionEnabled);
+        containerID = getContainerID(builder.containerID, originDetectionEnabled);
+        externalEnv = originDetectionEnabled ? Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV")) : "";
 
         try {
             clientChannel =
@@ -1588,7 +1591,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
-    boolean isOriginDetectionEnabled(boolean originDetectionEnabled) {
+    static boolean isOriginDetectionEnabled(boolean originDetectionEnabled) {
         if (!originDetectionEnabled) {
             // origin detection is explicitly disabled
             // or a user-defined container ID was provided
@@ -1606,12 +1609,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return true;
     }
 
-    private String getContainerID(String containerID, boolean originDetectionEnabled) {
+    private static String getContainerID(String containerID, boolean originDetectionEnabled) {
         if (containerID != null && !containerID.isEmpty()) {
             return containerID;
         }
 
-        if (isOriginDetectionEnabled(originDetectionEnabled)) {
+        if (originDetectionEnabled) {
             CgroupReader reader = new CgroupReader();
             return reader.getContainerID();
         }
