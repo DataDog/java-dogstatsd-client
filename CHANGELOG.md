@@ -2,7 +2,7 @@
 
 ## 4.4.5 / 2025.08.15
 
-* [IMPROVEMENT] Only send externalEnv when origin detection is enabled. See [#278][]
+* [IMPROVEMENT] Only send externalEnv when origin detection is enabled. See [#279][]
 * [FEATURE] Add per-metric tags cardinality setting. See [#277][]
 * [FEATURE] Add global tags cardinality setting. See [#276][]
 * [FEATURE] Use mountinfo for origin detection. See [#275][]
@@ -276,7 +276,7 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#275]: https://github.com/DataDog/java-dogstatsd-client/issues/275
 [#276]: https://github.com/DataDog/java-dogstatsd-client/issues/276
 [#277]: https://github.com/DataDog/java-dogstatsd-client/issues/277
-[#278]: https://github.com/DataDog/java-dogstatsd-client/issues/278
+[#279]: https://github.com/DataDog/java-dogstatsd-client/issues/279
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
