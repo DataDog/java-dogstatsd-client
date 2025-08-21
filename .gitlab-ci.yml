@@ -17,7 +17,7 @@ deploy_to_sonatype:
   tags:
     - "runner:docker"
 
-  image: maven:3.6.3-jdk-8-slim
+  image: maven:3.9-eclipse-temurin-8
 
   script:
     # Ensure we don't print commands being run to the logs during credential
@@ -25,10 +25,10 @@ deploy_to_sonatype:
     - set +x
 
     - echo "Installing AWSCLI..."
-    - apt update
-    - apt install -y python3 python3-pip
-    - python3 -m pip install awscli
-
+    - apt-get update
+    - apt-get install -y pipx
+    - pipx install awscli
+    - export PATH="$PATH:$HOME/.local/bin"
     - echo "Fetching Sonatype user..."
     - export SONATYPE_USER=$(aws ssm get-parameter --region us-east-1 --name ci.java-dogstatsd-client.publishing.sonatype_username --with-decryption --query "Parameter.Value" --out text)
     - echo "Fetching Sonatype password..."
