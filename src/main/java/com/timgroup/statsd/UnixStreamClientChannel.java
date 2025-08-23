@@ -137,36 +137,48 @@ public class UnixStreamClientChannel implements ClientChannel {
         if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket) {
             try {
                 // Use reflection to avoid compiling Java 16+ classes in incompatible versions
-                Class<?> protocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
-                Object unixProtocol = Enum.valueOf((Class<Enum>) protocolFamilyClass, "UNIX");
-                // Explicitly set StandardProtocolFamily.UNIX so that the socket uses the UDS protocol
+                Class<?> protocolFamilyClass = Class.forName("java.net.ProtocolFamily");
+                Class<?> standardProtocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
+                Object unixProtocol = Enum.valueOf((Class<Enum>) standardProtocolFamilyClass, "UNIX");
                 Method openMethod = SocketChannel.class.getMethod("open", protocolFamilyClass);
-                // Open the socketchannel with the UDS protocol
+                // Open a socketchannel with Unix Domain Socket protocol family
                 SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
                 
-                if (connectionTimeout > 0) {
-                    channel.socket().setSoTimeout(connectionTimeout);
-                }
+                // if (connectionTimeout > 0) {
+                //     channel.socket().setSoTimeout(connectionTimeout);
+                // }
+                channel.configureBlocking(true);
+
                 try {
                     System.out.println("========== Native UDS connect address: " + address);
                     System.out.println("========== Native UDS connect address type: " + address.getClass().getName());
+                    
+                    SocketAddress connectAddress = address;
+                    if (address instanceof UnixSocketAddressWithTransport) {
+                        connectAddress = ((UnixSocketAddressWithTransport) address).getAddress();
+                        System.out.println("========== Unwrapped address: " + connectAddress);
+                        System.out.println("========== Unwrapped address type: " + connectAddress.getClass().getName());
+                    }
+                    
                     Method connectMethod = SocketChannel.class.getMethod("connect", SocketAddress.class);
-                    boolean connected = (boolean) connectMethod.invoke(channel, address);
-                    // socketchannel is failing to connect here :(
+                    boolean connected = (boolean) connectMethod.invoke(channel, connectAddress);
                     if (!connected) {
-                        if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                            throw new IOException("Connection timed out");
-                        }
-                        if (!channel.finishConnect()) {
-                            throw new IOException("Connection failed");
-                        }
+                        // if (connectionTimeout > 0 && System.nanoTime() > deadline) {
+                        //     throw new IOException("Connection timed out");
+                        // }
+                        // if (!channel.finishConnect()) {
+                        //     throw new IOException("Connection failed");
+                        // }
+                        throw new IOException("Connection failed");
                     }
                     System.out.println("========== Connection successful");
-                    channel.socket().setSoTimeout(Math.max(timeout, 0));
-                    if (bufferSize > 0) {
-                        channel.socket().setSendBufferSize(bufferSize);
-                    }
+                    // channel.socket().setSoTimeout(Math.max(timeout, 0));
+                    // if (bufferSize > 0) {
+                    //     channel.socket().setSendBufferSize(bufferSize);
+                    // }
                 } catch (Exception e) {
+                    System.out.println("========== Native UDS connection failed with exception: " + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace();
                     try {
                         channel.close();
                     } catch (IOException __) {
@@ -178,6 +190,8 @@ public class UnixStreamClientChannel implements ClientChannel {
                 this.delegate = channel;
                 return;
             } catch (Exception e) {
+                System.out.println("========== Native UDS implementation failed with outer exception: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
                 throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
             }
         }
