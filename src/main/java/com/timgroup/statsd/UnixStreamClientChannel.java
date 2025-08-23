@@ -49,6 +49,8 @@ public class UnixStreamClientChannel implements ClientChannel {
     public synchronized int write(ByteBuffer src) throws IOException {
         connectIfNeeded();
 
+        System.out.println("========== Write called - delegate state: open=" + delegate.isOpen() + ", connected=" + delegate.isConnected());
+        
         int size = src.remaining();
         int written = 0;
         if (size == 0) {
@@ -60,11 +62,17 @@ public class UnixStreamClientChannel implements ClientChannel {
 
         try {
             long deadline = System.nanoTime() + timeout * 1_000_000L;
+            System.out.println("========== About to write delimiter buffer, size: " + delimiterBuffer.remaining());
             written = writeAll(delimiterBuffer, true, deadline);
+            System.out.println("========== Delimiter buffer written, bytes: " + written);
             if (written > 0) {
+                System.out.println("========== About to write src buffer, size: " + src.remaining());
                 written += writeAll(src, false, deadline);
+                System.out.println("========== Src buffer written, total bytes: " + written);
             }
         } catch (IOException e) {
+            System.out.println("========== Write failed with IOException: " + e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
             // If we get an exception, it's unrecoverable, we close the channel and try to reconnect
             disconnect();
             throw e;
@@ -111,7 +119,12 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     private void connectIfNeeded() throws IOException {
+        System.out.println("========== connectIfNeeded called - delegate is " + (delegate == null ? "null" : "not null"));
+        if (delegate != null) {
+            System.out.println("========== existing delegate state - open: " + delegate.isOpen() + ", connected: " + delegate.isConnected());
+        }
         if (delegate == null) {
+            System.out.println("========== calling connect()");
             connect();
         }
     }
@@ -172,6 +185,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                         throw new IOException("Connection failed");
                     }
                     System.out.println("========== Connection successful");
+                    System.out.println("========== Channel state - open: " + channel.isOpen() + ", connected: " + channel.isConnected());
                     // channel.socket().setSoTimeout(Math.max(timeout, 0));
                     // if (bufferSize > 0) {
                     //     channel.socket().setSendBufferSize(bufferSize);
