@@ -244,7 +244,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         externalEnv = originDetectionEnabled ? Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV")) : "";
 
         try {
-            clientChannel = createByteChannel(addressLookup, timeout, connectionTimeout, bufferSize, enableJdkSocket);
+            clientChannel = createByteChannel(builder.addressLookup, builder.timeout, builder.connectionTimeout, builder.socketBufferSize, builder.enableJdkSocket);
 
             ThreadFactory threadFactory =
                     builder.threadFactory != null
@@ -287,8 +287,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(telemetryAddressLookup, timeout, connectionTimeout, 
-                    bufferSize, enableJdkSocket);
+                telemetryClientChannel = createByteChannel(builder.telemetryAddressLookup, builder.timeout, builder.connectionTimeout, 
+                    builder.socketBufferSize, builder.enableJdkSocket);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor =
