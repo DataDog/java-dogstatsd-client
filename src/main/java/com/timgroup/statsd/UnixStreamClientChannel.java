@@ -206,6 +206,11 @@ public class UnixStreamClientChannel implements ClientChannel {
             } catch (Exception e) {
                 System.out.println("========== Native UDS implementation failed with outer exception: " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace();
+                
+                Throwable cause = e.getCause();
+                if (e instanceof java.lang.reflect.InvocationTargetException && cause instanceof IOException) {
+                    throw (IOException) cause;
+                }
                 throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
             }
         }
