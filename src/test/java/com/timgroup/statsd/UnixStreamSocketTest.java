@@ -184,6 +184,14 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
             attempts++;
             Thread.sleep(100);
         }
+        
+        System.out.println("=== TIMEOUT TEST DEBUG ===");
+        System.out.println("Attempts: " + attempts);
+        System.out.println("Original exception: " + originalException + " (class: " + originalException.getClass().getName() + ")");
+        System.out.println("Current exception: " + lastException + " (class: " + lastException.getClass().getName() + ")");
+        System.out.println("Are they the same object? " + (lastException == originalException));
+        System.out.println("Are they equal? " + (lastException.equals(originalException)));
+        
         assertTrue(lastException != originalException);
         assertTrue(lastException instanceof IOException);
         String timeoutMessage = lastException.getMessage();
