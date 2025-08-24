@@ -178,12 +178,19 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         server.freeze();
 
         Exception originalException = lastException;
-        while (lastException == originalException) {
+        int attempts = 0;
+        while (lastException == originalException && attempts < 50) {
             client.gauge("mycount", 20);
+            attempts++;
+            Thread.sleep(100);
         }
+        assertTrue(lastException != originalException);
         assertTrue(lastException instanceof IOException);
         String timeoutMessage = lastException.getMessage();
-        assertThat(timeoutMessage, anyOf(containsString("timed out"), containsString("broken"), containsString("pipe")));
+        // Message may be null for some exceptions (e.g. AsynchronousCloseException)
+        if (timeoutMessage != null) {
+            assertThat(timeoutMessage, anyOf(containsString("timed out"), containsString("broken"), containsString("pipe")));
+        }
 
         // Make sure we recover after we resume listening
         server.clear();
