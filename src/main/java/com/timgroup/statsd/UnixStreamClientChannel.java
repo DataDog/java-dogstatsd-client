@@ -3,12 +3,11 @@ package com.timgroup.statsd;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import jnr.unixsocket.UnixSocketOptions;
@@ -30,12 +29,15 @@ public class UnixStreamClientChannel implements ClientChannel {
      *
      * @param address Location of named pipe
      */
-    UnixStreamClientChannel(SocketAddress address, int timeout, int connectionTimeout, int bufferSize,
-            boolean enableJdkSocket) throws IOException {
+    UnixStreamClientChannel(
+            SocketAddress address,
+            int timeout,
+            int connectionTimeout,
+            int bufferSize,
+            boolean enableJdkSocket)
+            throws IOException {
         this.delegate = null;
         this.address = address;
-        System.out.println("========== Constructor address: " + address);
-        System.out.println("========== Constructor address type: " + address.getClass().getName());
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
@@ -51,30 +53,23 @@ public class UnixStreamClientChannel implements ClientChannel {
     public synchronized int write(ByteBuffer src) throws IOException {
         connectIfNeeded();
 
-        System.out.println("========== Write called - delegate state: open=" + delegate.isOpen() + ", connected=" + delegate.isConnected());
-        
         int size = src.remaining();
         int written = 0;
         if (size == 0) {
             return 0;
         }
+
         delimiterBuffer.clear();
         delimiterBuffer.putInt(size);
         delimiterBuffer.flip();
 
         try {
             long deadline = System.nanoTime() + timeout * 1_000_000L;
-            System.out.println("========== About to write delimiter buffer, size: " + delimiterBuffer.remaining());
             written = writeAll(delimiterBuffer, true, deadline);
-            System.out.println("========== Delimiter buffer written, bytes: " + written);
             if (written > 0) {
-                System.out.println("========== About to write src buffer, size: " + src.remaining());
                 written += writeAll(src, false, deadline);
-                System.out.println("========== Src buffer written, total bytes: " + written);
             }
         } catch (IOException e) {
-            System.out.println("========== Write failed with IOException: " + e.getClass().getName() + ": " + e.getMessage());
-            e.printStackTrace();
             // If we get an exception, it's unrecoverable, we close the channel and try to reconnect
             disconnect();
             throw e;
@@ -103,26 +98,25 @@ public class UnixStreamClientChannel implements ClientChannel {
         int remaining = bb.remaining();
         int written = 0;
         long timeoutMs = timeout;
-        
+
         while (remaining > 0) {
             int bytesWritten = delegate.write(bb);
-            
             if (bytesWritten > 0) {
                 remaining -= bytesWritten;
                 written += bytesWritten;
                 continue;
             }
-            
+
             if (bytesWritten == 0) {
                 if (canReturnOnTimeout && written == 0) {
                     return written;
                 }
-                
+
                 Selector selector = Selector.open();
                 try {
                     SelectionKey key = delegate.register(selector, SelectionKey.OP_WRITE);
                     long selectTimeout = timeoutMs;
-                    
+
                     if (deadline > 0) {
                         long remainingNs = deadline - System.nanoTime();
                         if (remainingNs <= 0) {
@@ -130,7 +124,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                         }
                         selectTimeout = Math.min(timeoutMs, remainingNs / 1_000_000L);
                     }
-                    
+
                     int ready = selector.select(selectTimeout);
                     if (ready == 0) {
                         throw new IOException("Write timed out after " + selectTimeout + "ms");
@@ -144,12 +138,7 @@ public class UnixStreamClientChannel implements ClientChannel {
     }
 
     private void connectIfNeeded() throws IOException {
-        System.out.println("========== connectIfNeeded called - delegate is " + (delegate == null ? "null" : "not null"));
-        if (delegate != null) {
-            System.out.println("========== existing delegate state - open: " + delegate.isOpen() + ", connected: " + delegate.isConnected());
-        }
         if (delegate == null) {
-            System.out.println("========== calling connect()");
             connect();
         }
     }
@@ -176,36 +165,39 @@ public class UnixStreamClientChannel implements ClientChannel {
             try {
                 // Use reflection to avoid compiling Java 16+ classes in incompatible versions
                 Class<?> protocolFamilyClass = Class.forName("java.net.ProtocolFamily");
-                Class<?> standardProtocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
-                Object unixProtocol = Enum.valueOf((Class<Enum>) standardProtocolFamilyClass, "UNIX");
+                Class<?> standardProtocolFamilyClass =
+                        Class.forName("java.net.StandardProtocolFamily");
+                Object unixProtocol =
+                        Enum.valueOf((Class<Enum>) standardProtocolFamilyClass, "UNIX");
                 Method openMethod = SocketChannel.class.getMethod("open", protocolFamilyClass);
                 // Open a socketchannel with Unix Domain Socket protocol family
                 SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
-                
+
                 channel.configureBlocking(false);
 
                 try {
-                    System.out.println("========== Native UDS connect address: " + address);
-                    System.out.println("========== Native UDS connect address type: " + address.getClass().getName());
-                    
                     SocketAddress connectAddress = address;
                     if (address instanceof UnixSocketAddressWithTransport) {
                         connectAddress = ((UnixSocketAddressWithTransport) address).getAddress();
-                        System.out.println("========== Unwrapped address: " + connectAddress);
-                        System.out.println("========== Unwrapped address type: " + connectAddress.getClass().getName());
                     }
-                    
-                    Method connectMethod = SocketChannel.class.getMethod("connect", SocketAddress.class);
+
+                    Method connectMethod =
+                            SocketChannel.class.getMethod("connect", SocketAddress.class);
                     boolean connected = (boolean) connectMethod.invoke(channel, connectAddress);
                     if (!connected) {
                         Selector selector = Selector.open();
                         try {
                             SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
-                            int ready = selector.select(connectionTimeout > 0 ? connectionTimeout : 1000);
+                            int ready =
+                                    selector.select(
+                                            connectionTimeout > 0 ? connectionTimeout : 1000);
                             if (ready == 0) {
-                                throw new IOException("Connection timed out after " + (connectionTimeout > 0 ? connectionTimeout : 1000) + "ms");
+                                throw new IOException(
+                                        "Connection timed out after "
+                                                + (connectionTimeout > 0 ? connectionTimeout : 1000)
+                                                + "ms");
                             }
-                            
+
                             if (key.isConnectable()) {
                                 connected = channel.finishConnect();
                                 if (!connected) {
@@ -216,40 +208,32 @@ public class UnixStreamClientChannel implements ClientChannel {
                             selector.close();
                         }
                     }
-                    
-                    System.out.println("========== Connection successful");
-                    System.out.println("========== Channel state - open: " + channel.isOpen() + ", connected: " + channel.isConnected());
-                    // channel.socket().setSoTimeout(Math.max(timeout, 0));
-                    // if (bufferSize > 0) {
-                    //     channel.socket().setSendBufferSize(bufferSize);
-                    // }
                 } catch (Exception e) {
-                    System.out.println("========== Native UDS connection failed with exception: " + e.getClass().getName() + ": " + e.getMessage());
-                    e.printStackTrace();
                     try {
                         channel.close();
                     } catch (IOException __) {
-                         // ignore
+                        // ignore
                     }
                     throw e;
                 }
-                
+
                 this.delegate = channel;
                 return;
             } catch (Exception e) {
-                System.out.println("========== Native UDS implementation failed with outer exception: " + e.getClass().getName() + ": " + e.getMessage());
-                e.printStackTrace();
-                
                 Throwable cause = e.getCause();
-                if (e instanceof java.lang.reflect.InvocationTargetException && cause instanceof IOException) {
+                if (e instanceof java.lang.reflect.InvocationTargetException
+                        && cause instanceof IOException) {
                     throw (IOException) cause;
                 }
-                throw new IOException("Failed to create UnixStreamClientChannel for native UDS implementation", e);
+                throw new IOException(
+                        "Failed to create UnixStreamClientChannel for native UDS implementation",
+                        e);
             }
         }
-        // Default to jnr-unixsocket if Java version is less than 16 or native UDS support is disabled
+        // Default to jnr-unixsocket if Java version is less than 16 or native UDS support is
+        // disabled
         UnixSocketChannel channel = UnixSocketChannel.create();
-        
+
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux
             // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
@@ -257,17 +241,12 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
 
         try {
-            // Ensure address is of type UnixSocketAddress -- this should be unnecessary after native UDS support
-            // is fixed and addresses that are not of type UnixSocketAddress are filtered out
             UnixSocketAddress unixAddress;
             if (address instanceof UnixSocketAddress) {
                 unixAddress = (UnixSocketAddress) address;
             } else {
                 unixAddress = new UnixSocketAddress(address.toString());
             }
-            
-            System.out.println("========== JNR connect address: " + unixAddress);
-            System.out.println("========== JNR connect address type: " + unixAddress.getClass().getName());
 
             if (!channel.connect(unixAddress)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {

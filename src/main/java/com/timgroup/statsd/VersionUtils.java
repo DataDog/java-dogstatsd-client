@@ -6,7 +6,8 @@ import java.util.List;
 // Logic copied from dd-trace-java Platform class. See:
 // https://github.com/DataDog/dd-trace-java/blob/master/internal-api/src/main/java/datadog/trace/api/Platform.java
 public class VersionUtils {
-    private static final Version JAVA_VERSION = parseJavaVersion(System.getProperty("java.version"));
+    private static final Version JAVA_VERSION =
+            parseJavaVersion(System.getProperty("java.version"));
 
     private static Version parseJavaVersion(String javaVersion) {
         // Remove pre-release part, usually -ea
@@ -87,7 +88,12 @@ public class VersionUtils {
         }
 
         private static boolean isAtLeast(
-                int major, int minor, int update, int atLeastMajor, int atLeastMinor, int atLeastUpdate) {
+                int major,
+                int minor,
+                int update,
+                int atLeastMajor,
+                int atLeastMinor,
+                int atLeastUpdate) {
             return (major > atLeastMajor)
                     || (major == atLeastMajor && minor > atLeastMinor)
                     || (major == atLeastMajor && minor == atLeastMinor && update >= atLeastUpdate);

@@ -7,7 +7,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -98,7 +97,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     public void sends_to_statsd() throws Exception {
         Thread.sleep(100);
         server.clear();
-        
+
         for (long i = 0; i < 5; i++) {
             client.gauge("mycount", i);
             server.waitForMessage();

@@ -244,7 +244,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
         externalEnv = originDetectionEnabled ? Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV")) : "";
 
         try {
-            clientChannel = createByteChannel(builder.addressLookup, builder.timeout, builder.connectionTimeout, builder.socketBufferSize, builder.enableJdkSocket);
+            clientChannel =
+                    createByteChannel(
+                            builder.addressLookup,
+                            builder.timeout,
+                            builder.connectionTimeout,
+                            builder.socketBufferSize,
+                            builder.enableJdkSocket);
 
             ThreadFactory threadFactory =
                     builder.threadFactory != null
@@ -287,8 +293,13 @@ public class NonBlockingStatsDClient implements StatsDClient {
                 telemetryClientChannel = clientChannel;
                 telemetryStatsDProcessor = statsDProcessor;
             } else {
-                telemetryClientChannel = createByteChannel(builder.telemetryAddressLookup, builder.timeout, builder.connectionTimeout, 
-                    builder.socketBufferSize, builder.enableJdkSocket);
+                telemetryClientChannel =
+                        createByteChannel(
+                                builder.telemetryAddressLookup,
+                                builder.timeout,
+                                builder.connectionTimeout,
+                                builder.socketBufferSize,
+                                builder.enableJdkSocket);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor =
@@ -471,7 +482,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
     }
 
     ClientChannel createByteChannel(
-            Callable<SocketAddress> addressLookup, int timeout, int connectionTimeout, int bufferSize, boolean enableJdkSocket)
+            Callable<SocketAddress> addressLookup,
+            int timeout,
+            int connectionTimeout,
+            int bufferSize,
+            boolean enableJdkSocket)
             throws Exception {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
@@ -485,8 +500,12 @@ public class NonBlockingStatsDClient implements StatsDClient {
             // Allow us to support `unix://` for both kind of sockets like in go.
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
-                    return new UnixStreamClientChannel(unixAddr.getAddress(), timeout, connectionTimeout, 
-                        bufferSize, enableJdkSocket);
+                    return new UnixStreamClientChannel(
+                            unixAddr.getAddress(),
+                            timeout,
+                            connectionTimeout,
+                            bufferSize,
+                            enableJdkSocket);
                 case UDS_DATAGRAM:
                 case UDS:
                     return new UnixDatagramClientChannel(

@@ -211,14 +211,14 @@ public class BuilderAddressTest {
 
         // Make it possible to run this code even if we don't have jnr-unixsocket.
         if (expected instanceof UnixSocketAddressWithTransport) {
-            UnixSocketAddressWithTransport a = (UnixSocketAddressWithTransport)actual;
-            UnixSocketAddressWithTransport e = (UnixSocketAddressWithTransport)expected;
+            UnixSocketAddressWithTransport a = (UnixSocketAddressWithTransport) actual;
+            UnixSocketAddressWithTransport e = (UnixSocketAddressWithTransport) expected;
             // native UDS support returns a SocketAddress rather than a UnixSocketAddress
             assertEquals(
-                ((FakeUnixSocketAddress)e.getAddress()).getPath(), 
-                a.getAddress() instanceof UnixSocketAddress ? 
-                    ((UnixSocketAddress)a.getAddress()).path() : 
-                    a.getAddress().toString()); 
+                    ((FakeUnixSocketAddress) e.getAddress()).getPath(),
+                    a.getAddress() instanceof UnixSocketAddress
+                            ? ((UnixSocketAddress) a.getAddress()).path()
+                            : a.getAddress().toString());
             assertEquals(e.getTransportType(), a.getTransportType());
         } else {
             assertEquals(expected, actual);
