@@ -7,6 +7,8 @@ import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.Selector;
+import java.nio.channels.SelectionKey;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
 import jnr.unixsocket.UnixSocketOptions;
@@ -100,19 +102,42 @@ public class UnixStreamClientChannel implements ClientChannel {
             throws IOException {
         int remaining = bb.remaining();
         int written = 0;
+        long timeoutMs = timeout;
+        
         while (remaining > 0) {
-            int read = delegate.write(bb);
-
-            // If we haven't written anything yet, we can still return
-            if (read == 0 && canReturnOnTimeout && written == 0) {
-                return written;
+            int bytesWritten = delegate.write(bb);
+            
+            if (bytesWritten > 0) {
+                remaining -= bytesWritten;
+                written += bytesWritten;
+                continue;
             }
-
-            remaining -= read;
-            written += read;
-
-            if (deadline > 0 && System.nanoTime() > deadline) {
-                throw new IOException("Write timed out");
+            
+            if (bytesWritten == 0) {
+                if (canReturnOnTimeout && written == 0) {
+                    return written;
+                }
+                
+                Selector selector = Selector.open();
+                try {
+                    SelectionKey key = delegate.register(selector, SelectionKey.OP_WRITE);
+                    long selectTimeout = timeoutMs;
+                    
+                    if (deadline > 0) {
+                        long remainingNs = deadline - System.nanoTime();
+                        if (remainingNs <= 0) {
+                            throw new IOException("Write timed out");
+                        }
+                        selectTimeout = Math.min(timeoutMs, remainingNs / 1_000_000L);
+                    }
+                    
+                    int ready = selector.select(selectTimeout);
+                    if (ready == 0) {
+                        throw new IOException("Write timed out after " + selectTimeout + "ms");
+                    }
+                } finally {
+                    selector.close();
+                }
             }
         }
         return written;
@@ -157,10 +182,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                 // Open a socketchannel with Unix Domain Socket protocol family
                 SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
                 
-                // if (connectionTimeout > 0) {
-                //     channel.socket().setSoTimeout(connectionTimeout);
-                // }
-                channel.configureBlocking(true);
+                channel.configureBlocking(false);
 
                 try {
                     System.out.println("========== Native UDS connect address: " + address);
@@ -176,14 +198,25 @@ public class UnixStreamClientChannel implements ClientChannel {
                     Method connectMethod = SocketChannel.class.getMethod("connect", SocketAddress.class);
                     boolean connected = (boolean) connectMethod.invoke(channel, connectAddress);
                     if (!connected) {
-                        // if (connectionTimeout > 0 && System.nanoTime() > deadline) {
-                        //     throw new IOException("Connection timed out");
-                        // }
-                        // if (!channel.finishConnect()) {
-                        //     throw new IOException("Connection failed");
-                        // }
-                        throw new IOException("Connection failed");
+                        Selector selector = Selector.open();
+                        try {
+                            SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
+                            int ready = selector.select(connectionTimeout > 0 ? connectionTimeout : 1000);
+                            if (ready == 0) {
+                                throw new IOException("Connection timed out after " + (connectionTimeout > 0 ? connectionTimeout : 1000) + "ms");
+                            }
+                            
+                            if (key.isConnectable()) {
+                                connected = channel.finishConnect();
+                                if (!connected) {
+                                    throw new IOException("Failed to complete connection");
+                                }
+                            }
+                        } finally {
+                            selector.close();
+                        }
                     }
+                    
                     System.out.println("========== Connection successful");
                     System.out.println("========== Channel state - open: " + channel.isOpen() + ", connected: " + channel.isConnected());
                     // channel.socket().setSoTimeout(Math.max(timeout, 0));

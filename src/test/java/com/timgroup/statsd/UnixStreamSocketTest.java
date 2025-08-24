@@ -122,34 +122,23 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         server.close();
 
         client.gauge("mycount", 20);
-        Exception originalException = lastException;
-        while (lastException == originalException) {
+        while (lastException.getMessage() == null) {
             Thread.sleep(10);
         }
         // Depending on the state of the client at that point we might get different messages.
-        assertTrue(lastException instanceof IOException);
-        String message = lastException.getMessage();
-        if (message != null) {
-            assertThat(message.toLowerCase(),
-                      anyOf(containsString("connection"), containsString("broken")));
-        }
+        assertThat(
+                lastException.getMessage(),
+                anyOf(containsString("Connection refused"), containsString("Broken pipe")));
 
         // Delete the socket file, client should throw an IOException
         lastException = new Exception();
         socketFile.delete();
 
         client.gauge("mycount", 21);
-        originalException = lastException;
-        while (lastException == originalException) {
+        while (lastException.getMessage() == null) {
             Thread.sleep(10);
         }
-        assertTrue(lastException instanceof IOException);
-        String fileMessage = lastException.getMessage();
-        if (fileMessage != null) {
-            assertThat(fileMessage.toLowerCase(),
-                      anyOf(containsString("file"), containsString("directory"), 
-                           containsString("socket"), containsString("connect")));
-        }
+        assertThat(lastException.getMessage(), containsString("No such file or directory"));
 
         // Re-open the server, next send should work OK
         DummyStatsDServer server2;
@@ -177,28 +166,11 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         // Freeze the server to simulate dsd being overwhelmed
         server.freeze();
 
-        Exception originalException = lastException;
-        int attempts = 0;
-        while (lastException == originalException && attempts < 50) {
+        while (lastException.getMessage() == null) {
             client.gauge("mycount", 20);
-            attempts++;
-            Thread.sleep(100);
         }
-        
-        System.out.println("=== TIMEOUT TEST DEBUG ===");
-        System.out.println("Attempts: " + attempts);
-        System.out.println("Original exception: " + originalException + " (class: " + originalException.getClass().getName() + ")");
-        System.out.println("Current exception: " + lastException + " (class: " + lastException.getClass().getName() + ")");
-        System.out.println("Are they the same object? " + (lastException == originalException));
-        System.out.println("Are they equal? " + (lastException.equals(originalException)));
-        
-        assertTrue(lastException != originalException);
-        assertTrue(lastException instanceof IOException);
-        String timeoutMessage = lastException.getMessage();
-        // Message may be null for some exceptions (e.g. AsynchronousCloseException)
-        if (timeoutMessage != null) {
-            assertThat(timeoutMessage, anyOf(containsString("timed out"), containsString("broken"), containsString("pipe")));
-        }
+        String excMessage = "Write timed out";
+        assertThat(lastException.getMessage(), containsString(excMessage));
 
         // Make sure we recover after we resume listening
         server.clear();
