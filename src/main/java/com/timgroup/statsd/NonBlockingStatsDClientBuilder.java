@@ -53,7 +53,7 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
 
-    /** Enable native JDK support for UDS. */
+    /** Enable native JDK support for UDS. Only available on Java 16+. */
     public boolean enableJdkSocket = NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET;
 
     /** Telemetry flush interval, in milliseconds. */
@@ -533,22 +533,20 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             @Override
             public SocketAddress call() {
                 SocketAddress socketAddress;
-                // Use native UDS support for compatible Java versions and jnr-unixsocket support
-                // otherwise
+
+                // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
                 if (VersionUtils.isJavaVersionAtLeast(16)
                         && NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET) {
                     try {
-                        // Use reflection to avoid compiling Java 16+ classes in incompatible
-                        // versions
+                        // Avoid compiling Java 16+ classes in incompatible versions
                         Class<?> unixDomainSocketAddressClass =
                                 Class.forName("java.net.UnixDomainSocketAddress");
                         Method ofMethod =
                                 unixDomainSocketAddressClass.getMethod("of", String.class);
                         socketAddress = (SocketAddress) ofMethod.invoke(null, path);
-
                     } catch (Exception e) {
                         throw new StatsDClientException(
-                                "Failed to create UnixSocketAddress for native UDS implementation",
+                                "Failed to create UnixSocketAddress for native JDK UDS implementation",
                                 e);
                     }
                 } else {

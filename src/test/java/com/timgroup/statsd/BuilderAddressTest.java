@@ -213,7 +213,7 @@ public class BuilderAddressTest {
         if (expected instanceof UnixSocketAddressWithTransport) {
             UnixSocketAddressWithTransport a = (UnixSocketAddressWithTransport) actual;
             UnixSocketAddressWithTransport e = (UnixSocketAddressWithTransport) expected;
-            // native UDS support returns a SocketAddress rather than a UnixSocketAddress
+            // Native JDK UDS support returns a SocketAddress rather than a UnixSocketAddress
             assertEquals(
                     ((FakeUnixSocketAddress) e.getAddress()).getPath(),
                     a.getAddress() instanceof UnixSocketAddress
