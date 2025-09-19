@@ -2,6 +2,7 @@ package com.timgroup.statsd;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 
 public class StatsDNonBlockingProcessor extends StatsDProcessor {
@@ -47,7 +48,12 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
                 aggregatorFlushInterval,
                 aggregatorShards,
                 threadFactory);
-        this.messages = new ArrayBlockingQueue<>(qcapacity);
+        if (qcapacity <= 8192) {
+            this.messages = new ArrayBlockingQueue<>(qcapacity);
+        } else {
+            this.messages = new LinkedBlockingQueue<>(qcapacity);
+        }
+
     }
 
     @Override
