@@ -53,7 +53,6 @@ public class StatsDNonBlockingProcessor extends StatsDProcessor {
         } else {
             this.messages = new LinkedBlockingQueue<>(qcapacity);
         }
-
     }
 
     @Override
