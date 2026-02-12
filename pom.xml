@@ -131,7 +131,7 @@
                  <dependency>
                     <groupId>com.github.jnr</groupId>
                     <artifactId>jnr-unixsocket</artifactId>
-                    <version>0.38.17</version>
+                    <version>0.38.24</version>
                 </dependency>
             </dependencies>
         </profile>
@@ -244,7 +244,7 @@
         <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jnr-unixsocket</artifactId>
-            <version>0.36</version>
+            <version>0.38.24</version>
         </dependency>
     </dependencies>
 
