@@ -1,18 +1,22 @@
 package com.timgroup.statsd;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class StatsDAggregator {
     public static int DEFAULT_FLUSH_INTERVAL = 2000; // 2s
     public static int DEFAULT_SHARDS = 4; // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
-    protected final ArrayList<Map<Message, Message>> aggregateMetrics;
+
+    @SuppressWarnings("unchecked")
+    protected final Map<Message, Message>[] aggregateMetrics;
+
+    final ReentrantLock[] locks;
 
     protected final int shardGranularity;
     protected final long flushInterval;
@@ -43,14 +47,16 @@ public class StatsDAggregator {
         this.processor = processor;
         this.flushInterval = flushInterval;
         this.shardGranularity = shards;
-        this.aggregateMetrics = new ArrayList<>(shards);
+        this.aggregateMetrics = new Map[shards];
+        this.locks = new ReentrantLock[shards];
 
         if (flushInterval > 0) {
             this.scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
         }
 
         for (int i = 0; i < this.shardGranularity; i++) {
-            this.aggregateMetrics.add(i, new HashMap<Message, Message>());
+            this.aggregateMetrics[i] = new HashMap<Message, Message>();
+            this.locks[i] = new ReentrantLock();
         }
     }
 
@@ -82,11 +88,14 @@ public class StatsDAggregator {
             return false;
         }
 
-        int hash = message.hashCode();
-        int bucket = Math.abs(hash % this.shardGranularity);
-        Map<Message, Message> map = aggregateMetrics.get(bucket);
+        // Fibonacci hashing: multiply by 2^32/phi to spread clustered hash codes evenly
+        int hash = message.hashCode() * 0x9E3779B9;
+        int bucket = (hash >>> 1) % this.shardGranularity;
+        Map<Message, Message> map = aggregateMetrics[bucket];
+        ReentrantLock lock = locks[bucket];
 
-        synchronized (map) {
+        lock.lock();
+        try {
             // For now let's just put the message in the map
             Message msg = MapUtils.putIfAbsent(map, message);
             if (msg != null) {
@@ -110,6 +119,8 @@ public class StatsDAggregator {
                     }
                 }
             }
+        } finally {
+            lock.unlock();
         }
 
         return true;
@@ -125,9 +136,11 @@ public class StatsDAggregator {
 
     protected void flush() {
         for (int i = 0; i < shardGranularity; i++) {
-            Map<Message, Message> map = aggregateMetrics.get(i);
+            Map<Message, Message> map = aggregateMetrics[i];
+            ReentrantLock lock = locks[i];
 
-            synchronized (map) {
+            lock.lock();
+            try {
                 Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
                 while (iter.hasNext()) {
                     Message msg = iter.next().getValue();
@@ -139,6 +152,8 @@ public class StatsDAggregator {
 
                     iter.remove();
                 }
+            } finally {
+                lock.unlock();
             }
         }
     }

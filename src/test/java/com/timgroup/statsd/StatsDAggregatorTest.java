@@ -253,8 +253,9 @@ public class StatsDAggregatorTest {
         waitForQueueSize(fakeProcessor.messages, 0);
 
         for (int i = 0; i < StatsDAggregator.DEFAULT_SHARDS; i++) {
-            Map<Message, Message> map = fakeProcessor.aggregator.aggregateMetrics.get(i);
-            synchronized (map) {
+            Map<Message, Message> map = fakeProcessor.aggregator.aggregateMetrics[i];
+            fakeProcessor.aggregator.locks[i].lock();
+            try {
                 Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
                 int count = 0;
                 while (iter.hasNext()) {
@@ -264,6 +265,8 @@ public class StatsDAggregatorTest {
 
                 // sharding should be balanced
                 assertEquals(iterations, count);
+            } finally {
+                fakeProcessor.aggregator.locks[i].unlock();
             }
         }
     }
