@@ -16,6 +16,10 @@
         <project.scm.id>github</project.scm.id>
         <jdk.module.illegalAccess>deny</jdk.module.illegalAccess>
         <argLine></argLine>
+        <!-- Path to java executable used to run benchmarks; override with -Dbenchmark.jvm=/path/to/java -->
+        <benchmark.jvm>java</benchmark.jvm>
+        <!-- JMH benchmark name regex filter; default matches all benchmarks -->
+        <jmh.args>.*</jmh.args>
     </properties>
 
     <licenses>
@@ -204,6 +208,74 @@
                                 </goals>
                             </execution>
                         </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>benchmarks</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.openjdk.jmh</groupId>
+                    <artifactId>jmh-core</artifactId>
+                    <version>1.37</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.openjdk.jmh</groupId>
+                    <artifactId>jmh-generator-annprocess</artifactId>
+                    <version>1.37</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.4.0</version>
+                        <executions>
+                            <execution>
+                                <id>add-benchmark-source</id>
+                                <phase>generate-test-sources</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/benchmark/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.8.1</version>
+                        <configuration>
+                            <!-- Override main source/target (normally 1.7) to 8 because
+                                 benchmark sources use lambda expressions (Java 8+). -->
+                            <source>8</source>
+                            <target>8</target>
+                            <testSource>8</testSource>
+                            <testTarget>8</testTarget>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <configuration>
+                            <executable>${benchmark.jvm}</executable>
+                            <classpathScope>test</classpathScope>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>org.openjdk.jmh.Main</argument>
+                                <argument>${jmh.args}</argument>
+                            </arguments>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
