@@ -5,8 +5,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class StatsDAggregator {
     public static int DEFAULT_FLUSH_INTERVAL = 2000; // 2s
@@ -16,7 +16,7 @@ public class StatsDAggregator {
 
     @SuppressWarnings("unchecked")
     protected final Map<Message, Message>[] aggregateMetrics;
-    private final ReadWriteLock[] locks;
+    private final Lock[] locks;
 
     protected final int shardGranularity;
     protected final long flushInterval;
@@ -49,7 +49,7 @@ public class StatsDAggregator {
         this.flushInterval = flushInterval;
         this.shardGranularity = shards;
         this.aggregateMetrics = new HashMap[shards];
-        this.locks = new ReentrantReadWriteLock[shards];
+        this.locks = new ReentrantLock[shards];
 
         if (flushInterval > 0) {
             this.scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
@@ -57,7 +57,7 @@ public class StatsDAggregator {
 
         for (int i = 0; i < this.shardGranularity; i++) {
             this.aggregateMetrics[i] = new HashMap<>();
-            this.locks[i] = new ReentrantReadWriteLock();
+            this.locks[i] = new ReentrantLock();
         }
     }
 
@@ -93,7 +93,7 @@ public class StatsDAggregator {
         int bucket = Math.abs(hash % this.shardGranularity);
         Map<Message, Message> map = aggregateMetrics[bucket];
 
-        locks[bucket].writeLock().lock();
+        locks[bucket].lock();
         try {
             // For now let's just put the message in the map
             Message msg = MapUtils.putIfAbsent(map, message);
@@ -119,7 +119,7 @@ public class StatsDAggregator {
                 }
             }
         } finally {
-            locks[bucket].writeLock().unlock();
+            locks[bucket].unlock();
         }
 
         return true;
@@ -137,7 +137,7 @@ public class StatsDAggregator {
         for (int i = 0; i < shardGranularity; i++) {
             Map<Message, Message> map = aggregateMetrics[i];
 
-            locks[i].writeLock().lock();
+            locks[i].lock();
             try {
                 Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
                 while (iter.hasNext()) {
@@ -151,7 +151,7 @@ public class StatsDAggregator {
                     iter.remove();
                 }
             } finally {
-                locks[i].writeLock().unlock();
+                locks[i].unlock();
             }
         }
     }
