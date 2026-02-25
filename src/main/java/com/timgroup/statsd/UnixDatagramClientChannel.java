@@ -16,6 +16,10 @@ class UnixDatagramClientChannel extends DatagramClientChannel {
      */
     UnixDatagramClientChannel(SocketAddress address, int timeout, int bufferSize)
             throws IOException {
+        // Ideally we could use native JDK UDS support such as with the UnixStreamClientChannel.
+        // However, DatagramChannels do not support StandardProtocolFamily.UNIX, so this is
+        // unavailable.
+        // See this open issue for updates: https://bugs.openjdk.org/browse/JDK-8297837?
         super(UnixDatagramChannel.open(), address);
         // Set send timeout, to handle the case where the transmission buffer is full
         // If no timeout is set, the send becomes blocking

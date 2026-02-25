@@ -23,7 +23,8 @@ public class UnixStreamSocketDummyStatsDServer extends DummyStatsDServer {
     public UnixStreamSocketDummyStatsDServer(String socketPath) throws IOException {
         server = UnixServerSocketChannel.open();
         server.configureBlocking(true);
-        server.socket().bind(new UnixSocketAddress(socketPath));
+        UnixSocketAddress address = new UnixSocketAddress(socketPath);
+        server.socket().bind(address);
         this.listen();
     }
 
