@@ -16,6 +16,7 @@ public class StatsDAggregator {
 
     @SuppressWarnings("unchecked")
     protected final Map<Message, Message>[] aggregateMetrics;
+
     private final Lock[] locks;
 
     protected final int shardGranularity;
