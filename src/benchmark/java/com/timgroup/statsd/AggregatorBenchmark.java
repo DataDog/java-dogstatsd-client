@@ -24,7 +24,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @State(Scope.Benchmark)
 public class AggregatorBenchmark {
 
-    @Param({"64", "1024"})
+    @Param({"1", "2", "64", "1024"})
     int distinctKeys;
 
     private StatsDAggregator aggregator;
@@ -32,7 +32,7 @@ public class AggregatorBenchmark {
 
     @Setup(Level.Trial)
     public void setup() throws Exception {
-        aggregator = new StatsDAggregator(new NoOpProcessor(), 4, 60_000);
+        aggregator = new StatsDAggregator(new NoOpProcessor(), StatsDAggregator.DEFAULT_SHARDS, StatsDAggregator.DEFAULT_FLUSH_INTERVAL);
     }
 
     @Setup(Level.Iteration)

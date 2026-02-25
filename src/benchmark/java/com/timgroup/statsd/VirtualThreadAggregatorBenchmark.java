@@ -44,7 +44,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @State(Scope.Benchmark)
 public class VirtualThreadAggregatorBenchmark {
 
-    @Param({"64", "1024"})
+    @Param({"1", "2", "64", "1024"})
     int distinctKeys;
 
     private StatsDAggregator aggregator;
@@ -54,7 +54,7 @@ public class VirtualThreadAggregatorBenchmark {
 
     @Setup(Level.Trial)
     public void setup() throws Exception {
-        aggregator = new StatsDAggregator(new AggregatorBenchmark.NoOpProcessor(), 4, 60_000);
+        aggregator = new StatsDAggregator(new AggregatorBenchmark.NoOpProcessor(), StatsDAggregator.DEFAULT_SHARDS, StatsDAggregator.DEFAULT_FLUSH_INTERVAL);
         executor = newVirtualThreadPerTaskExecutor();
         if (executor == null) {
             throw new UnsupportedOperationException(
