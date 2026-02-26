@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -14,9 +15,7 @@ public class StatsDAggregator {
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
 
-    @SuppressWarnings("unchecked")
-    protected final Map<Message, Message>[] aggregateMetrics;
-
+    protected final ArrayList<Map<Message, Message>> aggregateMetrics;
     private final Lock[] locks;
 
     protected final int shardGranularity;
@@ -43,13 +42,12 @@ public class StatsDAggregator {
      * @param shards number of shards for the aggregation map.
      * @param flushInterval flush interval in miliseconds, 0 disables message aggregation.
      */
-    @SuppressWarnings("unchecked")
     public StatsDAggregator(
             final StatsDProcessor processor, final int shards, final long flushInterval) {
         this.processor = processor;
         this.flushInterval = flushInterval;
         this.shardGranularity = shards;
-        this.aggregateMetrics = new HashMap[shards];
+        this.aggregateMetrics = new ArrayList<>(shards);
         this.locks = new ReentrantLock[shards];
 
         if (flushInterval > 0) {
@@ -57,7 +55,7 @@ public class StatsDAggregator {
         }
 
         for (int i = 0; i < this.shardGranularity; i++) {
-            this.aggregateMetrics[i] = new HashMap<>();
+            this.aggregateMetrics.add(i, new HashMap<Message, Message>());
             this.locks[i] = new ReentrantLock();
         }
     }
@@ -92,7 +90,7 @@ public class StatsDAggregator {
 
         int hash = message.hashCode();
         int bucket = Math.abs(hash % this.shardGranularity);
-        Map<Message, Message> map = aggregateMetrics[bucket];
+        Map<Message, Message> map = aggregateMetrics.get(bucket);
 
         locks[bucket].lock();
         try {
@@ -136,7 +134,7 @@ public class StatsDAggregator {
 
     protected void flush() {
         for (int i = 0; i < shardGranularity; i++) {
-            Map<Message, Message> map = aggregateMetrics[i];
+            Map<Message, Message> map = aggregateMetrics.get(i);
 
             locks[i].lock();
             try {
