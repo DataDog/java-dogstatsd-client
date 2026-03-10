@@ -52,6 +52,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
 
+    /** Use full precision when formatting numeric metric values. */
+    public boolean fullPrecision = true;
+
     /** Telemetry flush interval, in milliseconds. */
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
 
@@ -267,6 +270,12 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public NonBlockingStatsDClientBuilder enableAggregation(boolean val) {
         enableAggregation = val;
+        return this;
+    }
+
+    /** Use full precision when formatting numeric metric values. */
+    public NonBlockingStatsDClientBuilder fullPrecision(boolean val) {
+        fullPrecision = val;
         return this;
     }
 
