@@ -9,7 +9,7 @@ package com.datadoghq.dogstatsd.http.serializer;
 
 /** Builder for sketch timeseries. */
 public class SketchMetric extends Metric<SketchMetric> {
-    private static final int VALUES_PER_SKETCH_POINT = 3;
+    private static final int VALUES_PER_SKETCH_POINT = 4;
 
     SketchMetric(PayloadBuilder pb, int type, String name) {
         super(pb, type, name);
@@ -25,6 +25,7 @@ public class SketchMetric extends Metric<SketchMetric> {
      *
      * @param timestamp Timestamp of the point in seconds since Unix epoch.
      * @param sum Total sum of all observed values.
+     * @param avg Average of all observed values.
      * @param min Minimum observed value.
      * @param max Maximum observed value.
      * @param cnt Number of observed values.
@@ -35,6 +36,7 @@ public class SketchMetric extends Metric<SketchMetric> {
     public SketchMetric addPoint(
             long timestamp,
             double sum,
+            double avg,
             double min,
             double max,
             long cnt,
@@ -47,6 +49,7 @@ public class SketchMetric extends Metric<SketchMetric> {
 
         pb.timestamps.put(timestamp);
         pb.values.put(sum);
+        pb.values.put(avg);
         pb.values.put(min);
         pb.values.put(max);
         pb.counts.put(cnt);
@@ -85,6 +88,9 @@ public class SketchMetric extends Metric<SketchMetric> {
                     r.putSint64(
                             Column.valsSint64,
                             (long) pb.values.get(VALUES_PER_SKETCH_POINT * i + 2));
+                    r.putSint64(
+                            Column.valsSint64,
+                            (long) pb.values.get(VALUES_PER_SKETCH_POINT * i + 3));
                     r.putSint64(Column.valsSint64, pb.counts.get(i));
                 }
                 break;
@@ -98,6 +104,9 @@ public class SketchMetric extends Metric<SketchMetric> {
                     r.putFloat32(
                             Column.valsFloat32,
                             (float) pb.values.get(VALUES_PER_SKETCH_POINT * i + 2));
+                    r.putFloat32(
+                            Column.valsFloat32,
+                            (float) pb.values.get(VALUES_PER_SKETCH_POINT * i + 3));
                     r.putSint64(Column.valsSint64, pb.counts.get(i));
                 }
                 break;
@@ -108,6 +117,8 @@ public class SketchMetric extends Metric<SketchMetric> {
                             Column.valsFloat64, pb.values.get(VALUES_PER_SKETCH_POINT * i + 1));
                     r.putFloat64(
                             Column.valsFloat64, pb.values.get(VALUES_PER_SKETCH_POINT * i + 2));
+                    r.putFloat64(
+                            Column.valsFloat64, pb.values.get(VALUES_PER_SKETCH_POINT * i + 3));
                     r.putSint64(Column.valsSint64, pb.counts.get(i));
                 }
                 break;
