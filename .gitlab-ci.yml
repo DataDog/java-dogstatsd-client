@@ -15,7 +15,7 @@ deploy_to_sonatype:
       allow_failure: true
 
   tags:
-    - "runner:docker"
+    - "docker-in-docker:amd64"
 
   image: maven:3.9-eclipse-temurin-8
 
@@ -63,7 +63,7 @@ create_key:
   when: manual
 
   tags:
-    - "runner:docker"
+    - "docker-in-docker:amd64"
 
   image: $REGISTRY/ci/agent-key-management-tools/gpg:1
 
