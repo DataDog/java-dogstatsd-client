@@ -6,13 +6,17 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class StatsDAggregator {
     public static int DEFAULT_FLUSH_INTERVAL = 2000; // 2s
     public static int DEFAULT_SHARDS = 4; // 4 partitions to reduce contention.
 
     protected final String AGGREGATOR_THREAD_NAME = "statsd-aggregator-thread";
+
     protected final ArrayList<Map<Message, Message>> aggregateMetrics;
+    private final Lock[] locks;
 
     protected final int shardGranularity;
     protected final long flushInterval;
@@ -44,6 +48,7 @@ public class StatsDAggregator {
         this.flushInterval = flushInterval;
         this.shardGranularity = shards;
         this.aggregateMetrics = new ArrayList<>(shards);
+        this.locks = new ReentrantLock[shards];
 
         if (flushInterval > 0) {
             this.scheduler = new Timer(AGGREGATOR_THREAD_NAME, true);
@@ -51,6 +56,7 @@ public class StatsDAggregator {
 
         for (int i = 0; i < this.shardGranularity; i++) {
             this.aggregateMetrics.add(i, new HashMap<Message, Message>());
+            this.locks[i] = new ReentrantLock();
         }
     }
 
@@ -86,7 +92,8 @@ public class StatsDAggregator {
         int bucket = Math.abs(hash % this.shardGranularity);
         Map<Message, Message> map = aggregateMetrics.get(bucket);
 
-        synchronized (map) {
+        locks[bucket].lock();
+        try {
             // For now let's just put the message in the map
             Message msg = MapUtils.putIfAbsent(map, message);
             if (msg != null) {
@@ -110,6 +117,8 @@ public class StatsDAggregator {
                     }
                 }
             }
+        } finally {
+            locks[bucket].unlock();
         }
 
         return true;
@@ -127,7 +136,8 @@ public class StatsDAggregator {
         for (int i = 0; i < shardGranularity; i++) {
             Map<Message, Message> map = aggregateMetrics.get(i);
 
-            synchronized (map) {
+            locks[i].lock();
+            try {
                 Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
                 while (iter.hasNext()) {
                     Message msg = iter.next().getValue();
@@ -139,6 +149,8 @@ public class StatsDAggregator {
 
                     iter.remove();
                 }
+            } finally {
+                locks[i].unlock();
             }
         }
     }
