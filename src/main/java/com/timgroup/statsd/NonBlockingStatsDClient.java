@@ -182,6 +182,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final String containerID;
     private final String externalEnv;
     final TagsCardinality clientTagsCardinality;
+    private final boolean fullPrecision;
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the host and port
@@ -207,6 +208,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         }
 
         blocking = builder.blocking;
+        fullPrecision = builder.fullPrecision;
         maxPacketSizeBytes = builder.maxPacketSizeBytes;
         clientTagsCardinality = builder.tagsCardinality;
 
@@ -625,7 +627,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
                             tags) {
                         @Override
                         protected void writeValue(StringBuilder builder) {
-                            builder.append(format(NUMBER_FORMATTER, this.value));
+                            if (fullPrecision) {
+                                builder.append(this.value);
+                            } else {
+                                builder.append(format(NUMBER_FORMATTER, this.value));
+                            }
                         }
                     });
         }
