@@ -1,5 +1,6 @@
 package com.timgroup.statsd;
 
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -51,6 +52,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     public boolean enableTelemetry = NonBlockingStatsDClient.DEFAULT_ENABLE_TELEMETRY;
 
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
+
+    /** Enable native JDK support for UDS. Only available on Java 16+. */
+    public boolean enableJdkSocket = NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET;
 
     /** Telemetry flush interval, in milliseconds. */
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
@@ -322,6 +326,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableJdkSocket(boolean val) {
+        enableJdkSocket = val;
+        return this;
+    }
+
     /**
      * Request that all metrics from this client to be enriched to specified tag cardinality.
      *
@@ -523,8 +532,30 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return new Callable<SocketAddress>() {
             @Override
             public SocketAddress call() {
-                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
-                return new UnixSocketAddressWithTransport(socketAddress, transportType);
+                SocketAddress socketAddress;
+
+                // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
+                if (VersionUtils.isJavaVersionAtLeast(16)
+                        && NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET) {
+                    try {
+                        // Avoid compiling Java 16+ classes in incompatible versions
+                        Class<?> unixDomainSocketAddressClass =
+                                Class.forName("java.net.UnixDomainSocketAddress");
+                        Method ofMethod =
+                                unixDomainSocketAddressClass.getMethod("of", String.class);
+                        socketAddress = (SocketAddress) ofMethod.invoke(null, path);
+                    } catch (Exception e) {
+                        throw new StatsDClientException(
+                                "Failed to create UnixSocketAddress for native JDK UDS implementation",
+                                e);
+                    }
+                } else {
+                    socketAddress = new UnixSocketAddress(path);
+                }
+                UnixSocketAddressWithTransport result =
+                        new UnixSocketAddressWithTransport(socketAddress, transportType);
+
+                return result;
             }
         };
     }
