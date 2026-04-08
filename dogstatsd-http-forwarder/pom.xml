@@ -6,7 +6,7 @@
     <groupId>com.datadoghq</groupId>
     <artifactId>dogstatsd-http-forwarder</artifactId>
     <packaging>jar</packaging>
-    <name>dogstatsd-http-serializer</name>
+    <name>dogstatsd-http-forwarder</name>
     <version>1.0.0-SNAPSHOT</version>
     <description>HTTP forwarder for DogStatsD metrics.</description>
     <url>https://github.com/DataDog/java-dogstatsd-client</url>
