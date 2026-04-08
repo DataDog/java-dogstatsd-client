@@ -21,6 +21,13 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * An HTTP forwarder that delivers DogStatsD HTTP payloads to a remote endpoint.
+ *
+ * <p>Payloads are enqueued via {@link #send(byte[])} and delivered asynchronously
+ * by a background thread. Failed requests are retried with exponential back-off up
+ * to {@code maxTries} attempts before being discarded.
+ */
 public class Forwarder extends Thread {
     static final Logger logger = Logger.getLogger(Forwarder.class.getName());
     final BoundedQueue queue;
@@ -32,11 +39,22 @@ public class Forwarder extends Thread {
 
     int responseOk, responseBadRequest, responseOther;
 
+    /**
+     * Creates a new forwarder targeting the given URL.
+     *
+     * @param url              the remote HTTP endpoint to POST payloads to
+     * @param maxRequestsBytes maximum total size of buffered payloads, in bytes
+     * @param maxTries         maximum number of delivery attempts per payload
+     * @param whenFull         action to take when the queue is at capacity
+     */
     public Forwarder(URI url, long maxRequestsBytes, long maxTries, WhenFull whenFull) {
         this.url = url;
         this.queue = new BoundedQueue(maxRequestsBytes, maxTries, whenFull);
     }
 
+    /**
+     * Runs the forwarding loop, delivering queued payloads until the thread is interrupted.
+     */
     @Override
     public void run() {
         try {
@@ -48,6 +66,16 @@ public class Forwarder extends Thread {
         }
     }
 
+    /**
+     * Enqueues a payload for delivery to the remote endpoint.
+     *
+     * <p>If the queue is full, behaviour is determined by the {@link WhenFull} policy
+     * supplied at construction time.
+     *
+     * @param payload the raw bytes to deliver
+     * @throws InterruptedException if the calling thread is interrupted while waiting
+     *                              for space ({@link WhenFull#BLOCK} mode only)
+     */
     public void send(byte[] payload) throws InterruptedException {
         queue.add(payload);
     }
@@ -122,11 +150,28 @@ public class Forwarder extends Thread {
         }
     }
 
+    /**
+     * Sets the local-data value sent as the {@code x-dsd-ld} header with each request.
+     *
+     * <p>Local data carries the container ID or cgroup node inode used by the Datadog
+     * Agent for origin detection (DogStatsD protocol v1.4).
+     *
+     * @param data the local-data string, or {@code null} to omit the header
+     */
     public void setLocalData(String data) {
         logger.log(Level.INFO, "using local data: {0}", data);
         localData = data;
     }
 
+    /**
+     * Sets the external-data value sent as the {@code x-dsd-ed} header with each request.
+     *
+     * <p>External data is supplied by the Datadog Agent Admission Controller and is used
+     * by the Agent to enrich metrics with container tags when a container ID is unavailable
+     * (DogStatsD protocol v1.5, Agent &ge; v7.57.0).
+     *
+     * @param data the external-data string, or {@code null} to omit the header
+     */
     public void setExternalData(String data) {
         logger.log(Level.INFO, "using external data: {0}", data);
         externalData = data;
