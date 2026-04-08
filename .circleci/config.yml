@@ -98,7 +98,8 @@ workflows:
       - openjdk11
       - openjdk13
       - openjdk17
-#      - openjdk21
+      - openjdk21
+      - openjdk24
       - windows-openjdk12
       - openjdk8-jnr-exclude
       - openjdk8-jnr-latest
