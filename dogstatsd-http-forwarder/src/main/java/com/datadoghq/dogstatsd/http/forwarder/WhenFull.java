@@ -7,9 +7,7 @@
 
 package com.datadoghq.dogstatsd.http.forwarder;
 
-/**
- * Controls the behavior of {@link Forwarder} when its internal queue is full.
- */
+/** Controls the behavior of {@link Forwarder} when its internal queue is full. */
 public enum WhenFull {
     /** Block the caller until space becomes available in the queue. */
     BLOCK,
