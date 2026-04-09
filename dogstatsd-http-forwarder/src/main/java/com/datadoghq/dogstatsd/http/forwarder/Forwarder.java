@@ -32,6 +32,8 @@ public class Forwarder extends Thread {
     static final Logger logger = Logger.getLogger(Forwarder.class.getName());
     final BoundedQueue queue;
     final URI url;
+    final HttpClient client;
+    final Duration requestTimeout;
     final Random rng = new Random();
 
     String localData;
@@ -46,10 +48,25 @@ public class Forwarder extends Thread {
      * @param maxRequestsBytes maximum total size of buffered payloads, in bytes
      * @param maxTries maximum number of delivery attempts per payload
      * @param whenFull action to take when the queue is at capacity
+     * @param connectTimeout timeout for establishing the TCP connection
+     * @param requestTimeout timeout from sending the request until response headers are received;
+     *     {@code null} disables the request timeout
      */
-    public Forwarder(URI url, long maxRequestsBytes, long maxTries, WhenFull whenFull) {
+    public Forwarder(
+            URI url,
+            long maxRequestsBytes,
+            long maxTries,
+            WhenFull whenFull,
+            Duration connectTimeout,
+            Duration requestTimeout) {
         this.url = url;
         this.queue = new BoundedQueue(maxRequestsBytes, maxTries, whenFull);
+        this.requestTimeout = requestTimeout;
+        this.client =
+                HttpClient.newBuilder()
+                        .version(HttpClient.Version.HTTP_2)
+                        .connectTimeout(connectTimeout)
+                        .build();
     }
 
     /** Runs the forwarding loop, delivering queued payloads until the thread is interrupted. */
@@ -78,18 +95,15 @@ public class Forwarder extends Thread {
         queue.add(payload);
     }
 
-    final HttpClient client =
-            HttpClient.newBuilder()
-                    .version(HttpClient.Version.HTTP_2)
-                    .connectTimeout(Duration.ofSeconds(60))
-                    .build();
-
     void runOnce(Map.Entry<BoundedQueue.Key, byte[]> item) throws InterruptedException {
         byte[] payload = item.getValue();
         logger.log(Level.INFO, "sending {0} bytes", payload.length);
 
         HttpRequest.Builder builder =
                 HttpRequest.newBuilder(url).POST(BodyPublishers.ofByteArray(payload));
+        if (requestTimeout != null) {
+            builder.timeout(requestTimeout);
+        }
         if (localData != null) {
             builder.setHeader("x-dsd-ld", localData);
         }
