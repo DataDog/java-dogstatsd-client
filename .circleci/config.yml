@@ -14,41 +14,54 @@ commands:
           name: Grab java version and dump to file
           command: java -version > << parameters.filename >>
 
-default_steps: &default_steps
+default_steps_7-11: &default_steps_7-11
   steps:
     - checkout
-
-    - run: |
-        mvn clean install
+    - run: mvn clean install
     - run: cd dogstatsd-http-serializer && mvn clean install
+
+default_steps_11-21: &default_steps_11-21
+  steps:
+    - checkout
+    - run: mvn clean install
+    - run: cd dogstatsd-http-serializer && mvn clean install
+    - run: cd dogstatsd-http-forwarder && mvn clean install
+
+default_steps_21-24: &default_steps_21-24
+  # Java 7 source code is not compatible with OpenJDK 21 and later.
+  steps:
+    - checkout
+    - run: cd dogstatsd-http-forwarder && mvn clean install
 
 jobs:
   openjdk7:
     docker:
       - image: jfullaondo/openjdk:7
-    <<: *default_steps
+    <<: *default_steps_7-11
   openjdk8:
     docker: &jdk8
       - image: cimg/openjdk:8.0
-    <<: *default_steps
+    <<: *default_steps_7-11
   openjdk11:
     docker:
       - image: cimg/openjdk:11.0
-    <<: *default_steps
+    <<: *default_steps_11-21
   openjdk13:
     docker:
       - image: cimg/openjdk:13.0
-    <<: *default_steps
+    <<: *default_steps_11-21
   openjdk17:
     docker:
       - image: cimg/openjdk:17.0
-    <<: *default_steps
-
-## Fails with "Source option 7 is no longer supported. Use 8 or later."
-#  openjdk21:
-#    docker:
-#      - image: cimg/openjdk:21.0
-#    <<: *default_steps
+    <<: *default_steps_11-21
+  openjdk21:
+    docker:
+      - image: cimg/openjdk:21.0
+    <<: *default_steps_21-24
+  openjdk24:
+    docker:
+      - image: cimg/openjdk:24.0
+    <<: *default_steps_21-24
 
   windows-openjdk12:
     executor:
@@ -85,7 +98,8 @@ workflows:
       - openjdk11
       - openjdk13
       - openjdk17
-#      - openjdk21
+      - openjdk21
+      - openjdk24
       - windows-openjdk12
       - openjdk8-jnr-exclude
       - openjdk8-jnr-latest
