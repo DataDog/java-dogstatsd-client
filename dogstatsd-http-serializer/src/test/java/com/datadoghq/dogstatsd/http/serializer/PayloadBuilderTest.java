@@ -44,8 +44,8 @@ public class PayloadBuilderTest {
 
         b.sketch("ijk")
                 .setTags(Arrays.asList(new String[] {"foo", "baz"}))
-                .addPoint(100, 4.75, 2.25, 1.25, 1.75, 3, new int[] {1351, 1373}, new int[] {1, 2})
-                .addPoint(110, 6.5, 3.5, 2.25, 2.75, 5, new int[] {1389, 1402}, new int[] {2, 3})
+                .addPoint(100, 4.75, 1.25, 1.75, 3, new int[] {1351, 1373}, new int[] {1, 2})
+                .addPoint(110, 6.5, 2.25, 2.75, 5, new int[] {1389, 1402}, new int[] {2, 3})
                 .close();
 
         b.rate("lm").setInterval(10).addPoint(100, 3.14).close();
@@ -60,7 +60,7 @@ public class PayloadBuilderTest {
                 new int[] {
                     // MetricData
                     (3 << 3) | 2,
-                    196,
+                    188,
                     1,
                     // dictNameStr
                     (1 << 3) | 2,
@@ -195,17 +195,13 @@ public class PayloadBuilderTest {
                     6,
                     10,
                     // valsFloat32,
-                    // list(pack('<ffffffff', 4.75, 2.25, 1.25, 1.75, 6.5, 3.5, 2.25, 2.75))
+                    // list(pack('<ffffff', 4.75, 1.25, 1.75, 6.5, 2.25, 2.75))
                     (18 << 3) | 2,
                     1,
-                    32,
+                    24,
                     0,
                     0,
                     152,
-                    64,
-                    0,
-                    0,
-                    16,
                     64,
                     0,
                     0,
@@ -218,10 +214,6 @@ public class PayloadBuilderTest {
                     0,
                     0,
                     208,
-                    64,
-                    0,
-                    0,
-                    96,
                     64,
                     0,
                     0,
