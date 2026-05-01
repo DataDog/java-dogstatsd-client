@@ -55,6 +55,8 @@ public class PayloadBuilderTest {
                 .close();
 
         b.rate("lm").setInterval(10).addPoint(100, 3.14).close();
+        b.rate("no").addPoint(100, 1).addPoint(110, 1.5).close();
+        b.rate("pq").addPoint(100, 1L << 25).addPoint(110, 1.5).close();
 
         b.close();
 
@@ -66,11 +68,11 @@ public class PayloadBuilderTest {
                 new int[] {
                     // MetricData
                     (3 << 3) | 2,
-                    167,
+                    220,
                     1,
                     // dictNameStr
                     (1 << 3) | 2,
-                    17,
+                    23,
                     3,
                     97,
                     98,
@@ -88,6 +90,12 @@ public class PayloadBuilderTest {
                     2,
                     108,
                     109, // lm
+                    2,
+                    110,
+                    111, // no
+                    2,
+                    112,
+                    113, // pq
                     // dictTagsStr
                     (2 << 3) | 2,
                     12,
@@ -141,50 +149,62 @@ public class PayloadBuilderTest {
                     0,
                     // types
                     (10 << 3) | 2,
-                    4,
+                    6,
                     0x11,
                     0x03,
                     0x14,
                     0x32,
+                    0x22,
+                    0x32,
                     // names
                     (11 << 3) | 2,
-                    4,
+                    6,
+                    2,
+                    2,
                     2,
                     2,
                     2,
                     2,
                     // tags
                     (12 << 3) | 2,
-                    4,
+                    6,
                     2,
                     1,
                     4,
                     3,
+                    0,
+                    0,
                     // resources
                     (13 << 3) | 2,
-                    4,
+                    6,
                     2,
                     1,
+                    0,
+                    0,
                     0,
                     0,
                     // intervals
                     (14 << 3) | 2,
-                    4,
+                    6,
                     0,
                     0,
                     0,
                     10,
+                    0,
+                    0,
                     // numPoints
                     (15 << 3) | 2,
-                    4,
+                    6,
                     2,
                     1,
                     2,
                     1,
+                    2,
+                    2,
                     // timestamps
                     (16 << 3) | 2,
                     1,
-                    7,
+                    11,
                     200,
                     1,
                     20,
@@ -192,6 +212,10 @@ public class PayloadBuilderTest {
                     0,
                     20,
                     19,
+                    0,
+                    20,
+                    19,
+                    20,
                     // valsSint64
                     (17 << 3) | 2,
                     1,
@@ -206,10 +230,22 @@ public class PayloadBuilderTest {
                     4,
                     6,
                     10,
-                    // valsFloat64, list(pack('<d', 3.14))
-                    (19 << 3) | 2,
+                    // valsFloat32, list(pack('<ff', 1, 1.5))
+                    (18 << 3) | 2,
                     1,
                     8,
+                    0,
+                    0,
+                    128,
+                    63,
+                    0,
+                    0,
+                    192,
+                    63,
+                    // valsFloat64, list(pack('<ddd', 3.14, 1<<25, 1.5))
+                    (19 << 3) | 2,
+                    1,
+                    24,
                     31,
                     133,
                     235,
@@ -218,6 +254,22 @@ public class PayloadBuilderTest {
                     30,
                     9,
                     64,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    128,
+                    65,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    248,
+                    63,
                     // sketchNumBins
                     (20 << 3) | 2,
                     1,
@@ -245,7 +297,9 @@ public class PayloadBuilderTest {
                     // sourceTypeName
                     (23 << 3) | 2,
                     1,
-                    4,
+                    6,
+                    0,
+                    0,
                     0,
                     0,
                     0,
@@ -253,8 +307,10 @@ public class PayloadBuilderTest {
                     // origins
                     (24 << 3) | 2,
                     1,
-                    4,
+                    6,
                     2,
+                    0,
+                    0,
                     0,
                     0,
                     0,
