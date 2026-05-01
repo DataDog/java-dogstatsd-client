@@ -18,14 +18,12 @@ default_steps_7-11: &default_steps_7-11
   steps:
     - checkout
     - run: mvn clean install
-    - run: cd dogstatsd-http-serializer && mvn clean install
     - run: cd dogstatsd-http-core && mvn clean install
 
 default_steps_11-21: &default_steps_11-21
   steps:
     - checkout
     - run: mvn clean install
-    - run: cd dogstatsd-http-serializer && mvn clean install
     - run: cd dogstatsd-http-core && mvn clean install
     - run: cd dogstatsd-http-forwarder && mvn clean install
 
