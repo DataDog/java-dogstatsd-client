@@ -7,6 +7,9 @@
 
 package com.datadoghq.dogstatsd.http.serializer;
 
+import com.datadoghq.dogstatsd.Sketch;
+import java.nio.BufferOverflowException;
+
 /** Builder for sketch timeseries. */
 public class SketchMetric extends Metric<SketchMetric> {
 
@@ -20,44 +23,44 @@ public class SketchMetric extends Metric<SketchMetric> {
     }
 
     /**
-     * Add a new timeseries point.
+     * Add a new timeseries point sourced from a {@link Sketch}.
      *
      * @param timestamp Timestamp of the point in seconds since Unix epoch.
-     * @param sum Total sum of all observed values.
-     * @param min Minimum observed value.
-     * @param max Maximum observed value.
-     * @param cnt Number of observed values.
-     * @param binKeys Array of keys for each bin in the sketch.
-     * @param binCnts Array of number of observations for each bin.
+     * @param sketch Sketch supplying the summary statistics and bin distribution.
      * @return This.
      */
-    public SketchMetric addPoint(
-            long timestamp,
-            double sum,
-            double min,
-            double max,
-            long cnt,
-            int[] binKeys,
-            int[] binCnts) {
+    public SketchMetric addPoint(long timestamp, Sketch sketch) {
+        final long maxBinCount = (1L << 32) - 1;
+        final long maxBinBytes = ProtoUtil.varintLen(maxBinCount);
 
-        if (binKeys.length != binCnts.length) {
-            throw new IllegalArgumentException("binKeys and binCnts must have the same length");
+        // Skip doing the work if just the bin data would exceed payload size limit.
+        if (sketch.count() / maxBinCount * maxBinBytes >= pb.maxPayloadSize) {
+            throw new BufferOverflowException();
         }
 
         pb.timestamps.put(timestamp);
-        pb.values.put(sum);
-        pb.values.put(min);
-        pb.values.put(max);
-        pb.counts.put(cnt);
+        pb.values.put(sketch.sum());
+        pb.values.put(sketch.min());
+        pb.values.put(sketch.max());
+        pb.counts.put(sketch.count());
 
-        ColumnarBuffer r = pb.currentRecord();
-        DeltaEncoder dk = new DeltaEncoder();
+        final ColumnarBuffer r = pb.currentRecord();
+        final DeltaEncoder dk = new DeltaEncoder();
 
-        r.putUint64(Column.sketchNumBins, binKeys.length);
-        for (int i = 0; i < binKeys.length; i++) {
-            r.putSint64(Column.sketchBinKeys, dk.encode(binKeys[i]));
-            r.putUint64(Column.sketchBinCnts, binCnts[i]);
-        }
+        r.putUint64(Column.sketchNumBins, sketch.size());
+        sketch.bins(
+                new Sketch.BinConsumer() {
+                    @Override
+                    public void consumeBin(short key, long count) {
+                        while (count > maxBinCount) {
+                            r.putSint64(Column.sketchBinKeys, dk.encode(key));
+                            r.putUint64(Column.sketchBinCnts, maxBinCount);
+                            count -= maxBinCount;
+                        }
+                        r.putSint64(Column.sketchBinKeys, dk.encode(key));
+                        r.putUint64(Column.sketchBinCnts, count);
+                    }
+                });
 
         return this;
     }

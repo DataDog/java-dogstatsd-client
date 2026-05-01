@@ -10,6 +10,7 @@ package com.datadoghq.dogstatsd.http.serializer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.datadoghq.dogstatsd.Sketch;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
@@ -42,10 +43,15 @@ public class PayloadBuilderTest {
 
         b.gauge("defgh").addPoint(100, 0).close();
 
+        Sketch sketch1 = new Sketch();
+        sketch1.build(new long[] {1, 2, 2}, 1.0);
+        Sketch sketch2 = new Sketch();
+        sketch2.build(new long[] {2, 2, 3, 3, 3}, 1.0);
+
         b.sketch("ijk")
                 .setTags(Arrays.asList(new String[] {"foo", "baz"}))
-                .addPoint(100, 4.75, 1.25, 1.75, 3, new int[] {1351, 1373}, new int[] {1, 2})
-                .addPoint(110, 6.5, 2.25, 2.75, 5, new int[] {1389, 1402}, new int[] {2, 3})
+                .addPoint(100, sketch1)
+                .addPoint(110, sketch2)
                 .close();
 
         b.rate("lm").setInterval(10).addPoint(100, 3.14).close();
@@ -60,7 +66,7 @@ public class PayloadBuilderTest {
                 new int[] {
                     // MetricData
                     (3 << 3) | 2,
-                    188,
+                    167,
                     1,
                     // dictNameStr
                     (1 << 3) | 2,
@@ -138,7 +144,7 @@ public class PayloadBuilderTest {
                     4,
                     0x11,
                     0x03,
-                    0x24,
+                    0x14,
                     0x32,
                     // names
                     (11 << 3) | 2,
@@ -189,40 +195,17 @@ public class PayloadBuilderTest {
                     // valsSint64
                     (17 << 3) | 2,
                     1,
+                    10,
+                    2,
                     4,
+                    10,
                     2,
                     4,
                     6,
+                    26,
+                    4,
+                    6,
                     10,
-                    // valsFloat32,
-                    // list(pack('<ffffff', 4.75, 1.25, 1.75, 6.5, 2.25, 2.75))
-                    (18 << 3) | 2,
-                    1,
-                    24,
-                    0,
-                    0,
-                    152,
-                    64,
-                    0,
-                    0,
-                    160,
-                    63,
-                    0,
-                    0,
-                    224,
-                    63,
-                    0,
-                    0,
-                    208,
-                    64,
-                    0,
-                    0,
-                    16,
-                    64,
-                    0,
-                    0,
-                    48,
-                    64,
                     // valsFloat64, list(pack('<d', 3.14))
                     (19 << 3) | 2,
                     1,
@@ -245,12 +228,12 @@ public class PayloadBuilderTest {
                     (21 << 3) | 2,
                     1,
                     6,
-                    142,
+                    244,
+                    20,
+                    90,
+                    206,
                     21,
-                    44,
-                    218,
-                    21,
-                    26,
+                    52,
                     // sketchBinCnts
                     (22 << 3) | 2,
                     1,
