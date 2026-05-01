@@ -205,6 +205,10 @@ public class PayloadBuilder {
         }
 
         try {
+            if (timestamps.length() == 0) {
+                return;
+            }
+
             m.encodeIndependentFields();
             m.encodeDependentFields();
 

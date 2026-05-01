@@ -43,6 +43,8 @@ public class PayloadBuilderTest {
 
         b.gauge("defgh").addPoint(100, 0).close();
 
+        b.gauge("noop").setTags(Arrays.asList(new String[] {"foo", "bar"})).setInterval(10).close();
+
         Sketch sketch1 = new Sketch();
         sketch1.build(new long[] {1, 2, 2}, 1.0);
         Sketch sketch2 = new Sketch();
