@@ -46,7 +46,7 @@ public class PayloadBuilderTest {
         Sketch sketch1 = new Sketch();
         sketch1.build(new long[] {1, 2, 2}, 1.0);
         Sketch sketch2 = new Sketch();
-        sketch2.build(new long[] {2, 2, 3, 3, 3}, 1.0);
+        sketch2.build(new long[] {2, 2, 3, 3, 3}, 5e-10);
 
         b.sketch("ijk")
                 .setTags(Arrays.asList(new String[] {"foo", "baz"}))
@@ -68,7 +68,7 @@ public class PayloadBuilderTest {
                 new int[] {
                     // MetricData
                     (3 << 3) | 2,
-                    220,
+                    243,
                     1,
                     // dictNameStr
                     (1 << 3) | 2,
@@ -219,17 +219,26 @@ public class PayloadBuilderTest {
                     // valsSint64
                     (17 << 3) | 2,
                     1,
-                    10,
+                    19,
                     2,
                     4,
                     10,
                     2,
                     4,
                     6,
-                    26,
+                    128,
+                    144,
+                    196,
+                    219,
+                    193,
+                    1,
                     4,
                     6,
-                    10,
+                    246,
+                    143,
+                    223,
+                    192,
+                    74,
                     // valsFloat32, list(pack('<ff', 1, 1.5))
                     (18 << 3) | 2,
                     1,
@@ -279,21 +288,35 @@ public class PayloadBuilderTest {
                     // sketchBinKeys
                     (21 << 3) | 2,
                     1,
-                    6,
+                    7,
                     244,
                     20,
                     90,
                     206,
                     21,
                     52,
+                    0,
                     // sketchBinCnts
                     (22 << 3) | 2,
                     1,
-                    4,
+                    17,
                     1,
                     2,
-                    2,
-                    3,
+                    254,
+                    207,
+                    172,
+                    243,
+                    14,
+                    255,
+                    255,
+                    255,
+                    255,
+                    15,
+                    254,
+                    247,
+                    130,
+                    173,
+                    6,
                     // sourceTypeName
                     (23 << 3) | 2,
                     1,
