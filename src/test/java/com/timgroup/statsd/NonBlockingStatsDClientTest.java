@@ -43,6 +43,7 @@ public class NonBlockingStatsDClientTest {
     private static final int STATSD_SERVER_PORT = 17254;
     private NonBlockingStatsDClient client;
     private NonBlockingStatsDClient clientUnaggregated;
+    private NonBlockingStatsDClient clientFullPrecision;
     private static UDPDummyStatsDServer server;
 
     private static Logger log = Logger.getLogger("NonBlockingStatsDClientTest");
@@ -111,8 +112,20 @@ public class NonBlockingStatsDClientTest {
                         .originDetectionEnabled(originDetectionEnabled)
                         .aggregationFlushInterval(100)
                         .containerID(containerID)
+                        .fullPrecision(false)
                         .build();
         clientUnaggregated =
+                new NonBlockingStatsDClientBuilder()
+                        .prefix("my.prefix")
+                        .hostname("localhost")
+                        .port(server.getPort())
+                        .enableTelemetry(false)
+                        .enableAggregation(false)
+                        .originDetectionEnabled(originDetectionEnabled)
+                        .containerID(containerID)
+                        .fullPrecision(false)
+                        .build();
+        clientFullPrecision =
                 new NonBlockingStatsDClientBuilder()
                         .prefix("my.prefix")
                         .hostname("localhost")
@@ -128,6 +141,7 @@ public class NonBlockingStatsDClientTest {
     public void stop() throws IOException {
         client.stop();
         clientUnaggregated.stop();
+        clientFullPrecision.stop();
         server.close();
     }
 
@@ -234,6 +248,22 @@ public class NonBlockingStatsDClientTest {
 
         assertPayload("my.prefix.mycount:24.5|c|T1|#baz,foo:bar");
         assertPayload("my.prefix.mycount:42.5|c|T1|#baz,foo:bar");
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_large_long_counter_to_statsd() throws Exception {
+        clientUnaggregated.count("mycount", 1L << 62);
+        server.waitForMessage("my.prefix");
+
+        assertPayload("my.prefix.mycount:4611686018427387904|c");
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_large_long_counter_to_statsd_with_full_precision() throws Exception {
+        clientFullPrecision.count("mycount", 1L << 62);
+        server.waitForMessage("my.prefix");
+
+        assertPayload("my.prefix.mycount:4611686018427387904|c");
     }
 
     @Test(timeout = 5000L)
@@ -354,10 +384,19 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_large_double_gauge_to_statsd() throws Exception {
 
-        client.recordGaugeValue("mygauge", 123456789012345.67890);
+        client.recordGaugeValue("mygauge", 3.3e20);
         server.waitForMessage("my.prefix");
 
-        assertPayload("my.prefix.mygauge:123456789012345.67|g");
+        assertPayload("my.prefix.mygauge:330000000000000000000|g");
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_large_double_gauge_to_statsd_with_full_precision() throws Exception {
+
+        clientFullPrecision.recordGaugeValue("mygauge", 3.3e20);
+        server.waitForMessage("my.prefix");
+
+        assertPayload("my.prefix.mygauge:3.3E20|g");
     }
 
     @Test(timeout = 5000L)
@@ -394,6 +433,20 @@ public class NonBlockingStatsDClientTest {
         server.waitForMessage("my.prefix");
 
         assertPayload("my.prefix.mygauge:423|g|@1.000000|#baz,foo:bar");
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_gauge_with_full_precision_to_statsd() throws Exception {
+        clientFullPrecision.recordGaugeValue("mygauge", Math.PI);
+        server.waitForMessage("my.prefix");
+        assertPayload("my.prefix.mygauge:3.141592653589793|g");
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_gauge_with_full_precision_integer_value_to_statsd() throws Exception {
+        clientFullPrecision.recordGaugeValue("mygauge", 42.0);
+        server.waitForMessage("my.prefix");
+        assertPayload("my.prefix.mygauge:42.0|g");
     }
 
     @Test(timeout = 5000L)
