@@ -95,11 +95,14 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
     @Test(timeout = 5000L)
     public void sends_to_statsd() throws Exception {
+        Thread.sleep(100);
+        server.clear();
+
         for (long i = 0; i < 5; i++) {
             client.gauge("mycount", i);
             server.waitForMessage();
             String expected = String.format("my.prefix.mycount:%d|g", i);
-            assertThat(server.messagesReceived(), contains(expected));
+            assertThat(server.messagesReceived(), hasItem(expected));
             server.clear();
         }
         assertThat(lastException.getMessage(), nullValue());
