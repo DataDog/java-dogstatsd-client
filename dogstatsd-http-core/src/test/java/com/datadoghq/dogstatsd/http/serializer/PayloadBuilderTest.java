@@ -284,7 +284,7 @@ public class PayloadBuilderTest {
                     1,
                     2,
                     2,
-                    2,
+                    3,
                     // sketchBinKeys
                     (21 << 3) | 2,
                     1,
