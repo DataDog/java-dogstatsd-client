@@ -41,9 +41,6 @@ jobs:
           cache: maven
       - name: Build and test (jnr-exclude)
         run: mvn clean test -P jnr-exclude
-      - name: Build and test dogstatsd-http-core
-        run: mvn clean install
-        working-directory: dogstatsd-http-core
 
   test-jnr-latest:
     name: Test (Java 8, jnr-latest)
@@ -59,6 +56,3 @@ jobs:
         run: mvn clean install
       - name: Test with latest jnr dependencies
         run: mvn test -P jnr-latest
-      - name: Build and test dogstatsd-http-core
-        run: mvn clean install
-        working-directory: dogstatsd-http-core
