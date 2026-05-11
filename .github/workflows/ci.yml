@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Test (Java ${{ matrix.java-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        java-version: ['9', '11', '13', '17']
+        include:
+          - os: windows-latest
+            java-version: '12'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: zulu
+          cache: maven
+      - name: Build and test
+        run: mvn clean install
+      - name: Build and test dogstatsd-http-core
+        run: mvn clean install
+        working-directory: dogstatsd-http-core
+
+  test-jnr-exclude:
+    name: Test (Java 9, jnr-exclude)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: '9'
+          distribution: zulu
+          cache: maven
+      - name: Build and test (jnr-exclude)
+        run: mvn clean test -P jnr-exclude
+
+  test-jnr-latest:
+    name: Test (Java 9, jnr-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: '9'
+          distribution: zulu
+          cache: maven
+      - name: Build with default dependencies
+        run: mvn clean install
+      - name: Test with latest jnr dependencies
+        run: mvn test -P jnr-latest

@@ -17,7 +17,7 @@ deploy_to_sonatype:
   tags:
     - "docker-in-docker:amd64"
 
-  image: maven:3.9-eclipse-temurin-8
+  image: maven:3.9-eclipse-temurin-17
 
   script:
     # Ensure we don't print commands being run to the logs during credential
