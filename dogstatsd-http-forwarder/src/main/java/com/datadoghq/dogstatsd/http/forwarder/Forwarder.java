@@ -70,12 +70,14 @@ public class Forwarder extends Thread {
     /** Runs the forwarding loop, delivering queued payloads until the thread is interrupted. */
     @Override
     public void run() {
-        try {
-            while (true) {
+        while (true) {
+            try {
                 runOnce(queue.next());
+            } catch (InterruptedException e) {
+                return;
+            } catch (Throwable t) {
+                logger.log(Level.SEVERE, "unexpected error in forwarder loop", t);
             }
-        } catch (InterruptedException e) {
-            return;
         }
     }
 
