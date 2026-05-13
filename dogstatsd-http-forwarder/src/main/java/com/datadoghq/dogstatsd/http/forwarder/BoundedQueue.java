@@ -63,10 +63,6 @@ class BoundedQueue {
     Condition notEmpty = lock.newCondition();
     Condition notFull = lock.newCondition();
 
-    BoundedQueue(long maxBytes, long maxTries, WhenFull whenFull) {
-        this(maxBytes, maxTries, whenFull, null);
-    }
-
     BoundedQueue(long maxBytes, long maxTries, WhenFull whenFull, Telemetry telemetry) {
         this(maxBytes, maxTries, whenFull, telemetry, System::nanoTime);
     }
