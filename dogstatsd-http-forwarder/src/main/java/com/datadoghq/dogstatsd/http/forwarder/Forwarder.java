@@ -24,14 +24,13 @@ import java.util.logging.Logger;
 /**
  * An HTTP forwarder that delivers DogStatsD HTTP payloads to a remote endpoint.
  *
- * <p>Payloads are enqueued via {@link #send(byte[])} and delivered asynchronously by a background
- * thread. Failed requests are retried with exponential back-off up to {@code maxTries} attempts
- * before being discarded.
+ * <p>Payloads are enqueued via {@link #send(URI, byte[])} and delivered asynchronously by a
+ * background thread. Failed requests are retried with exponential back-off up to {@code maxTries}
+ * attempts before being discarded.
  */
 public class Forwarder extends Thread {
     static final Logger logger = Logger.getLogger(Forwarder.class.getName());
     final BoundedQueue queue;
-    final URI url;
     final HttpClient client;
     final Duration requestTimeout;
     final Random rng = new Random();
@@ -42,9 +41,8 @@ public class Forwarder extends Thread {
     int responseOk, responseBadRequest, responseOther;
 
     /**
-     * Creates a new forwarder targeting the given URL.
+     * Creates a new forwarder.
      *
-     * @param url the remote HTTP endpoint to POST payloads to
      * @param maxRequestsBytes maximum total size of buffered payloads, in bytes
      * @param maxTries maximum number of delivery attempts per payload
      * @param whenFull action to take when the queue is at capacity
@@ -53,13 +51,11 @@ public class Forwarder extends Thread {
      *     {@code null} disables the request timeout
      */
     public Forwarder(
-            URI url,
             long maxRequestsBytes,
             long maxTries,
             WhenFull whenFull,
             Duration connectTimeout,
             Duration requestTimeout) {
-        this.url = url;
         this.queue = new BoundedQueue(maxRequestsBytes, maxTries, whenFull);
         this.requestTimeout = requestTimeout;
         this.client =
@@ -82,25 +78,29 @@ public class Forwarder extends Thread {
     }
 
     /**
-     * Enqueues a payload for delivery to the remote endpoint.
+     * Enqueues a payload for delivery to the given endpoint.
      *
      * <p>If the queue is full, behaviour is determined by the {@link WhenFull} policy supplied at
      * construction time.
      *
+     * @param url the remote HTTP endpoint to POST the payload to
      * @param payload the raw bytes to deliver
      * @throws InterruptedException if the calling thread is interrupted while waiting for space
      *     ({@link WhenFull#BLOCK} mode only)
      */
-    public void send(byte[] payload) throws InterruptedException {
-        queue.add(payload);
+    public void send(URI url, byte[] payload) throws InterruptedException {
+        queue.add(new Payload(url, payload));
     }
 
-    void runOnce(Map.Entry<BoundedQueue.Key, byte[]> item) throws InterruptedException {
-        byte[] payload = item.getValue();
-        logger.log(Level.INFO, "sending {0} bytes", payload.length);
+    void runOnce(Map.Entry<BoundedQueue.Key, Payload> item) throws InterruptedException {
+        Payload payload = item.getValue();
+        logger.log(
+                Level.INFO,
+                "sending {0} bytes to {1}",
+                new Object[] {payload.bytes.length, payload.url});
 
         HttpRequest.Builder builder =
-                HttpRequest.newBuilder(url).POST(BodyPublishers.ofByteArray(payload));
+                HttpRequest.newBuilder(payload.url).POST(BodyPublishers.ofByteArray(payload.bytes));
         if (requestTimeout != null) {
             builder.timeout(requestTimeout);
         }

@@ -50,7 +50,7 @@ class BoundedQueue {
     final long maxTries;
     final WhenFull whenFull;
 
-    final TreeMap<Key, byte[]> items = new TreeMap<>();
+    final TreeMap<Key, Payload> items = new TreeMap<>();
 
     long droppedItems;
     long droppedBytes;
@@ -65,15 +65,15 @@ class BoundedQueue {
         this.whenFull = whenFull;
     }
 
-    void add(byte[] item) throws InterruptedException {
+    void add(Payload item) throws InterruptedException {
         put(null, item, whenFull);
     }
 
-    void requeue(Map.Entry<Key, byte[]> item) throws InterruptedException {
+    void requeue(Map.Entry<Key, Payload> item) throws InterruptedException {
         Key nextKey = item.getKey().next();
         if (nextKey.tries > maxTries) {
             droppedItems++;
-            droppedBytes += item.getValue().length;
+            droppedBytes += item.getValue().bytes.length;
             return;
         }
         put(nextKey, item.getValue(), WhenFull.DROP);
@@ -85,15 +85,15 @@ class BoundedQueue {
         return new Key(clock);
     }
 
-    private void put(Key key, byte[] item, WhenFull whenFull) throws InterruptedException {
+    private void put(Key key, Payload item, WhenFull whenFull) throws InterruptedException {
         lock.lock();
         try {
             if (key == null) {
                 key = newKey();
             }
-            ensureSpace(item.length, whenFull);
+            ensureSpace(item.bytes.length, whenFull);
             items.put(key, item);
-            bytes += item.length;
+            bytes += item.bytes.length;
             notEmpty.signal();
         } finally {
             lock.unlock();
@@ -107,10 +107,10 @@ class BoundedQueue {
         while (bytes + length > maxBytes) {
             switch (whenFull) {
                 case DROP:
-                    Map.Entry<Key, byte[]> last = items.pollLastEntry();
+                    Map.Entry<Key, Payload> last = items.pollLastEntry();
                     droppedItems++;
-                    droppedBytes += last.getValue().length;
-                    bytes -= last.getValue().length;
+                    droppedBytes += last.getValue().bytes.length;
+                    bytes -= last.getValue().bytes.length;
                     break;
                 case BLOCK:
                     notFull.await();
@@ -119,14 +119,14 @@ class BoundedQueue {
         }
     }
 
-    Map.Entry<Key, byte[]> next() throws InterruptedException {
+    Map.Entry<Key, Payload> next() throws InterruptedException {
         lock.lock();
         try {
             while (items.size() == 0) {
                 notEmpty.await();
             }
-            Map.Entry<Key, byte[]> item = items.pollFirstEntry();
-            bytes -= item.getValue().length;
+            Map.Entry<Key, Payload> item = items.pollFirstEntry();
+            bytes -= item.getValue().bytes.length;
             notFull.signalAll();
             return item;
         } finally {
