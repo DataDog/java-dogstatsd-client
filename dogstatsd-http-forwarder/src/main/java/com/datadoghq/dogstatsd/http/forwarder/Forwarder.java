@@ -122,21 +122,21 @@ public class Forwarder extends Thread {
             switch (res.statusCode()) {
                 case 400:
                     responseBadRequest++;
-                    onSuccess();
+                    decreaseBackoff();
                     break;
                 case 200:
                     responseOk++;
-                    onSuccess();
+                    decreaseBackoff();
                     break;
                 default:
                     responseOther++;
-                    onError();
+                    increaseBackoff();
                     queue.requeue(item);
             }
         } catch (IOException ex) {
             logger.log(Level.WARNING, "error sending request: {0}", ex.toString());
             responseOther++;
-            onError();
+            increaseBackoff();
             queue.requeue(item);
         }
 
@@ -145,11 +145,11 @@ public class Forwarder extends Thread {
 
     int delay;
 
-    void onSuccess() {
+    void decreaseBackoff() {
         delay >>= 4;
     }
 
-    void onError() {
+    void increaseBackoff() {
         if (delay < 64) delay <<= 1;
         if (delay == 0) delay = 1;
     }
