@@ -129,29 +129,39 @@ public class Forwarder extends Thread {
             logger.log(
                     Level.INFO, "response {0}: {1}", new Object[] {res.statusCode(), res.body()});
 
-            int code = res.statusCode();
-            switch (code) {
-                case 400:
-                    telemetry.onResponse(code, payload.length, false);
-                    decreaseBackoff();
-                    break;
-                case 200:
-                    telemetry.onResponse(code, payload.length, true);
-                    decreaseBackoff();
-                    break;
-                default:
-                    telemetry.onResponse(code, payload.length, false);
-                    increaseBackoff();
-                    queue.requeue(item);
-            }
+            handleResponse(res.statusCode(), item);
         } catch (IOException ex) {
             logger.log(Level.WARNING, "error sending request: {0}", ex.toString());
-            telemetry.onTransportError(payload.length);
-            increaseBackoff();
-            queue.requeue(item);
+            handleTransportError(item);
         }
 
         backoff();
+    }
+
+    void handleResponse(int code, Map.Entry<BoundedQueue.Key, byte[]> item)
+            throws InterruptedException {
+        int len = item.getValue().length;
+        switch (code) {
+            case 400:
+                telemetry.onResponse(code, len, false);
+                telemetry.onDrop(1, len);
+                decreaseBackoff();
+                break;
+            case 200:
+                telemetry.onResponse(code, len, true);
+                decreaseBackoff();
+                break;
+            default:
+                telemetry.onResponse(code, len, false);
+                increaseBackoff();
+                queue.requeue(item);
+        }
+    }
+
+    void handleTransportError(Map.Entry<BoundedQueue.Key, byte[]> item) throws InterruptedException {
+        telemetry.onTransportError(item.getValue().length);
+        increaseBackoff();
+        queue.requeue(item);
     }
 
     int delay;

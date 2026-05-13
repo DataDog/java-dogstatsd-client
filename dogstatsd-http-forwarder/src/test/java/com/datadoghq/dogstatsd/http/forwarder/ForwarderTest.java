@@ -12,6 +12,7 @@ import static org.junit.Assert.assertThrows;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Map;
 import org.junit.Test;
 
 public class ForwarderTest {
@@ -43,5 +44,20 @@ public class ForwarderTest {
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(0, s.enqueuedPayloads);
         assertEquals(0, s.enqueuedBytes);
+    }
+
+    /** A 400 response means the payload won't be retried, so it counts as a drop. */
+    @Test
+    public void fourHundredCountsAsDrop() throws Exception {
+        Forwarder f = newForwarder(100, WhenFull.DROP);
+        f.send(new byte[7]);
+        Map.Entry<BoundedQueue.Key, byte[]> item = f.queue.next();
+        f.handleResponse(400, item);
+        Telemetry.Snapshot s = f.snapshot();
+        assertEquals(1, s.enqueuedPayloads);
+        assertEquals(7, s.enqueuedBytes);
+        assertEquals(1, s.droppedPayloads);
+        assertEquals(7, s.droppedBytes);
+        assertEquals(0, s.deliveredPayloads);
     }
 }
