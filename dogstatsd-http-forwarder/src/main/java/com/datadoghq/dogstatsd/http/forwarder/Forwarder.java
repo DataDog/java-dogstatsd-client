@@ -17,9 +17,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * An HTTP forwarder that delivers DogStatsD HTTP payloads to a remote endpoint.
@@ -89,6 +91,8 @@ public class Forwarder extends Thread {
      *     ({@link WhenFull#BLOCK} mode only)
      */
     public void send(URI url, byte[] payload) throws InterruptedException {
+        Objects.requireNonNull(url, "url");
+        Objects.requireNonNull(payload, "payload");
         queue.add(new Payload(url, payload));
     }
 
@@ -171,6 +175,7 @@ public class Forwarder extends Thread {
      * @param data the local-data string, or {@code null} to omit the header
      */
     public void setLocalData(String data) {
+        validateHeaderValue(data);
         logger.log(Level.INFO, "using local data: {0}", data);
         localData = data;
     }
@@ -185,7 +190,19 @@ public class Forwarder extends Thread {
      * @param data the external-data string, or {@code null} to omit the header
      */
     public void setExternalData(String data) {
+        validateHeaderValue(data);
         logger.log(Level.INFO, "using external data: {0}", data);
         externalData = data;
+    }
+
+    private static final Pattern validHeaderValue = Pattern.compile("[\\t\\x20-\\x7E\\x80-\\xFF]*");
+
+    private static void validateHeaderValue(String name, String value) {
+        if (value == null) {
+            return;
+        }
+        if (!validHeaderValue.matcher(value).matches()) {
+            throw new IllegalArgumentException("invalid character");
+        }
     }
 }
