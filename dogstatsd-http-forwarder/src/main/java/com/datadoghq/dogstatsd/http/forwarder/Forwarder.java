@@ -158,7 +158,8 @@ public class Forwarder extends Thread {
         }
     }
 
-    void handleTransportError(Map.Entry<BoundedQueue.Key, byte[]> item) throws InterruptedException {
+    void handleTransportError(Map.Entry<BoundedQueue.Key, byte[]> item)
+            throws InterruptedException {
         telemetry.onTransportError(item.getValue().length);
         increaseBackoff();
         queue.requeue(item);
