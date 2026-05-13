@@ -12,25 +12,29 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.LongSupplier;
 
 class BoundedQueue {
-    // Key represents a tuple of integers (tries, clock).
+    // Key represents a tuple of integers (tries, clock). enqueuedAtNanos records when the
+    // payload first entered the queue (in System.nanoTime() units) and is preserved across
+    // requeues so that "age of oldest item" remains accurate after retries.
     static class Key implements Comparable<Key> {
         final long tries;
         final long clock;
+        final long enqueuedAtNanos;
 
         Key(long clock) {
-            this.tries = 0;
-            this.clock = clock;
+            this(0, clock, System.nanoTime());
         }
 
-        private Key(long tries, long clock) {
+        private Key(long tries, long clock, long enqueuedAtNanos) {
             this.tries = tries;
             this.clock = clock;
+            this.enqueuedAtNanos = enqueuedAtNanos;
         }
 
         Key next() {
-            return new Key(tries + 1, clock);
+            return new Key(tries + 1, clock, enqueuedAtNanos);
         }
 
         @Override
@@ -52,17 +56,40 @@ class BoundedQueue {
 
     final TreeMap<Key, byte[]> items = new TreeMap<>();
 
-    long droppedItems;
-    long droppedBytes;
+    final Telemetry telemetry;
+    final LongSupplier nanos;
 
     Lock lock = new ReentrantLock();
     Condition notEmpty = lock.newCondition();
     Condition notFull = lock.newCondition();
 
     BoundedQueue(long maxBytes, long maxTries, WhenFull whenFull) {
+        this(maxBytes, maxTries, whenFull, null);
+    }
+
+    BoundedQueue(long maxBytes, long maxTries, WhenFull whenFull, Telemetry telemetry) {
+        this(maxBytes, maxTries, whenFull, telemetry, System::nanoTime);
+    }
+
+    BoundedQueue(
+            long maxBytes,
+            long maxTries,
+            WhenFull whenFull,
+            Telemetry telemetry,
+            LongSupplier nanos) {
         this.maxBytes = maxBytes;
         this.maxTries = maxTries;
         this.whenFull = whenFull;
+        this.telemetry = telemetry;
+        this.nanos = nanos;
+    }
+
+    long droppedPayloads;
+    long droppedBytes;
+
+    private void recordDrop(long bytes) {
+        droppedPayloads++;
+        droppedBytes += bytes;
     }
 
     void add(byte[] item) throws InterruptedException {
@@ -72,8 +99,7 @@ class BoundedQueue {
     void requeue(Map.Entry<Key, byte[]> item) throws InterruptedException {
         Key nextKey = item.getKey().next();
         if (nextKey.tries > maxTries) {
-            droppedItems++;
-            droppedBytes += item.getValue().length;
+            telemetry.onDrop(1, item.getValue().length);
             return;
         }
         put(nextKey, item.getValue(), WhenFull.DROP);
@@ -82,7 +108,7 @@ class BoundedQueue {
     // Must be called when lock is held.
     private Key newKey() {
         clock++;
-        return new Key(clock);
+        return new Key(0, clock, nanos.getAsLong());
     }
 
     private void put(Key key, byte[] item, WhenFull whenFull) throws InterruptedException {
@@ -96,7 +122,13 @@ class BoundedQueue {
             bytes += item.length;
             notEmpty.signal();
         } finally {
+            long droppedPayloads = this.droppedPayloads;
+            long droppedBytes = this.droppedBytes;
+            this.droppedPayloads = 0;
+            this.droppedBytes = 0;
             lock.unlock();
+            // Avoid potential lock ordering issues.
+            telemetry.onDrop(droppedPayloads, droppedBytes);
         }
     }
 
@@ -108,9 +140,8 @@ class BoundedQueue {
             switch (whenFull) {
                 case DROP:
                     Map.Entry<Key, byte[]> last = items.pollLastEntry();
-                    droppedItems++;
-                    droppedBytes += last.getValue().length;
                     bytes -= last.getValue().length;
+                    recordDrop(last.getValue().length);
                     break;
                 case BLOCK:
                     notFull.await();
@@ -129,6 +160,25 @@ class BoundedQueue {
             bytes -= item.getValue().length;
             notFull.signalAll();
             return item;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void snapshot(long now, Telemetry.Snapshot s) {
+        lock.lock();
+        try {
+            long oldestAge = 0L;
+            for (Key k : items.keySet()) {
+                long age = now - k.enqueuedAtNanos;
+                if (age > oldestAge) {
+                    oldestAge = age;
+                }
+            }
+            s.queuePayloads = items.size();
+            s.queueBytes = bytes;
+            s.queueMaxBytes = maxBytes;
+            s.oldestEnqueuedAgeNanos = oldestAge;
         } finally {
             lock.unlock();
         }
