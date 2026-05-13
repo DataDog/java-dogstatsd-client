@@ -101,8 +101,8 @@ public class Forwarder extends Thread {
      *     ({@link WhenFull#BLOCK} mode only)
      */
     public void send(byte[] payload) throws InterruptedException {
-        telemetry.onEnqueue(payload.length);
         queue.add(payload);
+        telemetry.onEnqueue(payload.length);
     }
 
     void runOnce(Map.Entry<BoundedQueue.Key, byte[]> item) throws InterruptedException {
