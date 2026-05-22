@@ -115,8 +115,8 @@ public class Sketch {
      * Builds the sketch from the given values.
      *
      * @param observations the observations to include in the sketch
-     * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}. Each
-     *     observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
+     * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}.
+     *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
      */
@@ -137,8 +137,8 @@ public class Sketch {
      * Builds the sketch from the given values.
      *
      * @param observations the observations to include in the sketch
-     * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}. Each
-     *     observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
+     * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}.
+     *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
      */
