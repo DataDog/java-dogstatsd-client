@@ -34,6 +34,8 @@ public class Sketch {
     int size;
     int head;
 
+    private double[] values = new double[0];
+
     double min;
     double max;
     double sum;
@@ -110,40 +112,66 @@ public class Sketch {
     }
 
     /**
-     * Builds the sketch from the given values. The {@code values} array is modified in place
-     * (sorted); callers that need to preserve the original ordering should pass a copy.
+     * Builds the sketch from the given values.
      *
-     * @param values the observations to include in the sketch; sorted in place
-     * @param sampleRate the sampling rate used to collect {@code values}, in {@code (0, 1]}. Each
+     * @param observations the observations to include in the sketch
+     * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}. Each
      *     observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
      */
-    public void build(long[] values, double sampleRate) {
+    public void build(long[] observations, double sampleRate) {
+        validateSampleRate(sampleRate);
+        reset();
+        if (observations == null || observations.length == 0) {
+            return;
+        }
+        ensureCapacity(observations.length);
+        for (int i = 0; i < observations.length; i++) {
+            values[i] = observations[i];
+        }
+        buildInner(observations.length, sampleRate);
+    }
+
+    /**
+     * Builds the sketch from the given values.
+     *
+     * @param observations the observations to include in the sketch
+     * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}. Each
+     *     observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
+     *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
+     *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
+     */
+    public void build(double[] observations, double sampleRate) {
+        validateSampleRate(sampleRate);
+        reset();
+        if (observations == null || observations.length == 0) {
+            return;
+        }
+        ensureCapacity(observations.length);
+        System.arraycopy(observations, 0, values, 0, observations.length);
+        buildInner(observations.length, sampleRate);
+    }
+
+    private static void validateSampleRate(double sampleRate) {
         if (Double.isNaN(sampleRate) || sampleRate <= 0 || sampleRate > 1) {
             throw new IllegalArgumentException("sampleRate is out of range");
         }
-
-        reset();
-        buildInner(values, sampleRate);
     }
 
-    private void buildInner(final long[] values, double sampleRate) {
-        if (values == null || values.length == 0) {
-            return;
-        }
-
-        Arrays.sort(values);
+    private void buildInner(int length, double sampleRate) {
+        Arrays.sort(values, 0, length);
 
         final long sampleSize = (long) (1 / sampleRate);
         min = values[0];
-        max = values[values.length - 1];
-        count = satMul(sampleSize, values.length);
+        max = values[length - 1];
+        count = satMul(sampleSize, length);
 
         short topKey = negInfKey - 1;
         long topCount = 0;
 
-        for (long val : values) {
+        for (int i = 0; i < length; i++) {
+            double val = values[i];
             sum += val / sampleRate;
 
             short key = key(val);
@@ -160,6 +188,12 @@ public class Sketch {
         }
 
         append(topKey, topCount);
+    }
+
+    private void ensureCapacity(int needed) {
+        if (values.length < needed) {
+            values = new double[needed];
+        }
     }
 
     private void reset() {
