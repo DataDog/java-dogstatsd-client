@@ -39,7 +39,7 @@ public class Forwarder extends Thread {
     String localData;
     String externalData;
 
-    int responseOk, responseBadRequest, responseOther;
+    final Telemetry telemetry;
 
     /**
      * Creates a new forwarder targeting the given URL.
@@ -60,13 +60,22 @@ public class Forwarder extends Thread {
             Duration connectTimeout,
             Duration requestTimeout) {
         this.url = url;
-        this.queue = new BoundedQueue(maxRequestsBytes, maxTries, whenFull);
+        this.telemetry = new Telemetry();
+        this.queue = new BoundedQueue(maxRequestsBytes, maxTries, whenFull, this.telemetry);
         this.requestTimeout = requestTimeout;
         this.client =
                 HttpClient.newBuilder()
                         .version(HttpClient.Version.HTTP_2)
                         .connectTimeout(connectTimeout)
                         .build();
+    }
+
+    /**
+     * Captures a snapshot of the forwarder's telemetry counters and queue state, clearing delta
+     * counters so subsequent snapshots report activity since this call.
+     */
+    public Telemetry.Snapshot snapshot() {
+        return telemetry.snapshot(queue);
     }
 
     /** Runs the forwarding loop, delivering queued payloads until the thread is interrupted. */
@@ -93,6 +102,7 @@ public class Forwarder extends Thread {
      */
     public void send(byte[] payload) throws InterruptedException {
         queue.add(payload);
+        telemetry.onEnqueue(payload.length);
     }
 
     void runOnce(Map.Entry<BoundedQueue.Key, byte[]> item) throws InterruptedException {
@@ -119,37 +129,49 @@ public class Forwarder extends Thread {
             logger.log(
                     Level.INFO, "response {0}: {1}", new Object[] {res.statusCode(), res.body()});
 
-            switch (res.statusCode()) {
-                case 400:
-                    responseBadRequest++;
-                    onSuccess();
-                    break;
-                case 200:
-                    responseOk++;
-                    onSuccess();
-                    break;
-                default:
-                    responseOther++;
-                    onError();
-                    queue.requeue(item);
-            }
+            handleResponse(res.statusCode(), item);
         } catch (IOException ex) {
             logger.log(Level.WARNING, "error sending request: {0}", ex.toString());
-            responseOther++;
-            onError();
-            queue.requeue(item);
+            handleTransportError(item);
         }
 
         backoff();
     }
 
+    void handleResponse(int code, Map.Entry<BoundedQueue.Key, byte[]> item)
+            throws InterruptedException {
+        int len = item.getValue().length;
+        switch (code) {
+            case 400:
+                telemetry.onResponse(code, len, false);
+                telemetry.onDrop(1, len);
+                decreaseBackoff();
+                break;
+            case 200:
+                telemetry.onResponse(code, len, true);
+                decreaseBackoff();
+                break;
+            default:
+                telemetry.onResponse(code, len, false);
+                increaseBackoff();
+                queue.requeue(item);
+        }
+    }
+
+    void handleTransportError(Map.Entry<BoundedQueue.Key, byte[]> item)
+            throws InterruptedException {
+        telemetry.onTransportError(item.getValue().length);
+        increaseBackoff();
+        queue.requeue(item);
+    }
+
     int delay;
 
-    void onSuccess() {
+    void decreaseBackoff() {
         delay >>= 4;
     }
 
-    void onError() {
+    void increaseBackoff() {
         if (delay < 64) delay <<= 1;
         if (delay == 0) delay = 1;
     }
