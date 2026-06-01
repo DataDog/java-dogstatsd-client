@@ -11,6 +11,7 @@ import static com.datadoghq.dogstatsd.Sketch.key;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
+import java.util.Arrays;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
@@ -47,7 +48,7 @@ public class SketchTest {
 
     @Test
     public void basic() {
-        s.build(null, 1);
+        s.build((long[]) null, 1);
         assertEquals(0, s.min(), 0);
         assertEquals(0, s.max(), 0);
         assertEquals(0, s.sum(), 0);
@@ -112,11 +113,13 @@ public class SketchTest {
             values[i] = val;
             values[i + values.length / 2] = -val;
         }
+        long[] sortedValues = values.clone();
+        Arrays.sort(sortedValues);
         s.build(values, 1);
-        assertEquals(values[0], s.min(), 0);
-        assertEquals(values[values.length - 1], s.max(), 0);
+        assertEquals(sortedValues[0], s.min(), 0);
+        assertEquals(sortedValues[sortedValues.length - 1], s.max(), 0);
 
-        final short foldedKey = Sketch.key(values[4]);
+        final short foldedKey = Sketch.key(sortedValues[4]);
 
         s.bins(
                 new Sketch.BinConsumer() {
