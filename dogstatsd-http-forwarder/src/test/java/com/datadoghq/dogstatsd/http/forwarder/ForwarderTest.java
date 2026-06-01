@@ -20,12 +20,7 @@ public class ForwarderTest {
     private static final URI URL = URI.create("http://localhost:0/");
 
     private static Forwarder newForwarder(long maxBytes, WhenFull whenFull) {
-        return new Forwarder(
-                maxBytes,
-                1,
-                whenFull,
-                Duration.ofSeconds(1),
-                Duration.ofSeconds(1));
+        return new Forwarder(maxBytes, 1, whenFull, Duration.ofSeconds(1), Duration.ofSeconds(1));
     }
 
     @Test
