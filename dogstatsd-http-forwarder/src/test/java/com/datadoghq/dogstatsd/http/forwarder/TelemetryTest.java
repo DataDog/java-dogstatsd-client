@@ -12,11 +12,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import org.junit.Test;
 
 public class TelemetryTest {
+    private static final URI URL = URI.create("http://example.invalid/");
 
     private static void assertCounters(
             long expectedPayloads, long expectedBytes, Telemetry.Snapshot.CodeCounters c) {
@@ -80,8 +82,8 @@ public class TelemetryTest {
     public void queueState() throws InterruptedException {
         Telemetry t = new Telemetry();
         BoundedQueue q = new BoundedQueue(100, 1, WhenFull.DROP, t);
-        q.add(new byte[5]);
-        q.add(new byte[7]);
+        q.add(new Payload(URL, new byte[5]));
+        q.add(new Payload(URL, new byte[7]));
         Telemetry.Snapshot s = t.snapshot(q);
         assertEquals(2, s.queuePayloads);
         assertEquals(12, s.queueBytes);

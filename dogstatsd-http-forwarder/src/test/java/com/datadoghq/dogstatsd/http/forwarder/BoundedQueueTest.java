@@ -9,11 +9,14 @@ package com.datadoghq.dogstatsd.http.forwarder;
 
 import static org.junit.Assert.*;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Map;
 import org.junit.Test;
 
 public class BoundedQueueTest {
+    private static final URI URL = URI.create("http://example.invalid/");
+
     private static byte[] bytes(int n) {
         return bytes(n, (byte) 0);
     }
@@ -24,14 +27,22 @@ public class BoundedQueueTest {
         return b;
     }
 
+    private static Payload payload(int n) {
+        return new Payload(URL, bytes(n));
+    }
+
+    private static Payload payload(byte[] b) {
+        return new Payload(URL, b);
+    }
+
     // --- Round-trip / bytes tracking ---
 
     @Test
     public void addThenNextReturnsItem() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(10, 1, WhenFull.DROP, new Telemetry());
-        byte[] item = bytes(4);
+        Payload item = payload(4);
         q.add(item);
-        Map.Entry<BoundedQueue.Key, byte[]> entry = q.next();
+        Map.Entry<BoundedQueue.Key, Payload> entry = q.next();
         assertSame(item, entry.getValue());
         assertEquals(0, q.bytes);
     }
@@ -39,9 +50,9 @@ public class BoundedQueueTest {
     @Test
     public void bytesDecrementedOnNext() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(30, 1, WhenFull.DROP, new Telemetry());
-        q.add(bytes(3));
-        q.add(bytes(3));
-        q.add(bytes(3));
+        q.add(payload(3));
+        q.add(payload(3));
+        q.add(payload(3));
         assertEquals(9, q.bytes);
         q.next();
         assertEquals(6, q.bytes);
@@ -54,9 +65,9 @@ public class BoundedQueueTest {
     @Test
     public void newestItemDequeuesFirstWithinSameTries() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(30, 1, WhenFull.DROP, new Telemetry());
-        byte[] a = {1};
-        byte[] b = {2};
-        byte[] c = {3};
+        Payload a = payload(new byte[] {1});
+        Payload b = payload(new byte[] {2});
+        Payload c = payload(new byte[] {3});
         q.add(a);
         q.add(b);
         q.add(c);
@@ -72,11 +83,11 @@ public class BoundedQueueTest {
     public void dropWhenFullDropsOldestItem() throws InterruptedException {
         Telemetry t = new Telemetry();
         BoundedQueue q = new BoundedQueue(10, 1, WhenFull.DROP, t);
-        byte[] a = bytes(5); // added first → smallest clock → last in TreeMap
-        byte[] b = bytes(4);
+        Payload a = payload(5); // added first → smallest clock → last in TreeMap
+        Payload b = payload(4);
         q.add(a); // queue: a(clock=MIN+1)
         q.add(b); // queue full: a, b
-        byte[] c = bytes(3);
+        Payload c = payload(3);
         q.add(c); // a (oldest, last entry) evicted
         Telemetry.Snapshot s = t.snapshot(q);
         assertEquals(1, s.droppedPayloads);
@@ -90,9 +101,9 @@ public class BoundedQueueTest {
     public void dropCountersAccumulate() throws InterruptedException {
         Telemetry t = new Telemetry();
         BoundedQueue q = new BoundedQueue(5, 1, WhenFull.DROP, t);
-        q.add(bytes(5)); // fills queue (X)
-        q.add(bytes(5)); // X dropped (Y in)
-        q.add(bytes(5)); // Y dropped (Z in)
+        q.add(payload(5)); // fills queue (X)
+        q.add(payload(5)); // X dropped (Y in)
+        q.add(payload(5)); // Y dropped (Z in)
         Telemetry.Snapshot s = t.snapshot(q);
         assertEquals(2, s.droppedPayloads);
         assertEquals(10, s.droppedBytes);
@@ -101,8 +112,8 @@ public class BoundedQueueTest {
     @Test(timeout = 3000)
     public void dropDoesNotBlock() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(5, 1, WhenFull.DROP, new Telemetry());
-        q.add(bytes(5)); // fill
-        q.add(bytes(5)); // should return immediately via DROP
+        q.add(payload(5)); // fill
+        q.add(payload(5)); // should return immediately via DROP
     }
 
     // --- WhenFull.BLOCK ---
@@ -111,13 +122,13 @@ public class BoundedQueueTest {
     public void blockUnblocksWhenSpaceFreed() throws InterruptedException {
         Telemetry t = new Telemetry();
         BoundedQueue q = new BoundedQueue(5, 1, WhenFull.BLOCK, t);
-        q.add(bytes(5)); // queue full
+        q.add(payload(5)); // queue full
 
         Thread producer =
                 new Thread(
                         () -> {
                             try {
-                                q.add(bytes(5));
+                                q.add(payload(5));
                             } catch (InterruptedException e) {
                                 return;
                             }
@@ -140,20 +151,20 @@ public class BoundedQueueTest {
     @Test(expected = IllegalArgumentException.class)
     public void addThrowsForOversizedItem() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(4, 1, WhenFull.DROP, new Telemetry());
-        q.add(bytes(5));
+        q.add(payload(5));
     }
 
     @Test
     public void requeueIncrementsTriesPreservesClock() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(20, 3, WhenFull.DROP, new Telemetry());
-        q.add(bytes(4));
-        Map.Entry<BoundedQueue.Key, byte[]> entry = q.next();
+        q.add(payload(4));
+        Map.Entry<BoundedQueue.Key, Payload> entry = q.next();
         assertEquals(0, entry.getKey().tries);
         long originalClock = entry.getKey().clock;
         long originalEnqueued = entry.getKey().enqueuedAtNanos;
 
         q.requeue(entry);
-        Map.Entry<BoundedQueue.Key, byte[]> requeued = q.next();
+        Map.Entry<BoundedQueue.Key, Payload> requeued = q.next();
         assertEquals(1, requeued.getKey().tries);
         assertEquals(originalClock, requeued.getKey().clock);
         assertEquals(originalEnqueued, requeued.getKey().enqueuedAtNanos);
@@ -163,10 +174,10 @@ public class BoundedQueueTest {
     public void requeuedItemDequeuesAfterFreshItems() throws InterruptedException {
         MockNanos nanos = new MockNanos(0);
         BoundedQueue q = new BoundedQueue(20, 3, WhenFull.DROP, new Telemetry(), nanos);
-        byte[] a = {10};
-        byte[] b = {20};
+        Payload a = payload(new byte[] {10});
+        Payload b = payload(new byte[] {20});
         q.add(a); // A.enqueuedAtNanos = 0
-        Map.Entry<BoundedQueue.Key, byte[]> entryA = q.next();
+        Map.Entry<BoundedQueue.Key, Payload> entryA = q.next();
         q.requeue(entryA); // A now has tries=1
 
         nanos.advanceMillis(5);
@@ -186,8 +197,8 @@ public class BoundedQueueTest {
     public void requeueAtMaxTriesIsAccepted() throws InterruptedException {
         Telemetry t = new Telemetry();
         BoundedQueue q = new BoundedQueue(20, 2, WhenFull.DROP, t);
-        q.add(bytes(3));
-        Map.Entry<BoundedQueue.Key, byte[]> e = q.next();
+        q.add(payload(3));
+        Map.Entry<BoundedQueue.Key, Payload> e = q.next();
         q.requeue(e); // tries → 1
         e = q.next();
         q.requeue(e); // tries → 2 == maxTries, should be accepted
@@ -199,9 +210,8 @@ public class BoundedQueueTest {
     public void requeuePastMaxTriesDropsItem() throws InterruptedException {
         Telemetry t = new Telemetry();
         BoundedQueue q = new BoundedQueue(20, 2, WhenFull.DROP, t);
-        byte[] item = bytes(7);
-        q.add(item);
-        Map.Entry<BoundedQueue.Key, byte[]> e = q.next();
+        q.add(payload(7));
+        Map.Entry<BoundedQueue.Key, Payload> e = q.next();
         q.requeue(e); // tries → 1
         e = q.next();
         q.requeue(e); // tries → 2 == maxTries, accepted
@@ -230,8 +240,8 @@ public class BoundedQueueTest {
     @Test
     public void snapshotReports() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(30, 1, WhenFull.DROP, new Telemetry());
-        q.add(bytes(3));
-        q.add(bytes(5));
+        q.add(payload(3));
+        q.add(payload(5));
 
         Telemetry.Snapshot s = new Telemetry.Snapshot(0L);
         q.snapshot(System.nanoTime(), s);
@@ -245,8 +255,8 @@ public class BoundedQueueTest {
     @Test(timeout = 5000)
     public void nextBlocksUntilItemAdded() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(100, 1, WhenFull.DROP, new Telemetry());
-        byte[] item = bytes(3);
-        Map.Entry<BoundedQueue.Key, byte[]>[] result = new Map.Entry[1];
+        Payload item = payload(3);
+        Map.Entry<BoundedQueue.Key, Payload>[] result = new Map.Entry[1];
 
         Thread consumer =
                 new Thread(

@@ -17,22 +17,17 @@ import java.util.Map;
 import org.junit.Test;
 
 public class ForwarderTest {
+    private static final URI URL = URI.create("http://localhost:0/");
 
     private static Forwarder newForwarder(long maxBytes, WhenFull whenFull) {
-        return new Forwarder(
-                URI.create("http://localhost:0/"),
-                maxBytes,
-                1,
-                whenFull,
-                Duration.ofSeconds(1),
-                Duration.ofSeconds(1));
+        return new Forwarder(maxBytes, 1, whenFull, Duration.ofSeconds(1), Duration.ofSeconds(1));
     }
 
     @Test
     public void sendCountsEnqueue() throws InterruptedException {
         Forwarder f = newForwarder(100, WhenFull.DROP);
-        f.send(new byte[7]);
-        f.send(new byte[3]);
+        f.send(URL, new byte[7]);
+        f.send(URL, new byte[3]);
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(2, s.enqueuedPayloads);
         assertEquals(10, s.enqueuedBytes);
@@ -41,7 +36,7 @@ public class ForwarderTest {
     @Test
     public void oversizedSendDoesNotCount() {
         Forwarder f = newForwarder(10, WhenFull.DROP);
-        assertThrows(IllegalArgumentException.class, () -> f.send(new byte[11]));
+        assertThrows(IllegalArgumentException.class, () -> f.send(URL, new byte[11]));
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(0, s.enqueuedPayloads);
         assertEquals(0, s.enqueuedBytes);
@@ -51,8 +46,8 @@ public class ForwarderTest {
     @Test
     public void handle400() throws Exception {
         Forwarder f = newForwarder(100, WhenFull.DROP);
-        f.send(new byte[7]);
-        Map.Entry<BoundedQueue.Key, byte[]> item = f.queue.next();
+        f.send(URL, new byte[7]);
+        Map.Entry<BoundedQueue.Key, Payload> item = f.queue.next();
         f.handleResponse(400, item);
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(1, s.enqueuedPayloads);
@@ -65,8 +60,8 @@ public class ForwarderTest {
     @Test
     public void handle200() throws Exception {
         Forwarder f = newForwarder(100, WhenFull.DROP);
-        f.send(new byte[7]);
-        Map.Entry<BoundedQueue.Key, byte[]> item = f.queue.next();
+        f.send(URL, new byte[7]);
+        Map.Entry<BoundedQueue.Key, Payload> item = f.queue.next();
         f.handleResponse(200, item);
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(1, s.deliveredPayloads);
@@ -83,8 +78,8 @@ public class ForwarderTest {
     @Test
     public void handleError() throws Exception {
         Forwarder f = newForwarder(100, WhenFull.DROP);
-        f.send(new byte[7]);
-        Map.Entry<BoundedQueue.Key, byte[]> item = f.queue.next();
+        f.send(URL, new byte[7]);
+        Map.Entry<BoundedQueue.Key, Payload> item = f.queue.next();
         f.handleTransportError(item);
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(0, s.deliveredPayloads);
@@ -101,8 +96,8 @@ public class ForwarderTest {
     @Test
     public void handle500() throws Exception {
         Forwarder f = newForwarder(100, WhenFull.DROP);
-        f.send(new byte[7]);
-        Map.Entry<BoundedQueue.Key, byte[]> item = f.queue.next();
+        f.send(URL, new byte[7]);
+        Map.Entry<BoundedQueue.Key, Payload> item = f.queue.next();
         f.handleResponse(500, item);
         Telemetry.Snapshot s = f.snapshot();
         assertEquals(0, s.deliveredPayloads);
