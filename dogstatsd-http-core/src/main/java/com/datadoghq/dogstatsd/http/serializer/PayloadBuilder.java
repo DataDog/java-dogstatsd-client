@@ -12,7 +12,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Build metrics payloads in a format accepted by the agent or the intake. */
+/**
+ * Build metrics payloads in a format accepted by the agent or the intake.
+ *
+ * <p>If any {@link Metric} method throws, the in-progress metric is no longer valid; the caller
+ * must call {@link #resetMetric()} to discard the partial state before encoding any further
+ * metrics. Metrics that are ended without any successfully-added points are silently dropped from
+ * the payload.
+ */
 public class PayloadBuilder {
     private static final int DEFAULT_MAX_PAYLOAD_SIZE = 256 * 1024;
     private static final int METRIC_DATA_FIELD_ID = 3;
@@ -205,6 +212,10 @@ public class PayloadBuilder {
         }
 
         try {
+            if (timestamps.length() == 0) {
+                return;
+            }
+
             m.encodeIndependentFields();
             m.encodeDependentFields();
 
@@ -221,12 +232,22 @@ public class PayloadBuilder {
             }
             payload.put(record);
         } finally {
-            record.clear();
-            timestamps.clear();
-            values.clear();
-            counts.clear();
-            metricInProgress = null;
+            resetMetric();
         }
+    }
+
+    /**
+     * Discard the in-progress metric without adding it to the payload.
+     *
+     * <p>Must be called after any {@link Metric} method throws — the metric is no longer valid and
+     * its partial state must be discarded before encoding any further metrics.
+     */
+    public void resetMetric() {
+        record.clear();
+        timestamps.clear();
+        values.clear();
+        counts.clear();
+        metricInProgress = null;
     }
 
     ColumnarBuffer currentRecord() {
