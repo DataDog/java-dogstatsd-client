@@ -75,7 +75,7 @@ public class Forwarder extends Thread {
                 runOnce(queue.next());
             } catch (InterruptedException e) {
                 return;
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 logger.log(Level.SEVERE, "unexpected error in forwarder loop", t);
             }
         }
