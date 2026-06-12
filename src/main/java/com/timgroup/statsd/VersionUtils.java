@@ -1,5 +1,11 @@
 package com.timgroup.statsd;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.ProtocolFamily;
+import java.net.SocketAddress;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -110,5 +116,46 @@ public class VersionUtils {
 
     public static boolean isJavaVersionAtLeast(int major, int minor, int update) {
         return JAVA_VERSION.isAtLeast(major, minor, update);
+    }
+
+    /**
+     * Opens a {@link SocketChannel} for Unix domain sockets using {@code
+     * StandardProtocolFamily.UNIX}, available since Java 16. Uses reflection to avoid a compile-time
+     * dependency on Java 16+ classes.
+     */
+    @SuppressWarnings("unchecked")
+    static SocketChannel openUnixSocketChannel() throws IOException {
+        try {
+            Class<?> standardProtocolFamilyClass = Class.forName("java.net.StandardProtocolFamily");
+            Object unixProtocol = Enum.valueOf((Class<Enum>) standardProtocolFamilyClass, "UNIX");
+            Method openMethod = SocketChannel.class.getMethod("open", ProtocolFamily.class);
+            return (SocketChannel) openMethod.invoke(null, unixProtocol);
+        } catch (InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof IOException) {
+                throw (IOException) cause;
+            }
+            throw new IOException("Failed to open Unix domain SocketChannel", e);
+        } catch (Exception e) {
+            throw new IOException("Failed to open Unix domain SocketChannel", e);
+        }
+    }
+
+    /**
+     * Creates a {@code java.net.UnixDomainSocketAddress} for the given path using reflection.
+     * Available since Java 16.
+     */
+    static SocketAddress newUnixDomainSocketAddress(String path) {
+        try {
+            Class<?> cls = Class.forName("java.net.UnixDomainSocketAddress");
+            Method of = cls.getMethod("of", String.class);
+            return (SocketAddress) of.invoke(null, path);
+        } catch (InvocationTargetException e) {
+            throw new StatsDClientException(
+                    "Failed to create UnixDomainSocketAddress for path: " + path, e.getCause());
+        } catch (Exception e) {
+            throw new StatsDClientException(
+                    "Failed to create UnixDomainSocketAddress for path: " + path, e);
+        }
     }
 }

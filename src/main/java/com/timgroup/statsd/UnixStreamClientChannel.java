@@ -1,7 +1,6 @@
 package com.timgroup.statsd;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -112,7 +111,7 @@ public class UnixStreamClientChannel implements ClientChannel {
                 }
 
                 try (Selector selector = Selector.open()) {
-                    SelectionKey key = delegate.register(selector, SelectionKey.OP_WRITE);
+                    delegate.register(selector, SelectionKey.OP_WRITE);
                     long selectTimeout = timeoutMs;
 
                     if (deadline > 0) {
@@ -157,68 +156,40 @@ public class UnixStreamClientChannel implements ClientChannel {
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
         // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
         if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket) {
+            // Only SocketChannel.open(ProtocolFamily) needs reflection; connect/finishConnect
+            // have existed since Java 1.4 and are called directly once we have the channel.
+            SocketChannel channel = VersionUtils.openUnixSocketChannel();
+            channel.configureBlocking(false);
+
+            SocketAddress connectAddress =
+                    address instanceof UnixSocketAddressWithTransport
+                            ? ((UnixSocketAddressWithTransport) address).getAddress()
+                            : address;
+
             try {
-                // Avoid compiling Java 16+ classes in incompatible versions
-                Class<?> protocolFamilyClass = Class.forName("java.net.ProtocolFamily");
-                Class<?> standardProtocolFamilyClass =
-                        Class.forName("java.net.StandardProtocolFamily");
-                Object unixProtocol =
-                        Enum.valueOf((Class<Enum>) standardProtocolFamilyClass, "UNIX");
-                Method openMethod = SocketChannel.class.getMethod("open", protocolFamilyClass);
-                SocketChannel channel = (SocketChannel) openMethod.invoke(null, unixProtocol);
-
-                channel.configureBlocking(false);
-
-                try {
-                    SocketAddress connectAddress = address;
-                    if (address instanceof UnixSocketAddressWithTransport) {
-                        connectAddress = ((UnixSocketAddressWithTransport) address).getAddress();
-                    }
-
-                    Method connectMethod =
-                            SocketChannel.class.getMethod("connect", SocketAddress.class);
-                    boolean connected = (boolean) connectMethod.invoke(channel, connectAddress);
-
-                    if (!connected) {
-                        try (Selector selector = Selector.open()) {
-                            SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
-                            int timeoutMs = connectionTimeout > 0 ? connectionTimeout : 1000;
-                            int ready = selector.select(timeoutMs);
-
-                            if (ready == 0) {
-                                throw new IOException(
-                                        "Connection timed out after " + timeoutMs + "ms");
-                            }
-
-                            if (key.isConnectable()) {
-                                connected = channel.finishConnect();
-                                if (!connected) {
-                                    throw new IOException("Failed to complete connection");
-                                }
-                            }
+                if (!channel.connect(connectAddress)) {
+                    try (Selector selector = Selector.open()) {
+                        SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
+                        int timeoutMs = connectionTimeout > 0 ? connectionTimeout : 1000;
+                        if (selector.select(timeoutMs) == 0) {
+                            throw new IOException("Connection timed out after " + timeoutMs + "ms");
+                        }
+                        if (key.isConnectable() && !channel.finishConnect()) {
+                            throw new IOException("Failed to complete connection");
                         }
                     }
-                } catch (Exception e) {
-                    try {
-                        channel.close();
-                    } catch (IOException __) {
-                        // ignore
-                    }
-                    throw e;
                 }
-
-                this.delegate = channel;
-                return;
-            } catch (Exception e) {
-                Throwable cause = e.getCause();
-                if (e instanceof java.lang.reflect.InvocationTargetException
-                        && cause instanceof IOException) {
-                    throw (IOException) cause;
+            } catch (IOException e) {
+                try {
+                    channel.close();
+                } catch (IOException __) {
+                    // ignore
                 }
-                throw new IOException(
-                        "Failed to create UnixStreamClientChannel for native UDS implementation",
-                        e);
+                throw e;
             }
+
+            this.delegate = channel;
+            return;
         }
         // Default to jnr-unixsocket if Java version is < 16 or native support is disabled
         UnixSocketChannel channel = UnixSocketChannel.create();

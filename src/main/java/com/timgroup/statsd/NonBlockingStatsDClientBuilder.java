@@ -1,6 +1,5 @@
 package com.timgroup.statsd;
 
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -464,7 +463,8 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             String uriPath = parsed.getPath();
             return staticUnixResolution(
                     uriPath,
-                    UnixSocketAddressWithTransport.TransportType.fromScheme(parsed.getScheme()));
+                    UnixSocketAddressWithTransport.TransportType.fromScheme(parsed.getScheme()),
+                    enableJdkSocket);
         }
 
         return null;
@@ -528,34 +528,17 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     }
 
     protected static Callable<SocketAddress> staticUnixResolution(
-            final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
+            final String path,
+            final UnixSocketAddressWithTransport.TransportType transportType,
+            final boolean enableJdkSocket) {
         return new Callable<SocketAddress>() {
             @Override
             public SocketAddress call() {
-                SocketAddress socketAddress;
-
-                // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
-                if (VersionUtils.isJavaVersionAtLeast(16)
-                        && NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET) {
-                    try {
-                        // Avoid compiling Java 16+ classes in incompatible versions
-                        Class<?> unixDomainSocketAddressClass =
-                                Class.forName("java.net.UnixDomainSocketAddress");
-                        Method ofMethod =
-                                unixDomainSocketAddressClass.getMethod("of", String.class);
-                        socketAddress = (SocketAddress) ofMethod.invoke(null, path);
-                    } catch (Exception e) {
-                        throw new StatsDClientException(
-                                "Failed to create UnixSocketAddress for native JDK UDS implementation",
-                                e);
-                    }
-                } else {
-                    socketAddress = new UnixSocketAddress(path);
-                }
-                UnixSocketAddressWithTransport result =
-                        new UnixSocketAddressWithTransport(socketAddress, transportType);
-
-                return result;
+                SocketAddress socketAddress =
+                        VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket
+                                ? VersionUtils.newUnixDomainSocketAddress(path)
+                                : new UnixSocketAddress(path);
+                return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
         };
     }
