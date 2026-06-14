@@ -120,8 +120,8 @@ public class VersionUtils {
 
     /**
      * Opens a {@link SocketChannel} for Unix domain sockets using {@code
-     * StandardProtocolFamily.UNIX}, available since Java 16. Uses reflection to avoid a compile-time
-     * dependency on Java 16+ classes.
+     * StandardProtocolFamily.UNIX}, available since Java 16. Uses reflection to avoid a
+     * compile-time dependency on Java 16+ classes.
      */
     @SuppressWarnings("unchecked")
     static SocketChannel openUnixSocketChannel() throws IOException {
