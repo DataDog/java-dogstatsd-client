@@ -535,7 +535,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             @Override
             public SocketAddress call() {
                 SocketAddress socketAddress =
-                        VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket
+                        VersionUtils.isJavaVersionAtLeast(16)
+                                        && enableJdkSocket
+                                        && transportType
+                                                == UnixSocketAddressWithTransport.TransportType
+                                                        .UDS_STREAM
                                 ? VersionUtils.newUnixDomainSocketAddress(path)
                                 : new UnixSocketAddress(path);
                 return new UnixSocketAddressWithTransport(socketAddress, transportType);

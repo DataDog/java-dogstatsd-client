@@ -119,10 +119,14 @@ public class UnixStreamClientChannel implements ClientChannel {
                         if (remainingNs <= 0) {
                             throw new IOException("Write timed out");
                         }
-                        selectTimeout = Math.min(timeoutMs, remainingNs / 1_000_000L);
+                        long remainingMs = Math.max(1L, remainingNs / 1_000_000L);
+                        selectTimeout =
+                                timeoutMs > 0 ? Math.min(timeoutMs, remainingMs) : remainingMs;
                     }
 
-                    if (selector.select(selectTimeout) == 0) {
+                    int selected =
+                            selectTimeout > 0 ? selector.select(selectTimeout) : selector.select();
+                    if (selected == 0) {
                         throw new IOException("Write timed out after " + selectTimeout + "ms");
                     }
                 }
@@ -153,13 +157,11 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
         }
 
-        long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
         // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
         if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket) {
             // Only SocketChannel.open(ProtocolFamily) needs reflection; connect/finishConnect
             // have existed since Java 1.4 and are called directly once we have the channel.
             SocketChannel channel = VersionUtils.openUnixSocketChannel();
-            channel.configureBlocking(false);
 
             SocketAddress connectAddress =
                     address instanceof UnixSocketAddressWithTransport
@@ -167,15 +169,33 @@ public class UnixStreamClientChannel implements ClientChannel {
                             : address;
 
             try {
-                if (!channel.connect(connectAddress)) {
+                if (connectionTimeout <= 0) {
+                    channel.configureBlocking(true);
+                    channel.connect(connectAddress);
+                    channel.configureBlocking(false);
+                } else {
+                    channel.configureBlocking(false);
+                    long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+                    if (channel.connect(connectAddress)) {
+                        this.delegate = channel;
+                        return;
+                    }
+
                     try (Selector selector = Selector.open()) {
-                        SelectionKey key = channel.register(selector, SelectionKey.OP_CONNECT);
-                        int timeoutMs = connectionTimeout > 0 ? connectionTimeout : 1000;
-                        if (selector.select(timeoutMs) == 0) {
-                            throw new IOException("Connection timed out after " + timeoutMs + "ms");
-                        }
-                        if (key.isConnectable() && !channel.finishConnect()) {
-                            throw new IOException("Failed to complete connection");
+                        channel.register(selector, SelectionKey.OP_CONNECT);
+                        while (!channel.finishConnect()) {
+                            long remainingNs = deadline - System.nanoTime();
+                            if (remainingNs <= 0) {
+                                throw new IOException(
+                                        "Connection timed out after " + connectionTimeout + "ms");
+                            }
+                            long selectTimeout = Math.max(1L, remainingNs / 1_000_000L);
+                            if (selector.select(selectTimeout) == 0
+                                    && System.nanoTime() >= deadline) {
+                                throw new IOException(
+                                        "Connection timed out after " + connectionTimeout + "ms");
+                            }
+                            selector.selectedKeys().clear();
                         }
                     }
                 }
@@ -193,6 +213,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
         // Default to jnr-unixsocket if Java version is < 16 or native support is disabled
         UnixSocketChannel channel = UnixSocketChannel.create();
+        long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
 
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux

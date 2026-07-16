@@ -15,7 +15,7 @@ public class VersionUtils {
     private static final Version JAVA_VERSION =
             parseJavaVersion(System.getProperty("java.version"));
 
-    private static Version parseJavaVersion(String javaVersion) {
+    static Version parseJavaVersion(String javaVersion) {
         // Remove pre-release part, usually -ea
         final int indexOfDash = javaVersion.indexOf('-');
         if (indexOfDash >= 0) {
@@ -33,11 +33,11 @@ public class VersionUtils {
             // for java 1.6/1.7/1.8
             if (major == 1) {
                 major = nums.get(1);
-                minor = nums.get(2);
-                update = nums.get(3);
+                minor = nums.size() > 2 ? nums.get(2) : 0;
+                update = nums.size() > 3 ? nums.get(3) : 0;
             } else {
-                minor = nums.get(1);
-                update = nums.get(2);
+                minor = nums.size() > 1 ? nums.get(1) : 0;
+                update = nums.size() > 2 ? nums.get(2) : 0;
             }
         } catch (NumberFormatException | IndexOutOfBoundsException e) {
             // unable to parse version string - do nothing

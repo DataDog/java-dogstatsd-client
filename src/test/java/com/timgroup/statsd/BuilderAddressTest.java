@@ -1,6 +1,8 @@
 package com.timgroup.statsd;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -220,6 +222,13 @@ public class BuilderAddressTest {
                             ? ((UnixSocketAddress) a.getAddress()).path()
                             : a.getAddress().toString());
             assertEquals(e.getTransportType(), a.getTransportType());
+            if (VersionUtils.isJavaVersionAtLeast(16)
+                    && e.getTransportType()
+                            == UnixSocketAddressWithTransport.TransportType.UDS_STREAM) {
+                assertFalse(a.getAddress() instanceof UnixSocketAddress);
+            } else {
+                assertTrue(a.getAddress() instanceof UnixSocketAddress);
+            }
         } else {
             assertEquals(expected, actual);
         }
