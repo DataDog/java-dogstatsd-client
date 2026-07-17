@@ -10,6 +10,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
@@ -192,11 +193,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         Assume.assumeTrue(VersionUtils.isJavaVersionAtLeast(16));
         UnixStreamClientChannel channel =
                 new UnixStreamClientChannel(
-                        new jnr.unixsocket.UnixSocketAddress(socketFile.getPath()),
-                        500,
-                        500,
-                        -1,
-                        true);
+                        legacyUnixSocketAddress(socketFile.getPath()), 500, 500, -1, true);
 
         assertChannelSends(channel, "legacy.address:1|c");
     }
@@ -206,11 +203,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
         Assume.assumeTrue(VersionUtils.isJavaVersionAtLeast(16));
         UnixStreamClientChannel channel =
                 new UnixStreamClientChannel(
-                        new jnr.unixsocket.UnixSocketAddress(socketFile.getPath()),
-                        500,
-                        500,
-                        -1,
-                        true) {
+                        legacyUnixSocketAddress(socketFile.getPath()), 500, 500, -1, true) {
                     @Override
                     SocketChannel openJdkSocketChannel() throws IOException {
                         throw new IOException("Native UDS unavailable");
@@ -218,6 +211,13 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
                 };
 
         assertChannelSends(channel, "fallback:1|c");
+    }
+
+    private static SocketAddress legacyUnixSocketAddress(String path) throws Exception {
+        return (SocketAddress)
+                Class.forName("jnr.unixsocket.UnixSocketAddress")
+                        .getConstructor(String.class)
+                        .newInstance(path);
     }
 
     @Test(timeout = 5000L)
