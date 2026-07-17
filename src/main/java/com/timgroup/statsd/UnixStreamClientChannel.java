@@ -2,6 +2,7 @@ package com.timgroup.statsd;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SelectionKey;
@@ -62,7 +63,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         delimiterBuffer.flip();
 
         try {
-            long deadline = System.nanoTime() + timeout * 1_000_000L;
+            long deadline = timeout > 0 ? System.nanoTime() + timeout * 1_000_000L : 0;
             written = writeAll(delimiterBuffer, true, deadline);
             if (written > 0) {
                 written += writeAll(src, false, deadline);
@@ -106,7 +107,7 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
 
             if (read == 0) {
-                if (canReturnOnTimeout && written == 0) {
+                if (canReturnOnTimeout && written == 0 && delegate.isBlocking()) {
                     return written;
                 }
 
@@ -169,6 +170,9 @@ public class UnixStreamClientChannel implements ClientChannel {
                             : address;
 
             try {
+                if (bufferSize > 0) {
+                    channel.setOption(StandardSocketOptions.SO_SNDBUF, bufferSize);
+                }
                 if (connectionTimeout <= 0) {
                     channel.configureBlocking(true);
                     channel.connect(connectAddress);
