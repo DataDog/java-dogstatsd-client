@@ -10,6 +10,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.util.logging.Logger;
 import org.junit.After;
@@ -186,6 +188,39 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     }
 
     @Test(timeout = 5000L)
+    public void nativeSocketAcceptsLegacyUnixAddress() throws Exception {
+        Assume.assumeTrue(VersionUtils.isJavaVersionAtLeast(16));
+        UnixStreamClientChannel channel =
+                new UnixStreamClientChannel(
+                        new jnr.unixsocket.UnixSocketAddress(socketFile.getPath()),
+                        500,
+                        500,
+                        -1,
+                        true);
+
+        assertChannelSends(channel, "legacy.address:1|c");
+    }
+
+    @Test(timeout = 5000L)
+    public void fallsBackWhenNativeSocketCannotBeOpened() throws Exception {
+        Assume.assumeTrue(VersionUtils.isJavaVersionAtLeast(16));
+        UnixStreamClientChannel channel =
+                new UnixStreamClientChannel(
+                        new jnr.unixsocket.UnixSocketAddress(socketFile.getPath()),
+                        500,
+                        500,
+                        -1,
+                        true) {
+                    @Override
+                    SocketChannel openJdkSocketChannel() throws IOException {
+                        throw new IOException("Native UDS unavailable");
+                    }
+                };
+
+        assertChannelSends(channel, "fallback:1|c");
+    }
+
+    @Test(timeout = 5000L)
     public void stream_uds_has_uds_buffer_size() throws Exception {
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
@@ -210,5 +245,17 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
                         .build();
 
         assertEquals(client.statsDProcessor.bufferPool.getBufferSize(), 576);
+    }
+
+    private static void assertChannelSends(UnixStreamClientChannel channel, String message)
+            throws Exception {
+        try {
+            channel.write(ByteBuffer.wrap(message.getBytes(NonBlockingStatsDClient.UTF_8)));
+            server.waitForMessage();
+            assertThat(server.messagesReceived(), hasItem(message));
+            server.clear();
+        } finally {
+            channel.close();
+        }
     }
 }

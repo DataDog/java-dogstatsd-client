@@ -107,8 +107,11 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
 
             if (read == 0) {
-                if (canReturnOnTimeout && written == 0 && delegate.isBlocking()) {
-                    return written;
+                if (delegate.isBlocking()) {
+                    if (canReturnOnTimeout && written == 0) {
+                        return written;
+                    }
+                    throw new IOException("Write timed out");
                 }
 
                 try (Selector selector = Selector.open()) {
@@ -159,60 +162,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
 
         // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
-        if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket) {
-            // Only SocketChannel.open(ProtocolFamily) needs reflection; connect/finishConnect
-            // have existed since Java 1.4 and are called directly once we have the channel.
-            SocketChannel channel = VersionUtils.openUnixSocketChannel();
-
-            SocketAddress connectAddress =
-                    address instanceof UnixSocketAddressWithTransport
-                            ? ((UnixSocketAddressWithTransport) address).getAddress()
-                            : address;
-
-            try {
-                if (bufferSize > 0) {
-                    channel.setOption(StandardSocketOptions.SO_SNDBUF, bufferSize);
-                }
-                if (connectionTimeout <= 0) {
-                    channel.configureBlocking(true);
-                    channel.connect(connectAddress);
-                    channel.configureBlocking(false);
-                } else {
-                    channel.configureBlocking(false);
-                    long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
-                    if (channel.connect(connectAddress)) {
-                        this.delegate = channel;
-                        return;
-                    }
-
-                    try (Selector selector = Selector.open()) {
-                        channel.register(selector, SelectionKey.OP_CONNECT);
-                        while (!channel.finishConnect()) {
-                            long remainingNs = deadline - System.nanoTime();
-                            if (remainingNs <= 0) {
-                                throw new IOException(
-                                        "Connection timed out after " + connectionTimeout + "ms");
-                            }
-                            long selectTimeout = Math.max(1L, remainingNs / 1_000_000L);
-                            if (selector.select(selectTimeout) == 0
-                                    && System.nanoTime() >= deadline) {
-                                throw new IOException(
-                                        "Connection timed out after " + connectionTimeout + "ms");
-                            }
-                            selector.selectedKeys().clear();
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                try {
-                    channel.close();
-                } catch (IOException __) {
-                    // ignore
-                }
-                throw e;
-            }
-
-            this.delegate = channel;
+        if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket && connectWithJdkSocket()) {
             return;
         }
         // Default to jnr-unixsocket if Java version is < 16 or native support is disabled
@@ -256,6 +206,84 @@ public class UnixStreamClientChannel implements ClientChannel {
         }
 
         this.delegate = channel;
+    }
+
+    private boolean connectWithJdkSocket() throws IOException {
+        SocketChannel channel = null;
+        SocketAddress connectAddress;
+
+        try {
+            // Only SocketChannel.open(ProtocolFamily) needs reflection; connect/finishConnect
+            // have existed since Java 1.4 and are called directly once we have the channel.
+            channel = openJdkSocketChannel();
+            connectAddress = nativeSocketAddress(address);
+            if (bufferSize > 0) {
+                channel.setOption(StandardSocketOptions.SO_SNDBUF, bufferSize);
+            }
+        } catch (Exception | LinkageError e) {
+            closeQuietly(channel);
+            return false;
+        }
+
+        try {
+            if (connectionTimeout <= 0) {
+                channel.configureBlocking(true);
+                channel.connect(connectAddress);
+                channel.configureBlocking(false);
+            } else {
+                channel.configureBlocking(false);
+                long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+                if (!channel.connect(connectAddress)) {
+                    try (Selector selector = Selector.open()) {
+                        channel.register(selector, SelectionKey.OP_CONNECT);
+                        while (!channel.finishConnect()) {
+                            long remainingNs = deadline - System.nanoTime();
+                            if (remainingNs <= 0) {
+                                throw new IOException(
+                                        "Connection timed out after " + connectionTimeout + "ms");
+                            }
+                            long selectTimeout = Math.max(1L, remainingNs / 1_000_000L);
+                            if (selector.select(selectTimeout) == 0
+                                    && System.nanoTime() >= deadline) {
+                                throw new IOException(
+                                        "Connection timed out after " + connectionTimeout + "ms");
+                            }
+                            selector.selectedKeys().clear();
+                        }
+                    }
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            closeQuietly(channel);
+            throw e;
+        }
+
+        this.delegate = channel;
+        return true;
+    }
+
+    SocketChannel openJdkSocketChannel() throws IOException {
+        return VersionUtils.openUnixSocketChannel();
+    }
+
+    private static SocketAddress nativeSocketAddress(SocketAddress address) {
+        if (address instanceof UnixSocketAddressWithTransport) {
+            address = ((UnixSocketAddressWithTransport) address).getAddress();
+        }
+        if (address instanceof UnixSocketAddress) {
+            return VersionUtils.newUnixDomainSocketAddress(((UnixSocketAddress) address).path());
+        }
+        return address;
+    }
+
+    private static void closeQuietly(SocketChannel channel) {
+        if (channel != null) {
+            try {
+                channel.close();
+            } catch (IOException ignored) {
+                // ignore
+            }
+        }
     }
 
     @Override
