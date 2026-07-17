@@ -11,9 +11,11 @@ import java.util.List;
 
 // Logic copied from dd-trace-java Platform class. See:
 // https://github.com/DataDog/dd-trace-java/blob/master/internal-api/src/main/java/datadog/trace/api/Platform.java
-public class VersionUtils {
+final class VersionUtils {
     private static final Version JAVA_VERSION =
             parseJavaVersion(System.getProperty("java.version"));
+
+    private VersionUtils() {}
 
     static Version parseJavaVersion(String javaVersion) {
         // Remove pre-release part, usually -ea
@@ -67,29 +69,17 @@ public class VersionUtils {
     }
 
     static final class Version {
-        public final int major;
-        public final int minor;
-        public final int update;
+        final int major;
+        final int minor;
+        final int update;
 
-        public Version(int major, int minor, int update) {
+        Version(int major, int minor, int update) {
             this.major = major;
             this.minor = minor;
             this.update = update;
         }
 
-        public boolean is(int major) {
-            return this.major == major;
-        }
-
-        public boolean is(int major, int minor) {
-            return this.major == major && this.minor == minor;
-        }
-
-        public boolean is(int major, int minor, int update) {
-            return this.major == major && this.minor == minor && this.update == update;
-        }
-
-        public boolean isAtLeast(int major, int minor, int update) {
+        boolean isAtLeast(int major, int minor, int update) {
             return isAtLeast(this.major, this.minor, this.update, major, minor, update);
         }
 
@@ -106,16 +96,8 @@ public class VersionUtils {
         }
     }
 
-    public static boolean isJavaVersionAtLeast(int major) {
-        return isJavaVersionAtLeast(major, 0, 0);
-    }
-
-    public static boolean isJavaVersionAtLeast(int major, int minor) {
-        return isJavaVersionAtLeast(major, minor, 0);
-    }
-
-    public static boolean isJavaVersionAtLeast(int major, int minor, int update) {
-        return JAVA_VERSION.isAtLeast(major, minor, update);
+    static boolean isJavaVersionAtLeast(int major) {
+        return JAVA_VERSION.isAtLeast(major, 0, 0);
     }
 
     /**

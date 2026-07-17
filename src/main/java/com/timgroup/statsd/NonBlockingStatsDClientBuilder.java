@@ -528,6 +528,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     }
 
     protected static Callable<SocketAddress> staticUnixResolution(
+            final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
+        return staticUnixResolution(path, transportType, false);
+    }
+
+    private static Callable<SocketAddress> staticUnixResolution(
             final String path,
             final UnixSocketAddressWithTransport.TransportType transportType,
             final boolean enableJdkSocket) {
