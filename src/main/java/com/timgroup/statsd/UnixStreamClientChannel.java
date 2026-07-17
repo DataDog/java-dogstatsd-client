@@ -103,6 +103,9 @@ public class UnixStreamClientChannel implements ClientChannel {
             if (read > 0) {
                 remaining -= read;
                 written += read;
+                if (deadline > 0 && System.nanoTime() >= deadline) {
+                    throw new IOException("Write timed out");
+                }
                 continue;
             }
 
