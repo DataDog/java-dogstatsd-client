@@ -5,13 +5,13 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -22,13 +22,15 @@ public class NonBlockingDirectStatsDClientTest {
     private static DirectStatsDClient client;
     private static DummyStatsDServer server;
 
-    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    // Controlled (empty) environment so the client is unaffected by ambient DD_* variables.
+    private static final Map<String, String> CLIENT_ENV = new HashMap<>();
 
     @BeforeClass
     public static void start() throws IOException {
         server = new UDPDummyStatsDServer(STATSD_SERVER_PORT);
         client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(CLIENT_ENV)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(STATSD_SERVER_PORT)

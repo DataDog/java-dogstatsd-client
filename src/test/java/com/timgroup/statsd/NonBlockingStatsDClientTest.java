@@ -16,8 +16,10 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -52,6 +54,11 @@ public class NonBlockingStatsDClientTest {
     private String externalEnv;
     private String tagsCardinality;
     private String payloadTail;
+
+    // Controlled environment injected into every client built by this test, so the client only
+    // sees the variables a test explicitly sets and is unaffected by the ambient process
+    // environment (e.g. DD_ENV/DD_SERVICE/DD_ENTITY_ID set by a CI runner).
+    private Map<String, String> clientEnv;
 
     @Parameters
     public static Object[][] parameters() {
@@ -94,16 +101,18 @@ public class NonBlockingStatsDClientTest {
 
     @Before
     public void start() throws IOException {
+        clientEnv = new HashMap<>();
         if (externalEnv != null) {
-            environmentVariables.set("DD_EXTERNAL_ENV", externalEnv);
+            clientEnv.put("DD_EXTERNAL_ENV", externalEnv);
         }
         if (tagsCardinality != null) {
-            environmentVariables.set("DD_CARDINALITY", tagsCardinality);
+            clientEnv.put("DD_CARDINALITY", tagsCardinality);
         }
 
         server = new UDPDummyStatsDServer(0);
         client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -114,6 +123,7 @@ public class NonBlockingStatsDClientTest {
                         .build();
         clientUnaggregated =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -307,6 +317,7 @@ public class NonBlockingStatsDClientTest {
         final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -614,6 +625,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -638,6 +650,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -662,6 +675,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -684,9 +698,10 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_entityID_from_env() throws Exception {
         final String entity_value = "foo-entity";
-        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        clientEnv.put(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -708,10 +723,11 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_entityID_from_env_and_constant_tags() throws Exception {
         final String entity_value = "foo-entity";
-        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        clientEnv.put(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final String constantTags = "arbitraryTag:arbitraryValue";
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -733,9 +749,10 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void sends_gauge_entityID_from_args() throws Exception {
         final String entity_value = "foo-entity";
-        environmentVariables.set(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
+        clientEnv.put(NonBlockingStatsDClient.DD_ENTITY_ID_ENV_VAR, entity_value);
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -758,12 +775,13 @@ public class NonBlockingStatsDClientTest {
     @Test(timeout = 5000L)
     public void init_client_from_env_vars() throws Exception {
         final String entity_value = "foo-entity";
-        environmentVariables.set(
+        clientEnv.put(
                 NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR,
                 Integer.toString(server.getPort()));
-        environmentVariables.set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
+        clientEnv.put(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, "localhost");
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .enableAggregation(false)
                         .originDetectionEnabled(originDetectionEnabled)
@@ -786,9 +804,10 @@ public class NonBlockingStatsDClientTest {
                 NonBlockingStatsDClient.Literal.values()) {
             final String envVarName = literal.envName();
             final String randomString = envVarName + "_val_" + r.nextDouble();
-            environmentVariables.set(envVarName, randomString);
+            clientEnv.put(envVarName, randomString);
             final NonBlockingStatsDClient client =
                     new NonBlockingStatsDClientBuilder()
+                            .withEnvironmentVariables(clientEnv)
                             .prefix("checkEnvVars")
                             .hostname("localhost")
                             .port(server.getPort())
@@ -808,7 +827,7 @@ public class NonBlockingStatsDClientTest {
                             + randomString);
             server.clear();
 
-            environmentVariables.clear(envVarName);
+            clientEnv.remove(envVarName);
             log.info("passed for '" + literal + "'; env cleaned.");
             client.stop();
         }
@@ -819,6 +838,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -841,6 +861,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix(null)
                         .hostname("localhost")
                         .port(server.getPort())
@@ -863,6 +884,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient no_prefix_client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .hostname("localhost")
                         .port(server.getPort())
                         .enableAggregation(false)
@@ -963,6 +985,7 @@ public class NonBlockingStatsDClientTest {
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -1068,6 +1091,7 @@ public class NonBlockingStatsDClientTest {
 
         try (final NonBlockingStatsDClient testClient =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -1115,6 +1139,7 @@ public class NonBlockingStatsDClientTest {
         final UDPDummyStatsDServer telemetryServer = new UDPDummyStatsDServer(0);
         final NonBlockingStatsDClient testClient =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
@@ -1247,6 +1272,7 @@ public class NonBlockingStatsDClientTest {
     public void nonsampling_client_test() throws Exception {
         final NonBlockingStatsDClientBuilder builder =
                 new NonsamplingClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("")
                         .hostname("localhost")
                         .enableAggregation(false)
@@ -1308,7 +1334,8 @@ public class NonBlockingStatsDClientTest {
                     }
                 };
         NonBlockingStatsDClient client =
-                builder.hostname("localhost")
+                builder.withEnvironmentVariables(clientEnv)
+                        .hostname("localhost")
                         .port(port)
                         .blocking(true)
                         .originDetectionEnabled(originDetectionEnabled)
@@ -1355,7 +1382,8 @@ public class NonBlockingStatsDClientTest {
 
         final BlockingQueue errors = new LinkedBlockingQueue();
         NonBlockingStatsDClient client =
-                builder.hostname("localhost")
+                builder.withEnvironmentVariables(clientEnv)
+                        .hostname("localhost")
                         .blocking(true)
                         .errorHandler(
                                 new StatsDClientErrorHandler() {

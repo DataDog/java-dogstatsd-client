@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import jnr.unixsocket.UnixSocketAddress;
@@ -121,6 +122,8 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public ThreadFactory threadFactory;
     public TagsCardinality tagsCardinality = null;
+
+    EnvMap env = new EnvMap();
 
     public NonBlockingStatsDClientBuilder() {}
 
@@ -335,6 +338,22 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
     }
 
     /**
+     * Overrides the environment variables the client reads configuration from.
+     *
+     * <p>By default the client reads from the process environment via {@link
+     * System#getenv(String)}. Supplying a map makes the client read configuration (for example,
+     * {@code DD_ENV}, {@code DD_SERVICE}, {@code DD_VERSION}, {@code DD_ENTITY_ID}) exclusively
+     * from that map, so it is unaffected by the ambient process environment.
+     *
+     * @param env the map to read environment variables from, or null to use the process environment
+     * @return this builder
+     */
+    public NonBlockingStatsDClientBuilder withEnvironmentVariables(Map<String, String> env) {
+        this.env = new EnvMap(env);
+        return this;
+    }
+
+    /**
      * NonBlockingStatsDClient factory method.
      *
      * @return the built NonBlockingStatsDClient.
@@ -386,11 +405,10 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
         resolved.tagsCardinality = this.tagsCardinality;
         if (resolved.tagsCardinality == null) {
-            resolved.tagsCardinality = TagsCardinality.fromString(System.getenv("DD_CARDINALITY"));
+            resolved.tagsCardinality = TagsCardinality.fromString(env.get("DD_CARDINALITY"));
         }
         if (resolved.tagsCardinality == null) {
-            resolved.tagsCardinality =
-                    TagsCardinality.fromString(System.getenv("DATADOG_CARDINALITY"));
+            resolved.tagsCardinality = TagsCardinality.fromString(env.get("DATADOG_CARDINALITY"));
         }
         if (resolved.tagsCardinality == null) {
             resolved.tagsCardinality = TagsCardinality.DEFAULT;
@@ -414,12 +432,12 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         }
 
         // Next, try various environment variables.
-        String url = System.getenv(NonBlockingStatsDClient.DD_DOGSTATSD_URL_ENV_VAR);
+        String url = env.get(NonBlockingStatsDClient.DD_DOGSTATSD_URL_ENV_VAR);
         if (url != null) {
             return getAddressLookupFromUrl(url);
         }
 
-        String namedPipeFromEnv = System.getenv(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
+        String namedPipeFromEnv = env.get(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR);
         if (namedPipeFromEnv != null) {
             return staticNamedPipeResolution(namedPipeFromEnv);
         }
@@ -543,8 +561,8 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
      * @return host name from the environment variable "DD_AGENT_HOST"
      * @throws StatsDClientException if the environment variable is not set
      */
-    private static String getHostnameFromEnvVar() {
-        final String hostname = System.getenv(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR);
+    private String getHostnameFromEnvVar() {
+        final String hostname = env.get(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR);
         if (hostname == null) {
             throw new StatsDClientException(
                     "Failed to retrieve agent hostname from environment variable", null);
@@ -558,9 +576,8 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
      * @return dogstatsd port from the environment variable "DD_DOGSTATSD_PORT"
      * @throws StatsDClientException if the environment variable is an integer
      */
-    private static int getPortFromEnvVar(final int defaultPort) {
-        final String statsDPortString =
-                System.getenv(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR);
+    private int getPortFromEnvVar(final int defaultPort) {
+        final String statsDPortString = env.get(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR);
         if (statsDPortString == null) {
             return defaultPort;
         } else {

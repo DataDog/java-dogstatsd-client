@@ -76,10 +76,6 @@ public class NonBlockingStatsDClient implements StatsDClient {
             return (PREFIX + "_" + toString()).toUpperCase();
         }
 
-        String envVal() {
-            return System.getenv(envName());
-        }
-
         String tag() {
             return toString().toLowerCase();
         }
@@ -182,6 +178,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     private final String containerID;
     private final String externalEnv;
     final TagsCardinality clientTagsCardinality;
+    final EnvMap env;
 
     /**
      * Create a new StatsD client communicating with a StatsD instance on the host and port
@@ -209,6 +206,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
         blocking = builder.blocking;
         maxPacketSizeBytes = builder.maxPacketSizeBytes;
         clientTagsCardinality = builder.tagsCardinality;
+        env = builder.env;
 
         {
             List<String> constantPreTags = new ArrayList<>();
@@ -220,7 +218,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
             // Support "dd.internal.entity_id" internal tag.
             updateTagsWithEntityID(constantPreTags, builder.entityID);
             for (final Literal literal : Literal.values()) {
-                final String envVal = literal.envVal();
+                final String envVal = env.get(literal.envName());
                 if (envVal != null && !envVal.trim().isEmpty()) {
                     constantPreTags.add(literal.tag() + ":" + envVal);
                 }
@@ -240,7 +238,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
 
         boolean originDetectionEnabled = isOriginDetectionEnabled(builder.originDetectionEnabled);
         containerID = getContainerID(builder.containerID, originDetectionEnabled);
-        externalEnv = originDetectionEnabled ? Utf8.sanitize(System.getenv("DD_EXTERNAL_ENV")) : "";
+        externalEnv = originDetectionEnabled ? Utf8.sanitize(env.get("DD_EXTERNAL_ENV")) : "";
 
         try {
             clientChannel =
@@ -1521,11 +1519,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
      * @param entityID the entityID string provided by argument
      * @return true if tags was modified
      */
-    private static boolean updateTagsWithEntityID(final List<String> tags, String entityID) {
+    private boolean updateTagsWithEntityID(final List<String> tags, String entityID) {
         // Support "dd.internal.entity_id" internal tag.
         if (entityID == null || entityID.trim().isEmpty()) {
             // if the entityID parameter is null, default to the environment variable
-            entityID = System.getenv(DD_ENTITY_ID_ENV_VAR);
+            entityID = env.get(DD_ENTITY_ID_ENV_VAR);
         }
         if (entityID != null && !entityID.trim().isEmpty()) {
             final String entityTag = ENTITY_ID_TAG_NAME + ":" + entityID;
@@ -1591,14 +1589,14 @@ public class NonBlockingStatsDClient implements StatsDClient {
         return sampleRate != 1 && ThreadLocalRandom.current().nextDouble() > sampleRate;
     }
 
-    static boolean isOriginDetectionEnabled(boolean originDetectionEnabled) {
+    boolean isOriginDetectionEnabled(boolean originDetectionEnabled) {
         if (!originDetectionEnabled) {
             // origin detection is explicitly disabled
             // or a user-defined container ID was provided
             return false;
         }
 
-        String value = System.getenv(ORIGIN_DETECTION_ENABLED_ENV_VAR);
+        String value = env.get(ORIGIN_DETECTION_ENABLED_ENV_VAR);
         value = value != null ? value.trim() : null;
         if (value != null && !value.isEmpty()) {
             return !Arrays.asList("no", "false", "0", "n", "off").contains(value.toLowerCase());

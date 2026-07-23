@@ -6,15 +6,15 @@ import static org.hamcrest.Matchers.hasItem;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -130,7 +130,8 @@ public class TelemetryTest {
                 });
     }
 
-    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+    // Controlled environment so the client is unaffected by ambient DD_* variables.
+    private Map<String, String> clientEnv;
 
     public TelemetryTest(String containerID, String tagsCardinality) {
         this.containerID = containerID;
@@ -152,10 +153,12 @@ public class TelemetryTest {
         server = new UDPDummyStatsDServer(0);
         fakeProcessor = new FakeProcessor(LOGGING_HANDLER);
 
-        environmentVariables.set("DD_CARDINALITY", tagsCardinality);
+        clientEnv = new HashMap<>();
+        clientEnv.put("DD_CARDINALITY", tagsCardinality);
 
         NonBlockingStatsDClientBuilder builder =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .constantTags("test")
@@ -540,6 +543,7 @@ public class TelemetryTest {
         // fails to send any data on the network, producing packets dropped
         NonBlockingStatsDClient clientError =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .constantTags("test")

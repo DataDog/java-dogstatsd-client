@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
@@ -20,6 +21,7 @@ public class AggregationTest {
         server = new UDPDummyStatsDServer(0);
         testClient =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(new HashMap<String, String>())
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())
