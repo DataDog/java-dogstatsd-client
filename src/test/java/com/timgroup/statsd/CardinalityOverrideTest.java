@@ -5,12 +5,12 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -45,12 +45,13 @@ public class CardinalityOverrideTest {
                 });
     }
 
-    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
-
     String clientTagsCardinality;
     Case msgTagsCardinality;
     UDPDummyStatsDServer server;
     NonBlockingStatsDClient client;
+
+    // Controlled environment so the client is unaffected by ambient DD_* variables.
+    Map<String, String> clientEnv;
 
     public CardinalityOverrideTest(String clientTagsCardinality, Case msgTagsCardinality) {
         log.info(String.format("%s %s", clientTagsCardinality, msgTagsCardinality.value));
@@ -75,12 +76,14 @@ public class CardinalityOverrideTest {
 
     @Before
     public void start() throws IOException {
+        clientEnv = new HashMap<>();
         if (clientTagsCardinality != null) {
-            environmentVariables.set("DD_CARDINALITY", clientTagsCardinality);
+            clientEnv.put("DD_CARDINALITY", clientTagsCardinality);
         }
         server = new UDPDummyStatsDServer(0);
         client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(clientEnv)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(server.getPort())

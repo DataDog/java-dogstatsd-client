@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.logging.Logger;
 import org.junit.After;
@@ -42,6 +43,7 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
         server = new NamedPipeDummyStatsDServer(pipeName);
         client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(new HashMap<String, String>())
                         .prefix("my.prefix")
                         .namedPipe(pipeName)
                         .queueSize(1)

@@ -5,20 +5,21 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-import org.junit.Rule;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.function.ThrowingRunnable;
 
 public class NonBlockingStatsDClientBuilderTest {
-    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
 
     @Test(timeout = 5000L)
     public void origin_detection_env_false() throws Exception {
-        environmentVariables.set(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR, "false");
+        final Map<String, String> env = new HashMap<>();
+        env.put(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR, "false");
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(8125)
@@ -30,17 +31,18 @@ public class NonBlockingStatsDClientBuilderTest {
         assertFalse(
                 client.isOriginDetectionEnabled(
                         NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
-        environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
     }
 
     @Test(timeout = 5000L)
     public void origin_detection_env_unknown() throws Exception {
-        environmentVariables.set(
+        final Map<String, String> env = new HashMap<>();
+        env.put(
                 NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR,
                 "unknown"); // default to true
 
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(8125)
@@ -53,13 +55,14 @@ public class NonBlockingStatsDClientBuilderTest {
         assertTrue(
                 client.isOriginDetectionEnabled(
                         NonBlockingStatsDClient.DEFAULT_ENABLE_ORIGIN_DETECTION));
-        environmentVariables.clear(NonBlockingStatsDClient.ORIGIN_DETECTION_ENABLED_ENV_VAR);
     }
 
     @Test(timeout = 5000L)
     public void origin_detection_env_unset() throws Exception {
+        final Map<String, String> env = new HashMap<>();
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(8125)
@@ -76,8 +79,10 @@ public class NonBlockingStatsDClientBuilderTest {
 
     @Test(timeout = 5000L)
     public void origin_detection_arg_false() throws Exception {
+        final Map<String, String> env = new HashMap<>();
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .hostname("localhost")
                         .port(8125)
@@ -96,32 +101,45 @@ public class NonBlockingStatsDClientBuilderTest {
                 new ThrowingRunnable() {
                     @Override
                     public void run() {
-                        new NonBlockingStatsDClientBuilder().resolve();
+                        new NonBlockingStatsDClientBuilder()
+                                .withEnvironmentVariables(new HashMap<String, String>())
+                                .resolve();
                     }
                 });
     }
 
     @Test
     public void tags_cardinality() throws Exception {
-        environmentVariables.set("DD_DOGSTATSD_URL", "localhost:8125");
+        final Map<String, String> env = new HashMap<>();
+        env.put("DD_DOGSTATSD_URL", "localhost:8125");
         // default value
         assertEquals(
                 TagsCardinality.DEFAULT,
-                new NonBlockingStatsDClientBuilder().resolve().tagsCardinality);
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .resolve()
+                        .tagsCardinality);
         // one env variable works
-        environmentVariables.set("DATADOG_CARDINALITY", "low");
+        env.put("DATADOG_CARDINALITY", "low");
         assertEquals(
                 TagsCardinality.LOW,
-                new NonBlockingStatsDClientBuilder().resolve().tagsCardinality);
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .resolve()
+                        .tagsCardinality);
         // the other variable takes precedence
-        environmentVariables.set("DD_CARDINALITY", "high");
+        env.put("DD_CARDINALITY", "high");
         assertEquals(
                 TagsCardinality.HIGH,
-                new NonBlockingStatsDClientBuilder().resolve().tagsCardinality);
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .resolve()
+                        .tagsCardinality);
         // explicit user input takes precedence even if they request default
         assertEquals(
                 TagsCardinality.DEFAULT,
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .tagsCardinality(TagsCardinality.DEFAULT)
                         .resolve()
                         .tagsCardinality);

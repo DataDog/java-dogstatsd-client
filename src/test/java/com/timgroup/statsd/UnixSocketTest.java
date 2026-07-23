@@ -10,6 +10,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assume;
@@ -27,6 +29,8 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
     private volatile Exception lastException = new Exception();
 
     private static Logger log = Logger.getLogger(StatsDClientErrorHandler.class.getName());
+
+    static final Map<String, String> env = new HashMap<>();
 
     public synchronized void handle(Exception exception) {
         log.info("Got exception: " + exception);
@@ -49,6 +53,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
         client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .hostname(socketFile.toString())
                         .port(0)
@@ -63,6 +68,7 @@ public class UnixSocketTest implements StatsDClientErrorHandler {
 
         clientAggregate =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .hostname(socketFile.toString())
                         .port(0)

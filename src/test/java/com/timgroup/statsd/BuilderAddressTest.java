@@ -7,18 +7,20 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import jnr.unixsocket.UnixSocketAddress;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class BuilderAddressTest {
-    @Rule public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+    // Controlled environment so address resolution only sees the variables this test sets.
+    Map<String, String> env;
 
     final String url;
     final String host;
@@ -187,6 +189,7 @@ public class BuilderAddressTest {
 
     @Before
     public void set() {
+        env = new HashMap<>();
         set(NonBlockingStatsDClient.DD_DOGSTATSD_URL_ENV_VAR, url);
         set(NonBlockingStatsDClient.DD_AGENT_HOST_ENV_VAR, host);
         set(NonBlockingStatsDClient.DD_DOGSTATSD_PORT_ENV_VAR, port);
@@ -195,9 +198,7 @@ public class BuilderAddressTest {
 
     void set(String name, String val) {
         if (val != null) {
-            environmentVariables.set(name, val);
-        } else {
-            environmentVariables.clear(name);
+            env.put(name, val);
         }
     }
 
@@ -206,7 +207,7 @@ public class BuilderAddressTest {
         NonBlockingStatsDClientBuilder b;
 
         // Default configuration matches env vars
-        b = new NonBlockingStatsDClientBuilder().resolve();
+        b = new NonBlockingStatsDClientBuilder().withEnvironmentVariables(env).resolve();
         SocketAddress actual = b.addressLookup.call();
 
         // Make it possible to run this code even if we don't have jnr-unixsocket.
@@ -222,13 +223,26 @@ public class BuilderAddressTest {
         }
 
         // Explicit configuration is used regardless of environment variables.
-        b = new NonBlockingStatsDClientBuilder().hostname("2.2.2.2").resolve();
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .hostname("2.2.2.2")
+                        .resolve();
         assertEquals(new InetSocketAddress("2.2.2.2", defaultPort), b.addressLookup.call());
 
-        b = new NonBlockingStatsDClientBuilder().hostname("2.2.2.2").port(2222).resolve();
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .hostname("2.2.2.2")
+                        .port(2222)
+                        .resolve();
         assertEquals(new InetSocketAddress("2.2.2.2", 2222), b.addressLookup.call());
 
-        b = new NonBlockingStatsDClientBuilder().namedPipe("ook").resolve();
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .namedPipe("ook")
+                        .resolve();
         assertEquals(new NamedPipeSocketAddress("ook"), b.addressLookup.call());
     }
 }

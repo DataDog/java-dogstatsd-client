@@ -11,6 +11,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 import org.junit.After;
 import org.junit.Assume;
@@ -24,6 +26,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     private static NonBlockingStatsDClient clientAggregate;
     private static DummyStatsDServer server;
     private static File socketFile;
+    private final Map<String, String> env = new HashMap<>();
 
     private volatile Exception lastException = new Exception();
 
@@ -50,6 +53,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
         client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .address("unixstream://" + socketFile.getPath())
                         .port(0)
@@ -65,6 +69,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
         clientAggregate =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .address("unixstream://" + socketFile.getPath())
                         .port(0)
@@ -186,6 +191,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     public void stream_uds_has_uds_buffer_size() throws Exception {
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .address("unixstream:///foo")
                         .containerID("fake-container-id")
@@ -200,6 +206,7 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     public void max_packet_size_override() throws Exception {
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
                         .prefix("my.prefix")
                         .address("unixstream:///foo")
                         .containerID("fake-container-id")
