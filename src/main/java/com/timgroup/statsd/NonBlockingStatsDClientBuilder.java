@@ -341,9 +341,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
      * Overrides the environment variables the client reads configuration from.
      *
      * <p>By default the client reads from the process environment via {@link
-     * System#env.get(String)}. Supplying a map makes the client read configuration (e.g. {@code
-     * DD_ENV}, {@code DD_SERVICE}, {@code DD_VERSION}, {@code DD_ENTITY_ID}) exclusively from that
-     * map, so it is unaffected by the ambient process environment.
+     * System#getenv(String)}. Supplying a map makes the client read configuration (for example,
+     * {@code DD_ENV}, {@code DD_SERVICE}, {@code DD_VERSION}, {@code DD_ENTITY_ID}) exclusively
+     * from that map, so it is unaffected by the ambient process environment.
      *
      * @param env the map to read environment variables from, or null to use the process environment
      * @return this builder
