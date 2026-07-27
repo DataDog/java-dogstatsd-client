@@ -7,8 +7,11 @@
 
 package com.datadoghq.dogstatsd.http.forwarder;
 
+import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import java.time.Clock;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.LongSupplier;
 
@@ -46,8 +49,58 @@ public class Telemetry {
         /** Totals keyed by HTTP code. */
         public Map<String, CodeCounters> byCode = new HashMap<>();
 
+        /** Default metric name prefix used when none is supplied to {@link Snapshot#encode}. */
+        static final String DEFAULT_PREFIX = "datadog.dogstatsd_http.client";
+
         Snapshot(long intervalStartMillis) {
             this.intervalStartMillis = intervalStartMillis;
+        }
+
+        /**
+         * Encodes this snapshot into {@code pb} using the default metric.
+         *
+         * @param pb Builder to append metrics to.
+         */
+        public void encodeTo(PayloadBuilder pb) {
+            encodeTo(DEFAULT_PREFIX, pb);
+        }
+
+        /**
+         * Encodes this snapshot into {@code pb}.
+         *
+         * @param pb Builder to append metrics to.
+         * @param prefix Metric name prefix.
+         */
+        public void encodeTo(String prefix, PayloadBuilder pb) {
+            long ts = intervalStartMillis / 1000;
+
+            pb.count(prefix + ".enqueued_payloads").addPoint(ts, enqueuedPayloads).close();
+            pb.count(prefix + ".enqueued_bytes").addPoint(ts, enqueuedBytes).close();
+            pb.count(prefix + ".delivered_payloads").addPoint(ts, deliveredPayloads).close();
+            pb.count(prefix + ".delivered_bytes").addPoint(ts, deliveredBytes).close();
+            pb.count(prefix + ".dropped_payloads").addPoint(ts, droppedPayloads).close();
+            pb.count(prefix + ".dropped_bytes").addPoint(ts, droppedBytes).close();
+
+            pb.gauge(prefix + ".queue_payloads").addPoint(ts, queuePayloads).close();
+            pb.gauge(prefix + ".queue_bytes").addPoint(ts, queueBytes).close();
+            pb.gauge(prefix + ".queue_max_bytes").addPoint(ts, queueMaxBytes).close();
+
+            pb.gauge(prefix + ".oldest_enqueued_age_seconds")
+                    .addPoint(ts, oldestEnqueuedAgeNanos / 1e9)
+                    .close();
+            pb.gauge(prefix + ".last_success_age_seconds")
+                    .addPoint(ts, lastSuccessAgeNanos / 1e9)
+                    .close();
+
+            for (Map.Entry<String, CodeCounters> e : byCode.entrySet()) {
+                List<String> tags = Collections.singletonList("code:" + e.getKey());
+                CodeCounters c = e.getValue();
+                pb.count(prefix + ".response_payloads")
+                        .setTags(tags)
+                        .addPoint(ts, c.payloads)
+                        .close();
+                pb.count(prefix + ".response_bytes").setTags(tags).addPoint(ts, c.bytes).close();
+            }
         }
 
         /** Per-code totals within a snapshot's window. */
