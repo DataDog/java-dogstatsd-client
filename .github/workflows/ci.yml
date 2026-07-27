@@ -26,12 +26,13 @@ jobs:
       - name: Build and test
         run: mvn clean install
       - name: Build and test dogstatsd-http-core
-        run: mvn clean install
-        working-directory: dogstatsd-http-core
-      - name: Build and test dogstatsd-http-forwarder
+        if: matrix.java-version < 11
+        run: mvn clean install -pl core
+        working-directory: dogstatsd-http
+      - name: Build and test dogstatsd-http
         if: matrix.java-version >= 11
         run: mvn clean install
-        working-directory: dogstatsd-http-forwarder
+        working-directory: dogstatsd-http
 
   test-jnr-exclude:
     name: Test (Java 9, jnr-exclude)

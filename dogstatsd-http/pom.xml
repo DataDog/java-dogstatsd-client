@@ -1,0 +1,44 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.datadoghq</groupId>
+    <artifactId>dogstatsd-http</artifactId>
+    <packaging>pom</packaging>
+    <name>dogstatsd-http</name>
+    <version>1.0.0-SNAPSHOT</version>
+    <description>Aggregator for the DogStatsD HTTP client modules.</description>
+    <url>https://github.com/DataDog/java-dogstatsd-client</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <licenses>
+        <license>
+            <name>The MIT License (MIT)</name>
+            <url>http://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/DataDog/java-dogstatsd-client</url>
+        <connection>scm:git:git@github.com:DataDog/java-dogstatsd-client.git</connection>
+        <developerConnection>scm:git:git@github.com:Datadog/java-dogstatsd-client.git</developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>datadog</id>
+            <name>Datadog developers</name>
+            <email>dev@datadoghq.com</email>
+        </developer>
+    </developers>
+
+    <modules>
+        <module>core</module>
+        <module>forwarder</module>
+    </modules>
+</project>
