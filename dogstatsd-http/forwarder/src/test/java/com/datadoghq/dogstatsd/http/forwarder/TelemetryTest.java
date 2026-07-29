@@ -12,7 +12,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
+import java.io.ByteArrayOutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import org.junit.Test;
@@ -169,5 +172,59 @@ public class TelemetryTest {
         // A new delivery resets the reference point; age is 0 if snapshotted at the same nano.
         t.onResponse(200, 1, true);
         assertEquals(0L, t.snapshot(null).lastSuccessAgeNanos);
+    }
+
+    @Test
+    public void encodeTo() {
+        Telemetry t = new Telemetry();
+        t.onEnqueue(10);
+        t.onResponse(200, 5, true);
+        t.onResponse(503, 7, false);
+        t.onDrop(1, 25);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PayloadBuilder pb = new PayloadBuilder(out::writeBytes);
+        t.snapshot(null).encodeTo(pb);
+        pb.close();
+        byte[] p = out.toByteArray();
+
+        String prefix = "datadog.dogstatsd_http.client";
+        for (String suffix :
+                new String[] {
+                    ".enqueued_payloads",
+                    ".enqueued_bytes",
+                    ".delivered_payloads",
+                    ".delivered_bytes",
+                    ".dropped_payloads",
+                    ".dropped_bytes",
+                    ".queue_payloads",
+                    ".queue_bytes",
+                    ".queue_max_bytes",
+                    ".oldest_enqueued_age_seconds",
+                    ".last_success_age_seconds",
+                    ".response_payloads",
+                    ".response_bytes",
+                }) {
+            assertTrue("missing " + suffix, contains(p, prefix + suffix));
+        }
+
+        // Per-code totals are tagged with the HTTP code.
+        assertTrue(contains(p, "code:200"));
+        assertTrue(contains(p, "code:503"));
+    }
+
+    /** True if {@code needle} appears verbatim (as UTF-8) anywhere in {@code haystack}. */
+    private static boolean contains(byte[] haystack, String needle) {
+        byte[] n = needle.getBytes(StandardCharsets.UTF_8);
+        outer:
+        for (int i = 0; i + n.length <= haystack.length; i++) {
+            for (int j = 0; j < n.length; j++) {
+                if (haystack[i + j] != n[j]) {
+                    continue outer;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 }
