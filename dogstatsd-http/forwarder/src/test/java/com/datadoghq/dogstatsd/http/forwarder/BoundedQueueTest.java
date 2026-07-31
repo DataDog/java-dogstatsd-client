@@ -148,6 +148,49 @@ public class BoundedQueueTest {
         assertEquals(0, t.snapshot(q).droppedPayloads);
     }
 
+    @Test(timeout = 5000)
+    public void closeUnblocksProducerWithException() throws InterruptedException {
+        BoundedQueue q = new BoundedQueue(5, 1, WhenFull.BLOCK, new Telemetry());
+        q.add(payload(5)); // queue full
+
+        Throwable[] thrown = new Throwable[1];
+        Thread producer =
+                new Thread(
+                        () -> {
+                            try {
+                                q.add(payload(5));
+                            } catch (Throwable t) {
+                                thrown[0] = t;
+                            }
+                        });
+        producer.start();
+
+        // Give the producer time to reach await().
+        while (!(producer.getState() == Thread.State.WAITING
+                || producer.getState() == Thread.State.TIMED_WAITING)) {
+            Thread.sleep(50);
+        }
+
+        q.close();
+        producer.join(2000);
+        assertFalse(producer.isAlive());
+        assertTrue(thrown[0] instanceof IllegalStateException);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void addAfterCloseThrows() throws InterruptedException {
+        BoundedQueue q = new BoundedQueue(10, 1, WhenFull.DROP, new Telemetry());
+        q.close();
+        q.add(payload(3));
+    }
+
+    @Test
+    public void nextReturnsNullWhenClosedAndEmpty() throws InterruptedException {
+        BoundedQueue q = new BoundedQueue(10, 1, WhenFull.DROP, new Telemetry());
+        q.close();
+        assertNull(q.next());
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void addThrowsForOversizedItem() throws InterruptedException {
         BoundedQueue q = new BoundedQueue(4, 1, WhenFull.DROP, new Telemetry());

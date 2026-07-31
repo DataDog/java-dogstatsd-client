@@ -62,6 +62,7 @@ class BoundedQueue {
     Lock lock = new ReentrantLock();
     Condition notEmpty = lock.newCondition();
     Condition notFull = lock.newCondition();
+    boolean closed;
 
     BoundedQueue(long maxBytes, long maxTries, WhenFull whenFull, Telemetry telemetry) {
         this(maxBytes, maxTries, whenFull, telemetry, System::nanoTime);
@@ -111,6 +112,11 @@ class BoundedQueue {
         lock.lock();
         try {
             if (key == null) {
+                // Queue is closed for new items, but retries are allowed to enter.
+                if (closed) {
+                    throw new IllegalStateException("closed");
+                }
+
                 key = newKey();
             }
             ensureSpace(item.bytes.length, whenFull);
@@ -141,6 +147,9 @@ class BoundedQueue {
                     break;
                 case BLOCK:
                     notFull.await();
+                    if (closed) {
+                        throw new IllegalStateException("closed");
+                    }
                     break;
             }
         }
@@ -149,13 +158,27 @@ class BoundedQueue {
     Map.Entry<Key, Payload> next() throws InterruptedException {
         lock.lock();
         try {
-            while (items.size() == 0) {
+            while (empty()) {
+                if (closed) {
+                    return null;
+                }
                 notEmpty.await();
             }
             Map.Entry<Key, Payload> item = items.pollFirstEntry();
             bytes -= item.getValue().bytes.length;
             notFull.signalAll();
             return item;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    void close() {
+        lock.lock();
+        try {
+            closed = true;
+            notEmpty.signalAll();
+            notFull.signalAll();
         } finally {
             lock.unlock();
         }
@@ -178,5 +201,9 @@ class BoundedQueue {
         } finally {
             lock.unlock();
         }
+    }
+
+    boolean empty() {
+        return items.size() == 0;
     }
 }

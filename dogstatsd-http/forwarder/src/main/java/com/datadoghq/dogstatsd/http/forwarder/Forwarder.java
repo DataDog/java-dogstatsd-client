@@ -79,9 +79,13 @@ public class Forwarder extends Thread {
     /** Runs the forwarding loop, delivering queued payloads until the thread is interrupted. */
     @Override
     public void run() {
-        while (true) {
+        while (!interrupted()) {
             try {
-                runOnce(queue.next());
+                Map.Entry<BoundedQueue.Key, Payload> item = queue.next();
+                if (item == null) {
+                    return;
+                }
+                runOnce(item);
             } catch (InterruptedException e) {
                 return;
             } catch (Exception t) {
@@ -100,6 +104,7 @@ public class Forwarder extends Thread {
      * @param payload the raw bytes to deliver
      * @throws InterruptedException if the calling thread is interrupted while waiting for space
      *     ({@link WhenFull#BLOCK} mode only)
+     * @throws IllegalStateException if the forwarder has been closed via {@link #close(Duration)}
      */
     public void send(URI url, byte[] payload) throws InterruptedException {
         Objects.requireNonNull(url, "url");
@@ -139,6 +144,10 @@ public class Forwarder extends Thread {
         } catch (IOException ex) {
             logger.log(Level.WARNING, "error sending request: {0}", ex.toString());
             handleTransportError(item);
+        } catch (InterruptedException ex) {
+            // Wouldn't be retried, but will show up as a leftover in a telemetry snapshot.
+            queue.requeue(item);
+            throw ex;
         }
 
         backoff();
@@ -228,5 +237,35 @@ public class Forwarder extends Thread {
         if (!validHeaderValue.matcher(value).matches()) {
             throw new IllegalArgumentException("invalid character");
         }
+    }
+
+    /**
+     * Closes the forwarder: stops accepting new payloads and drains the remaining backlog.
+     *
+     * <p>Already-queued payloads keep being delivered until either the queue drains or {@code
+     * timeout} elapses, whichever comes first. If the timeout elapses first the forwarding thread
+     * is interrupted, abandoning any unsent payloads.
+     *
+     * @param timeout maximum time to wait for the backlog to drain. {@code null} means wait
+     *     forever.
+     * @return {@code true} if the queue drained cleanly with no unsent payloads remaining; {@code
+     *     false} if the timeout elapsed with data still queued
+     * @throws InterruptedException if the calling thread is interrupted while waiting
+     */
+    public boolean close(Duration timeout) throws InterruptedException {
+        queue.close();
+        if (timeout == null) {
+            join(0);
+        } else {
+            long timeoutMs = timeout.toMillis();
+            if (timeoutMs > 0) {
+                join(timeoutMs);
+            }
+        }
+        if (isAlive()) {
+            interrupt();
+            join();
+        }
+        return queue.empty();
     }
 }

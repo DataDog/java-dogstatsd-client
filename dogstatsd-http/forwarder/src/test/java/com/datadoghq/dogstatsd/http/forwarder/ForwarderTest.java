@@ -8,12 +8,16 @@
 package com.datadoghq.dogstatsd.http.forwarder;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 public class ForwarderTest {
@@ -108,5 +112,67 @@ public class ForwarderTest {
         assertNotNull(cc);
         assertEquals(1, cc.payloads);
         assertEquals(7, cc.bytes);
+    }
+
+    /** With an empty queue, close() unblocks the loop's next() and drains cleanly. */
+    @Test(timeout = 5000)
+    public void closeDrainsEmptyQueueReturnsTrue() throws InterruptedException {
+        Forwarder f = newForwarder(100, WhenFull.DROP);
+        f.start();
+        assertTrue(f.close(Duration.ofSeconds(5)));
+        assertFalse(f.isAlive());
+    }
+
+    /** Payloads queued before close() are all delivered before the thread exits. */
+    @Test(timeout = 5000)
+    public void closeDrainsPendingItemsReturnsTrue() throws InterruptedException {
+        AtomicInteger processed = new AtomicInteger();
+        Forwarder f =
+                new Forwarder(100, 1, WhenFull.DROP, Duration.ofSeconds(1), Duration.ofSeconds(1)) {
+                    @Override
+                    void runOnce(Map.Entry<BoundedQueue.Key, Payload> item) {
+                        processed.incrementAndGet();
+                    }
+                };
+        f.send(URL, new byte[3]);
+        f.send(URL, new byte[3]);
+        f.send(URL, new byte[3]);
+        f.start();
+        assertTrue(f.close(Duration.ofSeconds(5)));
+        assertFalse(f.isAlive());
+        assertEquals(3, processed.get());
+    }
+
+    /** After close(), send() propagates the closed-queue IllegalStateException. */
+    @Test
+    public void sendAfterCloseThrows() throws InterruptedException {
+        Forwarder f = newForwarder(100, WhenFull.DROP);
+        assertTrue(f.close(Duration.ofSeconds(1)));
+        assertThrows(IllegalStateException.class, () -> f.send(URL, new byte[3]));
+    }
+
+    /** If the backlog can't drain in time, close() interrupts the thread and returns false. */
+    @Test(timeout = 5000)
+    public void closeTimesOutReturnsFalse() throws InterruptedException {
+        CountDownLatch entered = new CountDownLatch(1);
+        Forwarder f =
+                new Forwarder(100, 1, WhenFull.DROP, Duration.ofSeconds(1), Duration.ofSeconds(1)) {
+                    @Override
+                    void runOnce(Map.Entry<BoundedQueue.Key, Payload> item)
+                            throws InterruptedException {
+                        try {
+                            entered.countDown();
+                            Thread.sleep(Long.MAX_VALUE);
+                        } catch (InterruptedException ex) {
+                            queue.requeue(item);
+                            throw ex;
+                        }
+                    }
+                };
+        f.send(URL, new byte[3]);
+        f.start();
+        entered.await();
+        assertFalse(f.close(Duration.ofMillis(200)));
+        assertFalse(f.isAlive());
     }
 }
