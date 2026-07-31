@@ -246,7 +246,8 @@ public class Forwarder extends Thread {
      * timeout} elapses, whichever comes first. If the timeout elapses first the forwarding thread
      * is interrupted, abandoning any unsent payloads.
      *
-     * @param timeout maximum time to wait for the backlog to drain. {@code null} means wait forever.
+     * @param timeout maximum time to wait for the backlog to drain. {@code null} means wait
+     *     forever.
      * @return {@code true} if the queue drained cleanly with no unsent payloads remaining; {@code
      *     false} if the timeout elapsed with data still queued
      * @throws InterruptedException if the calling thread is interrupted while waiting
