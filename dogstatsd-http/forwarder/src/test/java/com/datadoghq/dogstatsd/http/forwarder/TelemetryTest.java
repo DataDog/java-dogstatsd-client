@@ -12,12 +12,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
-import java.io.ByteArrayOutputStream;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Test;
 
 public class TelemetryTest {
@@ -174,6 +174,28 @@ public class TelemetryTest {
         assertEquals(0L, t.snapshot(null).lastSuccessAgeNanos);
     }
 
+    /** Encoder that records every emitted metric, keyed by name and tags. */
+    private static final class Recorder implements Telemetry.Snapshot.Encoder {
+        final Map<String, Double> gauges = new HashMap<>();
+        final Map<String, Double> counts = new HashMap<>();
+
+        @Override
+        public void gauge(String name, double value) {
+            gauges.put(name, value);
+        }
+
+        @Override
+        public void count(String name, double value, String[] tags) {
+            counts.put(tags == null ? name : name + Arrays.toString(tags), value);
+        }
+    }
+
+    private static void assertMetric(String name, double expected, Map<String, Double> metrics) {
+        Double actual = metrics.get(name);
+        assertNotNull("missing " + name, actual);
+        assertEquals(name, expected, actual, 0);
+    }
+
     @Test
     public void encodeTo() {
         Telemetry t = new Telemetry();
@@ -182,49 +204,28 @@ public class TelemetryTest {
         t.onResponse(503, 7, false);
         t.onDrop(1, 25);
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PayloadBuilder pb = new PayloadBuilder(out::writeBytes);
-        t.snapshot(null).encodeTo(pb);
-        pb.close();
-        byte[] p = out.toByteArray();
+        Recorder rec = new Recorder();
+        t.snapshot(null).encodeTo(rec);
 
         String prefix = "datadog.dogstatsd_http.client";
-        for (String suffix :
-                new String[] {
-                    ".enqueued_payloads",
-                    ".enqueued_bytes",
-                    ".delivered_payloads",
-                    ".delivered_bytes",
-                    ".dropped_payloads",
-                    ".dropped_bytes",
-                    ".queue_payloads",
-                    ".queue_bytes",
-                    ".queue_max_bytes",
-                    ".oldest_enqueued_age_seconds",
-                    ".last_success_age_seconds",
-                    ".response_payloads",
-                    ".response_bytes",
-                }) {
-            assertTrue("missing " + suffix, contains(p, prefix + suffix));
-        }
+        assertMetric(prefix + ".enqueued_payloads", 1, rec.counts);
+        assertMetric(prefix + ".enqueued_bytes", 10, rec.counts);
+        assertMetric(prefix + ".delivered_payloads", 1, rec.counts);
+        assertMetric(prefix + ".delivered_bytes", 5, rec.counts);
+        assertMetric(prefix + ".dropped_payloads", 1, rec.counts);
+        assertMetric(prefix + ".dropped_bytes", 25, rec.counts);
+
+        assertMetric(prefix + ".queue_payloads", 0, rec.gauges);
+        assertMetric(prefix + ".queue_bytes", 0, rec.gauges);
+        assertMetric(prefix + ".queue_max_bytes", 0, rec.gauges);
+        // Ages come off the real clock here; only their presence is deterministic.
+        assertNotNull(rec.gauges.get(prefix + ".oldest_enqueued_age_seconds"));
+        assertNotNull(rec.gauges.get(prefix + ".last_success_age_seconds"));
 
         // Per-code totals are tagged with the HTTP code.
-        assertTrue(contains(p, "code:200"));
-        assertTrue(contains(p, "code:503"));
-    }
-
-    /** True if {@code needle} appears verbatim (as UTF-8) anywhere in {@code haystack}. */
-    private static boolean contains(byte[] haystack, String needle) {
-        byte[] n = needle.getBytes(StandardCharsets.UTF_8);
-        outer:
-        for (int i = 0; i + n.length <= haystack.length; i++) {
-            for (int j = 0; j < n.length; j++) {
-                if (haystack[i + j] != n[j]) {
-                    continue outer;
-                }
-            }
-            return true;
-        }
-        return false;
+        assertMetric(prefix + ".response_payloads[code:200]", 1, rec.counts);
+        assertMetric(prefix + ".response_bytes[code:200]", 5, rec.counts);
+        assertMetric(prefix + ".response_payloads[code:503]", 1, rec.counts);
+        assertMetric(prefix + ".response_bytes[code:503]", 7, rec.counts);
     }
 }
