@@ -158,10 +158,14 @@ public class ForwarderTest {
         Forwarder f =
                 new Forwarder(100, 1, WhenFull.DROP, Duration.ofSeconds(1), Duration.ofSeconds(1)) {
                     @Override
-                    void runOnce(Map.Entry<BoundedQueue.Key, Payload> item)
-                            throws InterruptedException {
-                        entered.countDown();
-                        Thread.sleep(Long.MAX_VALUE);
+                    void runOnce(Map.Entry<BoundedQueue.Key, Payload> item) throws InterruptedException {
+                        try {
+                            entered.countDown();
+                            Thread.sleep(Long.MAX_VALUE);
+                        } catch (InterruptedException ex) {
+                            queue.requeue(item);
+                            throw ex;
+                        }
                     }
                 };
         f.send(URL, new byte[3]);

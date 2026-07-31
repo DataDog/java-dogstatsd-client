@@ -158,7 +158,7 @@ class BoundedQueue {
     Map.Entry<Key, Payload> next() throws InterruptedException {
         lock.lock();
         try {
-            while (items.size() == 0) {
+            while (empty()) {
                 if (closed) {
                     return null;
                 }
@@ -201,5 +201,9 @@ class BoundedQueue {
         } finally {
             lock.unlock();
         }
+    }
+
+    boolean empty() {
+        return items.size() == 0;
     }
 }

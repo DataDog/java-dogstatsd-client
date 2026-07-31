@@ -264,8 +264,7 @@ public class Forwarder extends Thread {
         if (isAlive()) {
             interrupt();
             join();
-            return false;
         }
-        return true;
+        return queue.empty();
     }
 }
