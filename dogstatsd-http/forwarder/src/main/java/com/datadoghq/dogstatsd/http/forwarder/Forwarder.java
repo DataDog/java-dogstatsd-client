@@ -10,6 +10,7 @@ package com.datadoghq.dogstatsd.http.forwarder;
 import static java.net.http.HttpRequest.BodyPublishers;
 import static java.net.http.HttpResponse.BodyHandlers;
 
+import com.datadoghq.dogstatsd.http.ForwarderContext;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -37,34 +38,36 @@ public class Forwarder extends Thread {
     final Duration requestTimeout;
     final Random rng = new Random();
 
-    String localData;
-    String externalData;
+    final String localData;
+    final String externalData;
 
     final Telemetry telemetry;
 
     /**
-     * Creates a new forwarder.
+     * Creates a builder for a forwarder.
      *
-     * @param maxRequestsBytes maximum total size of buffered payloads, in bytes
-     * @param maxTries maximum number of delivery attempts per payload
-     * @param whenFull action to take when the queue is at capacity
-     * @param connectTimeout timeout for establishing the TCP connection
-     * @param requestTimeout timeout from sending the request until response headers are received;
-     *     {@code null} disables the request timeout
+     * @return a new builder.
      */
-    public Forwarder(
-            long maxRequestsBytes,
-            long maxTries,
-            WhenFull whenFull,
-            Duration connectTimeout,
-            Duration requestTimeout) {
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    Forwarder(final Builder builder) {
         this.telemetry = new Telemetry();
-        this.queue = new BoundedQueue(maxRequestsBytes, maxTries, whenFull, this.telemetry);
-        this.requestTimeout = requestTimeout;
+        this.queue =
+                new BoundedQueue(
+                        builder.maxRequestsBytes,
+                        builder.maxTries,
+                        builder.whenFull,
+                        this.telemetry);
+        this.requestTimeout = builder.requestTimeout;
+        this.localData = builder.localData;
+        this.externalData = builder.externalData;
+
         this.client =
                 HttpClient.newBuilder()
                         .version(HttpClient.Version.HTTP_2)
-                        .connectTimeout(connectTimeout)
+                        .connectTimeout(builder.connectTimeout)
                         .build();
     }
 
@@ -97,8 +100,8 @@ public class Forwarder extends Thread {
     /**
      * Enqueues a payload for delivery to the given endpoint.
      *
-     * <p>If the queue is full, behaviour is determined by the {@link WhenFull} policy supplied at
-     * construction time.
+     * <p>If the queue is full, behaviour is determined by the {@link WhenFull} policy set with
+     * {@link Builder#whenFull}.
      *
      * @param url the remote HTTP endpoint to POST the payload to
      * @param payload the raw bytes to deliver
@@ -200,46 +203,6 @@ public class Forwarder extends Thread {
     }
 
     /**
-     * Sets the local-data value sent as the {@code x-dsd-ld} header with each request.
-     *
-     * <p>Local data carries the container ID or cgroup node inode used by the Datadog Agent for
-     * origin detection (DogStatsD protocol v1.4).
-     *
-     * @param data the local-data string, or {@code null} to omit the header
-     */
-    public void setLocalData(String data) {
-        validateHeaderValue(data);
-        logger.log(Level.INFO, "using local data: {0}", data);
-        localData = data;
-    }
-
-    /**
-     * Sets the external-data value sent as the {@code x-dsd-ed} header with each request.
-     *
-     * <p>External data is supplied by the Datadog Agent Admission Controller and is used by the
-     * Agent to enrich metrics with container tags when a container ID is unavailable (DogStatsD
-     * protocol v1.5, Agent &ge; v7.57.0).
-     *
-     * @param data the external-data string, or {@code null} to omit the header
-     */
-    public void setExternalData(String data) {
-        validateHeaderValue(data);
-        logger.log(Level.INFO, "using external data: {0}", data);
-        externalData = data;
-    }
-
-    private static final Pattern validHeaderValue = Pattern.compile("[\\t\\x20-\\x7E\\x80-\\xFF]*");
-
-    private static void validateHeaderValue(String value) {
-        if (value == null) {
-            return;
-        }
-        if (!validHeaderValue.matcher(value).matches()) {
-            throw new IllegalArgumentException("invalid character");
-        }
-    }
-
-    /**
      * Closes the forwarder: stops accepting new payloads and drains the remaining backlog.
      *
      * <p>Already-queued payloads keep being delivered until either the queue drains or {@code
@@ -267,5 +230,134 @@ public class Forwarder extends Thread {
             join();
         }
         return queue.empty();
+    }
+
+    /** Builds a {@link Forwarder}. Obtained via {@link Forwarder#builder}. */
+    public static final class Builder {
+        private long maxRequestsBytes = 8L * 1024 * 1024;
+        private long maxTries = 20;
+        private WhenFull whenFull = WhenFull.DROP;
+        private Duration connectTimeout = Duration.ofSeconds(1);
+        private Duration requestTimeout = Duration.ofSeconds(1);
+        private String localData;
+        private String externalData;
+        private boolean contextSet;
+
+        private Builder() {}
+
+        /**
+         * Sets the maximum total size of buffered payloads, in bytes. Defaults to 8 MiB.
+         *
+         * <p>Payloads larger than this are rejected by {@link Forwarder#send}.
+         *
+         * @param val the maximum number of buffered bytes; must be positive.
+         * @return this builder.
+         */
+        public Builder maxRequestsBytes(final long val) {
+            if (val <= 0) {
+                throw new IllegalArgumentException("maxRequestsBytes must be positive");
+            }
+            maxRequestsBytes = val;
+            return this;
+        }
+
+        /**
+         * Sets the maximum number of delivery attempts per payload. Defaults to 20.
+         *
+         * @param val the maximum number of attempts; must be at least 1.
+         * @return this builder.
+         */
+        public Builder maxTries(final long val) {
+            if (val < 1) {
+                throw new IllegalArgumentException("maxTries must be at least 1");
+            }
+            maxTries = val;
+            return this;
+        }
+
+        /**
+         * Sets the action to take when the queue is at capacity. Defaults to {@link WhenFull#DROP}.
+         *
+         * @param val the action to take.
+         * @return this builder.
+         */
+        public Builder whenFull(final WhenFull val) {
+            whenFull = Objects.requireNonNull(val, "whenFull");
+            return this;
+        }
+
+        /**
+         * Sets the timeout for establishing the TCP connection. Defaults to one second.
+         *
+         * @param val the connect timeout; must be positive.
+         * @return this builder.
+         */
+        public Builder connectTimeout(final Duration val) {
+            Objects.requireNonNull(val, "connectTimeout");
+            if (val.isNegative() || val.isZero()) {
+                throw new IllegalArgumentException("connectTimeout must be positive");
+            }
+            connectTimeout = val;
+            return this;
+        }
+
+        /**
+         * Sets the timeout from sending the request until response headers are received. Defaults
+         * to one second.
+         *
+         * @param val the request timeout, or {@code null} to disable it; must be positive when
+         *     non-null.
+         * @return this builder.
+         */
+        public Builder requestTimeout(final Duration val) {
+            if (val != null && (val.isNegative() || val.isZero())) {
+                throw new IllegalArgumentException("requestTimeout must be positive");
+            }
+            requestTimeout = val;
+            return this;
+        }
+
+        /**
+         * Sets the shared context for this forwarder.
+         *
+         * <p>Defaults to {@code ForwarderContext.defaults()}.
+         *
+         * @param context the context to take the values from, or {@code null}.
+         * @return this builder.
+         */
+        public Builder context(final ForwarderContext context) {
+            contextSet = true;
+            if (context == null) {
+                localData = null;
+                externalData = null;
+            } else {
+                localData = validateHeaderValue(context.localData());
+                externalData = validateHeaderValue(context.externalData());
+            }
+            return this;
+        }
+
+        /**
+         * Builds the forwarder. The returned forwarder is a {@link Thread} that has not been
+         * started yet.
+         *
+         * @return a new forwarder.
+         */
+        public Forwarder build() {
+            if (!contextSet) {
+                context(ForwarderContext.defaults());
+            }
+            return new Forwarder(this);
+        }
+
+        private static final Pattern validHeaderValue =
+                Pattern.compile("[\\t\\x20-\\x7E\\x80-\\xFF]*");
+
+        private static String validateHeaderValue(final String value) {
+            if (value != null && !validHeaderValue.matcher(value).matches()) {
+                throw new IllegalArgumentException("invalid character");
+            }
+            return value;
+        }
     }
 }
