@@ -61,3 +61,14 @@ jobs:
         run: mvn clean install
       - name: Test with latest jnr dependencies
         run: mvn test -P jnr-latest
+
+  check-vendored:
+    name: Check vendored code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: CgroupReader is in sync
+        run: >
+          diff
+          <(grep -v ^package src/main/java/com/timgroup/statsd/CgroupReader.java)
+          <(grep -v ^package dogstatsd-http/core/src/main/java/com/datadoghq/dogstatsd/http/CgroupReader.java)
