@@ -1,7 +1,7 @@
 bin
 build
 *.iml
-/target/
+target/
 .idea
 .classpath
 .project
