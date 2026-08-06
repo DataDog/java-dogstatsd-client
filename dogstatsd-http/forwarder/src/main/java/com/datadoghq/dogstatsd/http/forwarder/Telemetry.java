@@ -7,11 +7,8 @@
 
 package com.datadoghq.dogstatsd.http.forwarder;
 
-import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import java.time.Clock;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.LongSupplier;
 
@@ -56,50 +53,63 @@ public class Telemetry {
             this.intervalStartMillis = intervalStartMillis;
         }
 
-        /**
-         * Encodes this snapshot into {@code pb} using the default metric.
-         *
-         * @param pb Builder to append metrics to.
-         */
-        public void encodeTo(PayloadBuilder pb) {
-            encodeTo(DEFAULT_PREFIX, pb);
+        /** Destination for the metrics of an encoded snapshot. */
+        public interface Encoder {
+            /**
+             * Emits a gauge.
+             *
+             * @param name Full metric name.
+             * @param value Metric value.
+             */
+            void gauge(String name, double value);
+
+            /**
+             * Emits a count.
+             *
+             * @param name Full metric name.
+             * @param value Metric value.
+             * @param tags Tags to attach, or {@code null} for none.
+             */
+            void count(String name, double value, String[] tags);
         }
 
         /**
-         * Encodes this snapshot into {@code pb}.
+         * Encodes this snapshot into {@code enc} using the default metric name prefix.
          *
-         * @param pb Builder to append metrics to.
-         * @param prefix Metric name prefix.
+         * @param enc Encoder to emit metrics to.
          */
-        public void encodeTo(String prefix, PayloadBuilder pb) {
-            long ts = intervalStartMillis / 1000;
+        public void encodeTo(Encoder enc) {
+            encodeTo(DEFAULT_PREFIX, enc);
+        }
 
-            pb.count(prefix + ".enqueued_payloads").addPoint(ts, enqueuedPayloads).close();
-            pb.count(prefix + ".enqueued_bytes").addPoint(ts, enqueuedBytes).close();
-            pb.count(prefix + ".delivered_payloads").addPoint(ts, deliveredPayloads).close();
-            pb.count(prefix + ".delivered_bytes").addPoint(ts, deliveredBytes).close();
-            pb.count(prefix + ".dropped_payloads").addPoint(ts, droppedPayloads).close();
-            pb.count(prefix + ".dropped_bytes").addPoint(ts, droppedBytes).close();
+        /**
+         * Encodes this snapshot into {@code enc}.
+         *
+         * <p>Metrics carry no timestamp — the encoder decides how to timestamp them.
+         *
+         * @param prefix Metric name prefix.
+         * @param enc Encoder to emit metrics to.
+         */
+        public void encodeTo(String prefix, Encoder enc) {
+            enc.count(prefix + ".enqueued_payloads", (double) enqueuedPayloads, null);
+            enc.count(prefix + ".enqueued_bytes", (double) enqueuedBytes, null);
+            enc.count(prefix + ".delivered_payloads", (double) deliveredPayloads, null);
+            enc.count(prefix + ".delivered_bytes", (double) deliveredBytes, null);
+            enc.count(prefix + ".dropped_payloads", (double) droppedPayloads, null);
+            enc.count(prefix + ".dropped_bytes", (double) droppedBytes, null);
 
-            pb.gauge(prefix + ".queue_payloads").addPoint(ts, queuePayloads).close();
-            pb.gauge(prefix + ".queue_bytes").addPoint(ts, queueBytes).close();
-            pb.gauge(prefix + ".queue_max_bytes").addPoint(ts, queueMaxBytes).close();
+            enc.gauge(prefix + ".queue_payloads", (double) queuePayloads);
+            enc.gauge(prefix + ".queue_bytes", (double) queueBytes);
+            enc.gauge(prefix + ".queue_max_bytes", (double) queueMaxBytes);
 
-            pb.gauge(prefix + ".oldest_enqueued_age_seconds")
-                    .addPoint(ts, oldestEnqueuedAgeNanos / 1e9)
-                    .close();
-            pb.gauge(prefix + ".last_success_age_seconds")
-                    .addPoint(ts, lastSuccessAgeNanos / 1e9)
-                    .close();
+            enc.gauge(prefix + ".oldest_enqueued_age_seconds", oldestEnqueuedAgeNanos / 1e9);
+            enc.gauge(prefix + ".last_success_age_seconds", lastSuccessAgeNanos / 1e9);
 
             for (Map.Entry<String, CodeCounters> e : byCode.entrySet()) {
-                List<String> tags = Collections.singletonList("code:" + e.getKey());
+                String[] tags = {"code:" + e.getKey()};
                 CodeCounters c = e.getValue();
-                pb.count(prefix + ".response_payloads")
-                        .setTags(tags)
-                        .addPoint(ts, c.payloads)
-                        .close();
-                pb.count(prefix + ".response_bytes").setTags(tags).addPoint(ts, c.bytes).close();
+                enc.count(prefix + ".response_payloads", (double) c.payloads, tags);
+                enc.count(prefix + ".response_bytes", (double) c.bytes, tags);
             }
         }
 
