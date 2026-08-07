@@ -32,6 +32,7 @@ public class ForwarderContextTest {
 
     private static ForwarderContext.Builder builder(Map<String, String> env, String containerID) {
         return ForwarderContext.builder()
+                .baseUri("http://localhost:8125")
                 .environment(env)
                 .cgroupReader(new StubCgroupReader(containerID));
     }
@@ -166,7 +167,10 @@ public class ForwarderContextTest {
             }
 
             boolean detects =
-                    ForwarderContext.builder().environment(env).resolveOriginDetectionEnabled();
+                    ForwarderContext.builder()
+                            .environment(env)
+                            .baseUri("http://localhost:8125")
+                            .resolveOriginDetectionEnabled();
             assertEquals(c.value, c.detects, detects);
         }
     }
@@ -234,6 +238,7 @@ public class ForwarderContextTest {
     public void emptyEnvironmentDetectsLocalDataOnly() {
         ForwarderContext ctx =
                 ForwarderContext.builder()
+                        .baseUri("http://localhost:8125")
                         .environment(Collections.<String, String>emptyMap())
                         .cgroupReader(new StubCgroupReader("container-id"))
                         .build();

@@ -38,6 +38,7 @@ public class Forwarder extends Thread {
     final Duration requestTimeout;
     final Random rng = new Random();
 
+    final URI baseUri;
     final String localData;
     final String externalData;
 
@@ -61,6 +62,7 @@ public class Forwarder extends Thread {
                         builder.whenFull,
                         this.telemetry);
         this.requestTimeout = builder.requestTimeout;
+        this.baseUri = builder.baseUri;
         this.localData = builder.localData;
         this.externalData = builder.externalData;
 
@@ -118,13 +120,12 @@ public class Forwarder extends Thread {
 
     void runOnce(Map.Entry<BoundedQueue.Key, Payload> item) throws InterruptedException {
         Payload payload = item.getValue();
+        final URI url = baseUri.resolve(payload.url);
         logger.log(
-                Level.INFO,
-                "sending {0} bytes to {1}",
-                new Object[] {payload.bytes.length, payload.url});
+                Level.INFO, "sending {0} bytes to {1}", new Object[] {payload.bytes.length, url});
 
         HttpRequest.Builder builder =
-                HttpRequest.newBuilder(payload.url).POST(BodyPublishers.ofByteArray(payload.bytes));
+                HttpRequest.newBuilder(url).POST(BodyPublishers.ofByteArray(payload.bytes));
         if (requestTimeout != null) {
             builder.timeout(requestTimeout);
         }
@@ -242,6 +243,7 @@ public class Forwarder extends Thread {
         private String localData;
         private String externalData;
         private boolean contextSet;
+        private URI baseUri;
 
         private Builder() {}
 
@@ -322,18 +324,15 @@ public class Forwarder extends Thread {
          *
          * <p>Defaults to {@code ForwarderContext.defaults()}.
          *
-         * @param context the context to take the values from, or {@code null}.
+         * @param context the context to take the values from.
          * @return this builder.
          */
         public Builder context(final ForwarderContext context) {
             contextSet = true;
-            if (context == null) {
-                localData = null;
-                externalData = null;
-            } else {
-                localData = validateHeaderValue(context.localData());
-                externalData = validateHeaderValue(context.externalData());
-            }
+            Objects.requireNonNull(context);
+            baseUri = context.baseUri();
+            localData = validateHeaderValue(context.localData());
+            externalData = validateHeaderValue(context.externalData());
             return this;
         }
 

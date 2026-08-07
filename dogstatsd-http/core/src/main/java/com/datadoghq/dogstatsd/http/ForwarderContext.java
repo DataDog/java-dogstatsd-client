@@ -7,14 +7,17 @@
 
 package com.datadoghq.dogstatsd.http;
 
+import java.net.URI;
 import java.util.Map;
 
 /** Provides common parameters to the forwarder implementations. */
 public class ForwarderContext {
+    private final URI baseUri;
     private final String localData;
     private final String externalData;
 
-    private ForwarderContext(final String localData, final String externalData) {
+    private ForwarderContext(final URI baseUri, final String localData, final String externalData) {
+        this.baseUri = baseUri;
         this.localData = localData;
         this.externalData = externalData;
     }
@@ -26,6 +29,10 @@ public class ForwarderContext {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    public URI baseUri() {
+        return baseUri;
     }
 
     /**
@@ -63,6 +70,7 @@ public class ForwarderContext {
         private CgroupReader cgroupReader = new CgroupReader();
         private String localData;
         private String externalData;
+        private String baseUri;
 
         private Builder() {}
 
@@ -100,7 +108,19 @@ public class ForwarderContext {
             return this;
         }
 
-        Builder environment(final Map<String, String> val) {
+        /**
+         * Sets the base URI the series and sketches endpoints are resolved against. Defaults to the
+         * value of the {@code DD_DOGSTATSD_HTTP_URL} environment variable.
+         *
+         * @param val the base URI, or null to use the default.
+         * @return this builder.
+         */
+        public Builder baseUri(final String uri) {
+            baseUri = uri;
+            return this;
+        }
+
+        public Builder environment(final Map<String, String> val) {
             env = new EnvMap(val);
             return this;
         }
@@ -114,6 +134,7 @@ public class ForwarderContext {
          * Builds the context, running detection for any value not set explicitly.
          *
          * @return a new context.
+         * @throws URISyntaxException if baseUri value is not a valid URI.
          */
         public ForwarderContext build() {
             String local = localData;
@@ -128,7 +149,7 @@ public class ForwarderContext {
                 }
             }
 
-            return new ForwarderContext(local, external);
+            return new ForwarderContext(resolveBaseUri(), local, external);
         }
 
         boolean resolveOriginDetectionEnabled() {
@@ -146,6 +167,21 @@ public class ForwarderContext {
                     || "0".equals(normalized)
                     || "n".equals(normalized)
                     || "off".equals(normalized));
+        }
+
+        URI resolveBaseUri() {
+            if (baseUri == null) {
+                baseUri = env.get("DD_DOGSTATSD_HTTP_URL");
+            }
+            if (baseUri == null) {
+                throw new IllegalStateException(
+                        "baseUri is not set and DD_DOGSTATSD_HTTP_URL is not defined");
+            }
+            // Make sure baseUri acts as a prefix when we use it with URI#resolve later.
+            if (!baseUri.endsWith("/")) {
+                baseUri += "/";
+            }
+            return URI.create(baseUri);
         }
     }
 }

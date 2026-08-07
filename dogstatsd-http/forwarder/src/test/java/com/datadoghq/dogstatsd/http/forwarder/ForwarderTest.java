@@ -17,6 +17,7 @@ import static org.junit.Assert.assertTrue;
 import com.datadoghq.dogstatsd.http.ForwarderContext;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,13 +25,18 @@ import org.junit.Test;
 
 public class ForwarderTest {
     private static final URI URL = URI.create("http://localhost:0/");
+    private static final Map<String, String> emptyMap = new HashMap();
+
+    private static ForwarderContext.Builder contextBuilder() {
+        return ForwarderContext.builder().environment(emptyMap).baseUri("http://localhost:8125");
+    }
+
+    private static Forwarder.Builder builder() {
+        return Forwarder.builder().context(contextBuilder().build());
+    }
 
     private static Forwarder newForwarder(long maxBytes, WhenFull whenFull) {
-        return Forwarder.builder()
-                .maxRequestsBytes(maxBytes)
-                .maxTries(1)
-                .whenFull(whenFull)
-                .build();
+        return builder().maxRequestsBytes(maxBytes).maxTries(1).whenFull(whenFull).build();
     }
 
     @Test
@@ -47,7 +53,7 @@ public class ForwarderTest {
     /** A null request timeout is legal and means requests have no timeout at all. */
     @Test
     public void nullRequestTimeoutIsAllowed() {
-        Forwarder f = Forwarder.builder().requestTimeout(null).build();
+        Forwarder f = builder().requestTimeout(null).build();
         assertNull(f.requestTimeout);
     }
 
@@ -56,26 +62,16 @@ public class ForwarderTest {
         Forwarder f =
                 Forwarder.builder()
                         .context(
-                                ForwarderContext.builder()
-                                        .localData("ci-abc")
-                                        .externalData("en-xyz")
-                                        .build())
+                                contextBuilder().localData("ci-abc").externalData("en-xyz").build())
                         .build();
         assertEquals("ci-abc", f.localData);
         assertEquals("en-xyz", f.externalData);
     }
 
-    @Test
-    public void nullContextOmitsOriginDetectionHeaders() {
-        Forwarder f = Forwarder.builder().context(null).build();
-        assertNull(f.localData);
-        assertNull(f.externalData);
-    }
-
     /** Values that can't be sent as a header value are rejected where they're supplied. */
     @Test
     public void contextRejectsUnsendableHeaderValue() {
-        ForwarderContext ctx = ForwarderContext.builder().localData("bad\nvalue").build();
+        ForwarderContext ctx = contextBuilder().localData("bad\nvalue").build();
         Forwarder.Builder b = Forwarder.builder();
         assertThrows(IllegalArgumentException.class, () -> b.context(ctx));
     }
