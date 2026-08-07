@@ -10,9 +10,11 @@ package com.datadoghq.dogstatsd.http.forwarder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.datadoghq.dogstatsd.http.ForwarderContext;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
@@ -24,7 +26,58 @@ public class ForwarderTest {
     private static final URI URL = URI.create("http://localhost:0/");
 
     private static Forwarder newForwarder(long maxBytes, WhenFull whenFull) {
-        return new Forwarder(maxBytes, 1, whenFull, Duration.ofSeconds(1), Duration.ofSeconds(1));
+        return Forwarder.builder()
+                .maxRequestsBytes(maxBytes)
+                .maxTries(1)
+                .whenFull(whenFull)
+                .build();
+    }
+
+    @Test
+    public void builderRejectsInvalidValues() {
+        Forwarder.Builder b = Forwarder.builder();
+        assertThrows(IllegalArgumentException.class, () -> b.maxRequestsBytes(0));
+        assertThrows(IllegalArgumentException.class, () -> b.maxTries(0));
+        assertThrows(NullPointerException.class, () -> b.whenFull(null));
+        assertThrows(NullPointerException.class, () -> b.connectTimeout(null));
+        assertThrows(IllegalArgumentException.class, () -> b.connectTimeout(Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> b.requestTimeout(Duration.ZERO));
+    }
+
+    /** A null request timeout is legal and means requests have no timeout at all. */
+    @Test
+    public void nullRequestTimeoutIsAllowed() {
+        Forwarder f = Forwarder.builder().requestTimeout(null).build();
+        assertNull(f.requestTimeout);
+    }
+
+    @Test
+    public void contextSuppliesOriginDetectionHeaders() {
+        Forwarder f =
+                Forwarder.builder()
+                        .context(
+                                ForwarderContext.builder()
+                                        .localData("ci-abc")
+                                        .externalData("en-xyz")
+                                        .build())
+                        .build();
+        assertEquals("ci-abc", f.localData);
+        assertEquals("en-xyz", f.externalData);
+    }
+
+    @Test
+    public void nullContextOmitsOriginDetectionHeaders() {
+        Forwarder f = Forwarder.builder().context(null).build();
+        assertNull(f.localData);
+        assertNull(f.externalData);
+    }
+
+    /** Values that can't be sent as a header value are rejected where they're supplied. */
+    @Test
+    public void contextRejectsUnsendableHeaderValue() {
+        ForwarderContext ctx = ForwarderContext.builder().localData("bad\nvalue").build();
+        Forwarder.Builder b = Forwarder.builder();
+        assertThrows(IllegalArgumentException.class, () -> b.context(ctx));
     }
 
     @Test
@@ -128,7 +181,7 @@ public class ForwarderTest {
     public void closeDrainsPendingItemsReturnsTrue() throws InterruptedException {
         AtomicInteger processed = new AtomicInteger();
         Forwarder f =
-                new Forwarder(100, 1, WhenFull.DROP, Duration.ofSeconds(1), Duration.ofSeconds(1)) {
+                new Forwarder(Forwarder.builder()) {
                     @Override
                     void runOnce(Map.Entry<BoundedQueue.Key, Payload> item) {
                         processed.incrementAndGet();
@@ -156,7 +209,7 @@ public class ForwarderTest {
     public void closeTimesOutReturnsFalse() throws InterruptedException {
         CountDownLatch entered = new CountDownLatch(1);
         Forwarder f =
-                new Forwarder(100, 1, WhenFull.DROP, Duration.ofSeconds(1), Duration.ofSeconds(1)) {
+                new Forwarder(Forwarder.builder()) {
                     @Override
                     void runOnce(Map.Entry<BoundedQueue.Key, Payload> item)
                             throws InterruptedException {
