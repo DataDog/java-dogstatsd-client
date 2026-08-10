@@ -11,7 +11,6 @@ import com.datadoghq.dogstatsd.Sketch;
 import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.PayloadConsumer;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 
@@ -39,7 +38,7 @@ public class DirectHttpClient {
         return new Builder(forwarder);
     }
 
-    private DirectHttpClient(final Builder builder) throws URISyntaxException {
+    private DirectHttpClient(final Builder builder) {
         final Forwarder forwarder = builder.forwarder;
 
         if (builder.prefix != null && !builder.prefix.isEmpty()) {
@@ -112,9 +111,8 @@ public class DirectHttpClient {
          * Builds the client.
          *
          * @return a new client.
-         * @throws URISyntaxException if the configuration yields an invalid URI.
          */
-        public DirectHttpClient build() throws URISyntaxException {
+        public DirectHttpClient build() {
             return new DirectHttpClient(this);
         }
     }
