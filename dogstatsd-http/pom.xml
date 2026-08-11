@@ -7,11 +7,12 @@
     <artifactId>dogstatsd-http</artifactId>
     <packaging>pom</packaging>
     <name>dogstatsd-http</name>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>${version}</version>
     <description>Aggregator for the DogStatsD HTTP client modules.</description>
     <url>https://github.com/DataDog/java-dogstatsd-client</url>
 
     <properties>
+        <version>1.0.0-SNAPSHOT</version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 

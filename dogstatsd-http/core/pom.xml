@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.datadoghq</groupId>
         <artifactId>dogstatsd-http</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>${version}</version>
     </parent>
 
     <artifactId>dogstatsd-http-core</artifactId>
