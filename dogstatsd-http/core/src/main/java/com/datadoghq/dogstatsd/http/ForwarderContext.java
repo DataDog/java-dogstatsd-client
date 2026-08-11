@@ -31,6 +31,12 @@ public class ForwarderContext {
         return new Builder();
     }
 
+    /**
+     * Returns the base URI that per-payload URIs are resolved against. Always ends with {@code /}
+     * so that it acts as a prefix for {@link URI#resolve}.
+     *
+     * @return the base URI, never null.
+     */
     public URI baseUri() {
         return baseUri;
     }
@@ -112,7 +118,7 @@ public class ForwarderContext {
          * Sets the base URI the series and sketches endpoints are resolved against. Defaults to the
          * value of the {@code DD_DOGSTATSD_HTTP_URL} environment variable.
          *
-         * @param val the base URI, or null to use the default.
+         * @param uri the base URI, or null to use the default.
          * @return this builder.
          */
         public Builder baseUri(final String uri) {
@@ -120,6 +126,12 @@ public class ForwarderContext {
             return this;
         }
 
+        /**
+         * Use the supplied map instead of OS environment variables.
+         *
+         * @param val the environment map.
+         * @return this builder.
+         */
         public Builder environment(final Map<String, String> val) {
             env = new EnvMap(val);
             return this;
@@ -134,7 +146,6 @@ public class ForwarderContext {
          * Builds the context, running detection for any value not set explicitly.
          *
          * @return a new context.
-         * @throws URISyntaxException if baseUri value is not a valid URI.
          */
         public ForwarderContext build() {
             String local = localData;

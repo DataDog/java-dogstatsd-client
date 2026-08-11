@@ -76,6 +76,8 @@ public class Forwarder extends Thread {
     /**
      * Captures a snapshot of the forwarder's telemetry counters and queue state, clearing delta
      * counters so subsequent snapshots report activity since this call.
+     *
+     * @return a telemetry snapshot.
      */
     public Telemetry.Snapshot snapshot() {
         return telemetry.snapshot(queue);

@@ -18,7 +18,7 @@ public class Telemetry {
     /** HTTP status code used to record transport-level (no-response) errors. */
     public static final int TRANSPORT_ERROR_CODE = 0;
 
-    /** Point-in-time view of cumulative counters and queue state. */
+    /** Queue state at snapshot time, plus counters for the interval leading up to it. */
     public static final class Snapshot {
         /**
          * Wall-clock time (Unix epoch milliseconds) at the start of the interval covered by this
@@ -27,14 +27,31 @@ public class Telemetry {
          */
         public long intervalStartMillis;
 
+        /** Number of payloads added to the queue in this interval. */
         public long enqueuedPayloads;
+
+        /** Number of payloads successfully delivered in this interval. */
         public long deliveredPayloads;
+
+        /** Total size in bytes of payloads added to the queue in this interval. */
         public long enqueuedBytes;
+
+        /** Total size in bytes of payloads successfully delivered in this interval. */
         public long deliveredBytes;
+
+        /** Number of payloads currently in the queue. */
         public long queuePayloads;
+
+        /** Total size in bytes of payloads currently in the queue. */
         public long queueBytes;
+
+        /** Maximum number of bytes the queue is allowed to store. */
         public long queueMaxBytes;
+
+        /** Number of payloads dropped in this interval. */
         public long droppedPayloads;
+
+        /** Total size in bytes of payloads dropped in this interval. */
         public long droppedBytes;
 
         /** Nanos elapsed since the oldest queued item was enqueued; {@code 0} if queue is empty. */
@@ -115,7 +132,10 @@ public class Telemetry {
 
         /** Per-code totals within a snapshot's window. */
         public static final class CodeCounters {
+            /** Number of payloads. */
             public long payloads;
+
+            /** Total size in bytes of payloads. */
             public long bytes;
         }
     }

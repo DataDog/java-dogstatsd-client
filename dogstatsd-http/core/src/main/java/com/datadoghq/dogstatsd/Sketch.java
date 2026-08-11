@@ -59,6 +59,12 @@ public class Sketch {
 
     /** Receives (key, count) pairs from {@link #bins(BinConsumer)}. */
     public interface BinConsumer {
+        /**
+         * Process one sketch bin.
+         *
+         * @param key a value that specifies the range of observations counted in this bin.
+         * @param count number of observations in the bin.
+         */
         void consumeBin(short key, long count);
     }
 
@@ -69,7 +75,11 @@ public class Sketch {
         return size;
     }
 
-    /** Feeds each populated bin to {@code consumer} in order. */
+    /**
+     * Feeds each populated bin to {@code consumer} in order.
+     *
+     * @param consumer A consumer to feed sketch bins to.
+     */
     public void bins(BinConsumer consumer) {
         int idx = head;
         for (int i = 0; i < size; i++) {
