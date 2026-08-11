@@ -11,6 +11,7 @@ import com.datadoghq.dogstatsd.Sketch;
 import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.PayloadConsumer;
 import java.net.URI;
+import java.nio.BufferOverflowException;
 import java.util.List;
 import java.util.Objects;
 
