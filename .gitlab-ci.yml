@@ -5,8 +5,7 @@ stages:
 variables:
   REGISTRY: registry.ddbuild.io
 
-# From the tagged repo, push the release artifact
-deploy_to_sonatype:
+.sonatype_release:
   stage: deploy_to_sonatype
 
   rules:
@@ -18,6 +17,10 @@ deploy_to_sonatype:
     - "docker-in-docker:amd64"
 
   image: $REGISTRY/images/mirror/maven:3.9-eclipse-temurin-17
+
+  variables:
+    # Pom of the project to release, relative to the repository root.
+    RELEASE_POM: ./pom.xml
 
   script:
     # Ensure we don't print commands being run to the logs during credential
@@ -43,8 +46,12 @@ deploy_to_sonatype:
 
     - set -x
 
-    - echo "Building release..."
-    - mvn -DperformRelease=true --settings ./settings.xml clean deploy
+    - echo "Building release of $RELEASE_POM..."
+    - mvn -DperformRelease=true --settings ./settings.xml -f "$RELEASE_POM" clean deploy
+
+# From the tagged repo, push the release artifact
+deploy_to_sonatype:
+  extends: .sonatype_release
 
   artifacts:
     expire_in: 6 mos
@@ -56,6 +63,19 @@ deploy_to_sonatype:
       - ./target/*.sha1
       - ./target/*.sha256
       - ./target/*.sha512
+
+deploy_dogstatsd_http:
+  extends: .sonatype_release
+  variables:
+    RELEASE_POM: ./dogstatsd-http/pom.xml
+  artifacts:
+    expire_in: 6 mos
+    paths:
+      - ./dogstatsd-http/target/*.asc
+      - ./dogstatsd-http/core/target/*.jar
+      - ./dogstatsd-http/core/target/*.asc
+      - ./dogstatsd-http/forwarder/target/*.jar
+      - ./dogstatsd-http/forwarder/target/*.asc
 
 # This job creates the GPG key used to sign the releases
 create_key:
