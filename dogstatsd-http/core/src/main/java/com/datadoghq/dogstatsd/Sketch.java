@@ -13,8 +13,7 @@ import java.util.Arrays;
  * Reusable DDSketch builder. Consumes a batch of observations and populates sum, min, max, count
  * and distribution bins accordingly.
  *
- * <p>This implementation maintains at most 4096 bins with 64-bit counters. The number of bins is a
- * hard limit and is enforced by the intake.
+ * <p>This implementation maintains at most 4096 bins with 64-bit counters.
  *
  * <p>Prioritizes accuracy of higher key bins (higher percentiles) over lower ones when the number
  * of bins exceeds the limit.
