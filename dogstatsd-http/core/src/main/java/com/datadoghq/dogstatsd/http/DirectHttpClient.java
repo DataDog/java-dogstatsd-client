@@ -18,6 +18,9 @@ import java.util.Objects;
  * Simple Dogstatsd HTTP client for sending pre-aggregated metrics.
  *
  * <p>Not thread safe.
+ *
+ * <p>Caveat: if the forwarder throws {@code InterruptedException}, the
+ * payload in progress is lost.
  */
 public class DirectHttpClient {
     private static URI seriesUri = URI.create("series");
