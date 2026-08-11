@@ -161,6 +161,12 @@
                             <publishingServerId>central</publishingServerId>
                             <waitUntil>validated</waitUntil>
                             <deploymentName>dogstatsd-http:${project.version}</deploymentName>
+                            <!-- The aggregator pom is build-time only: children are flattened
+                                 into standalone poms with no parent reference, so it is never
+                                 resolved by consumers and must not be published. -->
+                            <excludeArtifacts>
+                                <excludeArtifact>dogstatsd-http</excludeArtifact>
+                            </excludeArtifacts>
                         </configuration>
                     </plugin>
                     <plugin>

@@ -71,7 +71,6 @@ deploy_dogstatsd_http:
   artifacts:
     expire_in: 6 mos
     paths:
-      - ./dogstatsd-http/target/*.asc
       - ./dogstatsd-http/core/target/*.jar
       - ./dogstatsd-http/core/target/*.asc
       - ./dogstatsd-http/forwarder/target/*.jar
