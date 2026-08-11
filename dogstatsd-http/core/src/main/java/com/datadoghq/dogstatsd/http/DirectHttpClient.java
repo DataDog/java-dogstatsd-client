@@ -19,8 +19,7 @@ import java.util.Objects;
  *
  * <p>Not thread safe.
  *
- * <p>Caveat: if the forwarder throws {@code InterruptedException}, the
- * payload in progress is lost.
+ * <p>Caveat: if the forwarder throws {@code InterruptedException}, the payload in progress is lost.
  */
 public class DirectHttpClient {
     private static URI seriesUri = URI.create("series");
