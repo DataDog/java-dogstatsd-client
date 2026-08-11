@@ -128,7 +128,7 @@ public class Telemetry {
     private long lastSuccessNanos;
     private boolean everDelivered;
 
-    public Telemetry() {
+    Telemetry() {
         this(Clock.systemUTC(), System::nanoTime);
     }
 
@@ -167,11 +167,7 @@ public class Telemetry {
         current.droppedBytes += bytes;
     }
 
-    /**
-     * Captures a snapshot using the supplied queue stats, then swaps in a fresh accumulator so
-     * subsequent snapshots report deltas since this call.
-     */
-    public synchronized Snapshot snapshot(BoundedQueue q) {
+    synchronized Snapshot snapshot(BoundedQueue q) {
         long now = nanos.getAsLong();
         Snapshot s = current;
         current = new Snapshot(clock.millis());
