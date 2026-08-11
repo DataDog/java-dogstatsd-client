@@ -104,14 +104,14 @@ public class Forwarder extends Thread {
     /**
      * Enqueues a payload for delivery to the given endpoint.
      *
-     * <p>If the queue is full, behaviour is determined by the {@link WhenFull} policy set with
+     * <p>If the queue is full, behavior is determined by the {@link WhenFull} policy set with
      * {@link Builder#whenFull}.
      *
-     * @param url the remote HTTP endpoint to POST the payload to
-     * @param payload the raw bytes to deliver
+     * @param url the remote HTTP endpoint to POST the payload to.
+     * @param payload the raw bytes to deliver.
      * @throws InterruptedException if the calling thread is interrupted while waiting for space
-     *     ({@link WhenFull#BLOCK} mode only)
-     * @throws IllegalStateException if the forwarder has been closed via {@link #close(Duration)}
+     *     ({@link WhenFull#BLOCK} mode only).
+     * @throws IllegalStateException if the forwarder has been closed via {@link #close(Duration)}.
      */
     public void send(URI url, byte[] payload) throws InterruptedException {
         Objects.requireNonNull(url, "url");
@@ -215,8 +215,8 @@ public class Forwarder extends Thread {
      * @param timeout maximum time to wait for the backlog to drain. {@code null} means wait
      *     forever.
      * @return {@code true} if the queue drained cleanly with no unsent payloads remaining; {@code
-     *     false} if the timeout elapsed with data still queued
-     * @throws InterruptedException if the calling thread is interrupted while waiting
+     *     false} if the timeout elapsed with data still queued.
+     * @throws InterruptedException if the calling thread is interrupted while waiting.
      */
     public boolean close(Duration timeout) throws InterruptedException {
         queue.close();

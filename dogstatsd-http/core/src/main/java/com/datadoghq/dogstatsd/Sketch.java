@@ -13,11 +13,11 @@ import java.util.Arrays;
  * Reusable DDSketch builder. Consumes a batch of observations and populates sum, min, max, count
  * and distribution bins accordingly.
  *
- * <p>This implementation maintains at most 4096 bins with 64-bit counters. Number of bins is a hard
- * limit and is enforced by the intake.
+ * <p>This implementation maintains at most 4096 bins with 64-bit counters. The number of bins is a
+ * hard limit and is enforced by the intake.
  *
- * <p>Prioritizes accuracy of higher key bins (higher percentiles) over lower ones when number of
- * bins exceeds the limit.
+ * <p>Prioritizes accuracy of higher key bins (higher percentiles) over lower ones when the number
+ * of bins exceeds the limit.
  */
 public class Sketch {
     static final double gamma = 130.0 / 128;
@@ -78,7 +78,7 @@ public class Sketch {
     /**
      * Feeds each populated bin to {@code consumer} in order.
      *
-     * @param consumer A consumer to feed sketch bins to.
+     * @param consumer a consumer to feed sketch bins to.
      */
     public void bins(BinConsumer consumer) {
         int idx = head;
@@ -124,7 +124,7 @@ public class Sketch {
     /**
      * Builds the sketch from the given values.
      *
-     * @param observations the observations to include in the sketch
+     * @param observations the observations to include in the sketch.
      * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}.
      *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
@@ -146,7 +146,7 @@ public class Sketch {
     /**
      * Builds the sketch from the given values.
      *
-     * @param observations the observations to include in the sketch
+     * @param observations the observations to include in the sketch.
      * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}.
      *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total

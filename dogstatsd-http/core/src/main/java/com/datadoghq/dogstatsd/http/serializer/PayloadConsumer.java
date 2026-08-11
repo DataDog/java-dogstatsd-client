@@ -10,7 +10,7 @@ package com.datadoghq.dogstatsd.http.serializer;
 /** Consumes payloads from the PayloadBuilder. */
 public interface PayloadConsumer {
     /**
-     * Called when payload builder finishes another payload.
+     * Called when the payload builder finishes another payload.
      *
      * @param payload Completed payload.
      */

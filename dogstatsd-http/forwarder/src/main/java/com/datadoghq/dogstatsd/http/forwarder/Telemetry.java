@@ -54,7 +54,9 @@ public class Telemetry {
         /** Total size in bytes of payloads dropped in this interval. */
         public long droppedBytes;
 
-        /** Nanos elapsed since the oldest queued item was enqueued; {@code 0} if queue is empty. */
+        /**
+         * Nanos elapsed since the oldest queued item was enqueued; {@code 0} if the queue is empty.
+         */
         public long oldestEnqueuedAgeNanos;
 
         /** Nanos elapsed since the last successful submission; {@code 0} if none yet. */
@@ -63,7 +65,7 @@ public class Telemetry {
         /** Totals keyed by HTTP code. */
         public Map<String, CodeCounters> byCode = new HashMap<>();
 
-        /** Default metric name prefix used when none is supplied to {@link Snapshot#encode}. */
+        /** Default metric name prefix used when none is supplied to {@link Snapshot#encodeTo}. */
         static final String DEFAULT_PREFIX = "datadog.dogstatsd_http.client";
 
         Snapshot(long intervalStartMillis) {

@@ -61,9 +61,9 @@ public class ForwarderContext {
     }
 
     /**
-     * Returns new instance with default settings.
+     * Returns a new instance with default settings.
      *
-     * @return new default instance.
+     * @return a new default instance.
      */
     public static ForwarderContext defaults() {
         return builder().build();

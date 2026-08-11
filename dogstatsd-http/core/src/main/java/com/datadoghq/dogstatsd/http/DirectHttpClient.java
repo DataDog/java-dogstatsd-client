@@ -139,7 +139,8 @@ public class DirectHttpClient {
     /**
      * Records a count point.
      *
-     * <p>For compatibility with aggregated dogstatsd counts, assumes aggregation interval of 10s.
+     * <p>For compatibility with aggregated dogstatsd counts, assumes an aggregation interval of
+     * 10s.
      *
      * @param name the metric name, to which the client prefix is prepended.
      * @param value the count accumulated over the interval starting at {@code ts}.

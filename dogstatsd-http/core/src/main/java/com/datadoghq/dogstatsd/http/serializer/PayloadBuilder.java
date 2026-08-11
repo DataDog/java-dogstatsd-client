@@ -135,7 +135,7 @@ public class PayloadBuilder {
     Metric<?> metricInProgress;
 
     /**
-     * Create new PayloadBuilder.
+     * Create a new PayloadBuilder.
      *
      * @param consumer Is given payloads one by one as they are finished.
      */
@@ -145,12 +145,12 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new count metric.
+     * Begin encoding a new count metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
      * @param name Name of the metric.
-     * @return Builder instance.
+     * @return New builder instance.
      */
     public ScalarMetric count(String name) {
         ScalarMetric m = new ScalarMetric(this, 1, name);
@@ -159,7 +159,7 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new rate metric.
+     * Begin encoding a new rate metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
@@ -173,7 +173,7 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new gauge metric.
+     * Begin encoding a new gauge metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
@@ -187,7 +187,7 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new sketch metric.
+     * Begin encoding a new sketch metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
