@@ -9,6 +9,7 @@ package com.datadoghq.dogstatsd.http.serializer;
 
 class DeltaEncoder {
     private long prev = 0;
+    private long undo = 0;
 
     long encode(long v) {
         long r = v - prev;
@@ -16,7 +17,16 @@ class DeltaEncoder {
         return r;
     }
 
+    void commit() {
+        undo = prev;
+    }
+
+    void revert() {
+        prev = undo;
+    }
+
     void clear() {
         prev = 0;
+        undo = 0;
     }
 }

@@ -8,12 +8,15 @@
 package com.datadoghq.dogstatsd.http.serializer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.datadoghq.dogstatsd.Sketch;
+import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 
 public class PayloadBuilderTest {
     @Test
@@ -368,6 +371,72 @@ public class PayloadBuilderTest {
 
         for (byte[] p : payloads) {
             assertTrue(p.length <= b.maxPayloadSize);
+        }
+    }
+
+    @Test
+    // Make sure we leave builder in consistent state on error.
+    public void rollback() {
+        final ArrayList<byte[]> payloads1 = new ArrayList<>();
+        PayloadBuilder pb1 =
+                new PayloadBuilder(
+                        new PayloadConsumer() {
+                            @Override
+                            public void handle(byte[] p) {
+                                payloads1.add(p);
+                            }
+                        });
+
+        final ArrayList<byte[]> payloads2 = new ArrayList<>();
+        PayloadBuilder pb2 =
+                new PayloadBuilder(
+                        new PayloadConsumer() {
+                            @Override
+                            public void handle(byte[] p) {
+                                payloads2.add(p);
+                            }
+                        });
+
+        pb1.count("m.before")
+                .setTags(Arrays.asList(new String[] {"env:prod"}))
+                .addPoint(100, 1)
+                .close();
+        pb2.count("m.before")
+                .setTags(Arrays.asList(new String[] {"env:prod"}))
+                .addPoint(100, 1)
+                .close();
+
+        // 40k * 8 bytes = 320 KB > 256 KB payload limit.
+        final ScalarMetric huge =
+                pb2.gauge("m.huge").setTags(Arrays.asList(new String[] {"env:prod", "kind:huge"}));
+        for (int i = 0; i < 40000; i++) {
+            huge.addPoint(1000, 3.14);
+        }
+        assertThrows(
+                BufferOverflowException.class,
+                new ThrowingRunnable() {
+                    @Override
+                    public void run() {
+                        huge.close();
+                    }
+                });
+        pb2.resetMetric();
+
+        pb1.gauge("m.huge")
+                .setTags(Arrays.asList(new String[] {"env:prod", "kind:huge"}))
+                .addPoint(200, 2)
+                .close();
+        pb2.gauge("m.huge")
+                .setTags(Arrays.asList(new String[] {"env:prod", "kind:huge"}))
+                .addPoint(200, 2)
+                .close();
+
+        pb1.close();
+        pb2.close();
+
+        assertEquals(payloads1.size(), payloads2.size());
+        for (int i = 0; i < payloads1.size(); i++) {
+            TestUtil.assertPayload(payloads2.get(i), payloads1.get(i));
         }
     }
 }
