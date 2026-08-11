@@ -64,6 +64,8 @@ public class ForwarderContext {
      * Returns a new instance with default settings.
      *
      * @return a new default instance.
+     * @throws IllegalStateException if {@code DD_DOGSTATSD_HTTP_URL} is not defined.
+     * @throws IllegalArgumentException if the base URI is malformed.
      */
     public static ForwarderContext defaults() {
         return builder().build();
@@ -146,6 +148,9 @@ public class ForwarderContext {
          * Builds the context, running detection for any value not set explicitly.
          *
          * @return a new context.
+         * @throws IllegalStateException if no base URI was set with {@link #baseUri} and {@code
+         *     DD_DOGSTATSD_HTTP_URL} is not defined.
+         * @throws IllegalArgumentException if the base URI is malformed.
          */
         public ForwarderContext build() {
             String local = localData;

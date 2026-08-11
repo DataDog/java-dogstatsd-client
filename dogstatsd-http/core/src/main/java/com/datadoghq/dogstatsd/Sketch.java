@@ -129,6 +129,8 @@ public class Sketch {
      *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
+     * @throws IllegalArgumentException if {@code sampleRate} is {@code NaN}, not positive, or
+     *     greater than 1.
      */
     public void build(long[] observations, double sampleRate) {
         validateSampleRate(sampleRate);
@@ -151,6 +153,8 @@ public class Sketch {
      *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
+     * @throws IllegalArgumentException if {@code sampleRate} is {@code NaN}, not positive, or
+     *     greater than 1.
      */
     public void build(double[] observations, double sampleRate) {
         validateSampleRate(sampleRate);

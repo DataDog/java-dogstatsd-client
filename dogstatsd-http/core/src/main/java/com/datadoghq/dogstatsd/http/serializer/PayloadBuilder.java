@@ -151,6 +151,7 @@ public class PayloadBuilder {
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public ScalarMetric count(String name) {
         ScalarMetric m = new ScalarMetric(this, 1, name);
@@ -165,6 +166,7 @@ public class PayloadBuilder {
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public ScalarMetric rate(String name) {
         ScalarMetric m = new ScalarMetric(this, 2, name);
@@ -179,6 +181,7 @@ public class PayloadBuilder {
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public ScalarMetric gauge(String name) {
         ScalarMetric m = new ScalarMetric(this, 3, name);
@@ -193,6 +196,7 @@ public class PayloadBuilder {
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public SketchMetric sketch(String name) {
         SketchMetric m = new SketchMetric(this, 4, name);
@@ -305,7 +309,11 @@ public class PayloadBuilder {
         timestampsDelta.clear();
     }
 
-    /** Finish any pending data. */
+    /**
+     * Finish any pending data.
+     *
+     * @throws BufferOverflowException if finishing the in-progress metric overflows the payload.
+     */
     public void close() {
         endMetric();
         flushPayload();
