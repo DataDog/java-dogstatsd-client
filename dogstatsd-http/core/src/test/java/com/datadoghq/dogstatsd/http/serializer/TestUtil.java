@@ -103,9 +103,14 @@ class TestUtil {
     }
 
     static String protodump(int[] p) {
+        return protodump(toBytes(p));
+    }
+
+    // int[] lets tests write unsigned byte values without conversion.
+    static byte[] toBytes(int[] p) {
         byte[] pb = new byte[p.length];
         for (int i = 0; i < p.length; i++) pb[i] = (byte) p[i];
-        return protodump(pb);
+        return pb;
     }
 
     static void formatTwoCols(Formatter out, String hl, String hr, String dl, String dr) {
@@ -129,9 +134,13 @@ class TestUtil {
 
     // expected is int[] to be able to write unsigned byte values wtihout conversion.
     static void assertPayload(byte[] got, int[] expected) {
+        assertPayload(got, toBytes(expected));
+    }
+
+    static void assertPayload(byte[] got, byte[] expected) {
         boolean same = got.length == expected.length;
         for (int i = 0; same && i < got.length; i++) {
-            same &= got[i] == (byte) expected[i];
+            same &= got[i] == expected[i];
         }
         if (!same) {
             Formatter out = new Formatter();

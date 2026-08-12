@@ -7,6 +7,7 @@
 
 package com.datadoghq.dogstatsd.http.serializer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 class Interner<T> {
@@ -15,6 +16,8 @@ class Interner<T> {
     }
 
     private HashMap<T, Long> inner = new HashMap<>();
+    private ArrayList<T> undo = new ArrayList<>();
+
     private long lastId = 0;
     private final Encoder<T> encoder;
     private final T empty;
@@ -38,12 +41,26 @@ class Interner<T> {
         encoder.encode(val);
 
         lastId++;
+        undo.add(val);
         inner.put(val, lastId);
         return lastId;
     }
 
+    void commit() {
+        undo.clear();
+    }
+
+    void revert() {
+        for (T it : undo) {
+            inner.remove(it);
+        }
+        lastId -= undo.size();
+        undo.clear();
+    }
+
     void clear() {
         inner.clear();
+        undo.clear();
         lastId = 0;
     }
 }
