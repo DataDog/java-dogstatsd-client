@@ -70,5 +70,5 @@ jobs:
       - name: CgroupReader is in sync
         run: >
           diff
-          <(grep -v ^package src/main/java/com/timgroup/statsd/CgroupReader.java)
-          <(grep -v ^package dogstatsd-http/core/src/main/java/com/datadoghq/dogstatsd/http/CgroupReader.java)
+          <(awk 'f; /^package /{f=1}' src/main/java/com/timgroup/statsd/CgroupReader.java)
+          <(awk 'f; /^package /{f=1}' dogstatsd-http/core/src/main/java/com/datadoghq/dogstatsd/http/CgroupReader.java)
