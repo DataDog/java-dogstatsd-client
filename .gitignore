@@ -14,3 +14,5 @@ target/
 
 # rbenv for pimpmychangelog
 .ruby-version
+
+.flattened-pom.xml

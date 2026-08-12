@@ -42,6 +42,7 @@ abstract class Metric<T extends Metric<T>> {
      * @param resources List of even length, containing zero or more (type, name) pairs, or null for
      *     no resources.
      * @return This.
+     * @throws IllegalArgumentException if {@code resources} has an odd number of elements.
      */
     public T setResources(List<String> resources) {
         if (resources != null && resources.size() % 2 != 0) {
@@ -100,7 +101,13 @@ abstract class Metric<T extends Metric<T>> {
         pb.encodeOrigin(origin);
     }
 
-    /** Finish this timeseries and add it to the payload. */
+    /**
+     * Finish this timeseries and add it to the payload.
+     *
+     * @throws java.nio.BufferOverflowException if the encoded metric exceeds the maximum payload
+     *     size. The in-progress metric is discarded, so no {@link PayloadBuilder#resetMetric()} is
+     *     needed before encoding further metrics.
+     */
     public void close() {
         pb.endMetric();
     }

@@ -53,6 +53,9 @@ public class SketchMetric extends Metric<SketchMetric> {
      * @param timestamp Timestamp of the point in seconds since Unix epoch.
      * @param sketch Sketch supplying the summary statistics and bin distribution.
      * @return This.
+     * @throws BufferOverflowException if the sketch's bin data alone would exceed the maximum
+     *     payload size. The metric is no longer valid; call {@link PayloadBuilder#resetMetric()}
+     *     before encoding any further metrics.
      */
     public SketchMetric addPoint(long timestamp, Sketch sketch) {
         // Skip doing the work if just the bin data would exceed payload size limit.

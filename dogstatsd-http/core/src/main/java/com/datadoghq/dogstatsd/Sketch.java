@@ -13,11 +13,10 @@ import java.util.Arrays;
  * Reusable DDSketch builder. Consumes a batch of observations and populates sum, min, max, count
  * and distribution bins accordingly.
  *
- * <p>This implementation maintains at most 4096 bins with 64-bit counters. Number of bins is a hard
- * limit and is enforced by the intake.
+ * <p>This implementation maintains at most 4096 bins with 64-bit counters.
  *
- * <p>Prioritizes accuracy of higher key bins (higher percentiles) over lower ones when number of
- * bins exceeds the limit.
+ * <p>Prioritizes accuracy of higher key bins (higher percentiles) over lower ones when the number
+ * of bins exceeds the limit.
  */
 public class Sketch {
     static final double gamma = 130.0 / 128;
@@ -59,6 +58,12 @@ public class Sketch {
 
     /** Receives (key, count) pairs from {@link #bins(BinConsumer)}. */
     public interface BinConsumer {
+        /**
+         * Process one sketch bin.
+         *
+         * @param key a value that specifies the range of observations counted in this bin.
+         * @param count number of observations in the bin.
+         */
         void consumeBin(short key, long count);
     }
 
@@ -69,7 +74,11 @@ public class Sketch {
         return size;
     }
 
-    /** Feeds each populated bin to {@code consumer} in order. */
+    /**
+     * Feeds each populated bin to {@code consumer} in order.
+     *
+     * @param consumer a consumer to feed sketch bins to.
+     */
     public void bins(BinConsumer consumer) {
         int idx = head;
         for (int i = 0; i < size; i++) {
@@ -114,11 +123,13 @@ public class Sketch {
     /**
      * Builds the sketch from the given values.
      *
-     * @param observations the observations to include in the sketch
+     * @param observations the observations to include in the sketch.
      * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}.
      *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
+     * @throws IllegalArgumentException if {@code sampleRate} is {@code NaN}, not positive, or
+     *     greater than 1.
      */
     public void build(long[] observations, double sampleRate) {
         validateSampleRate(sampleRate);
@@ -136,11 +147,13 @@ public class Sketch {
     /**
      * Builds the sketch from the given values.
      *
-     * @param observations the observations to include in the sketch
+     * @param observations the observations to include in the sketch.
      * @param sampleRate the sampling rate used to collect {@code observations}, in {@code (0, 1]}.
      *     Each observation is weighted by {@code 1 / sampleRate} when accumulating counts and sums.
      *     Rates below ~1.08e-19 saturate the per-observation weight; bin counts and the total
      *     {@code count} field saturate at {@link Long#MAX_VALUE} on overflow.
+     * @throws IllegalArgumentException if {@code sampleRate} is {@code NaN}, not positive, or
+     *     greater than 1.
      */
     public void build(double[] observations, double sampleRate) {
         validateSampleRate(sampleRate);

@@ -41,7 +41,7 @@ abstract class Buffer {
         size = 0;
     }
 
-    /** Return true if buf is null or empty */
+    /** Return true if buf is null or empty. */
     static boolean isEmpty(Buffer buf) {
         return buf == null || buf.size == 0;
     }
