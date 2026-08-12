@@ -11,6 +11,7 @@ import com.datadoghq.dogstatsd.Sketch;
 import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.PayloadConsumer;
 import java.net.URI;
+import java.nio.BufferOverflowException;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,6 +36,7 @@ public class DirectHttpClient {
      *
      * @param forwarder the forwarder used to send payloads, required.
      * @return a new builder.
+     * @throws NullPointerException if {@code forwarder} is null.
      */
     public static Builder builder(final Forwarder forwarder) {
         return new Builder(forwarder);
@@ -126,6 +128,7 @@ public class DirectHttpClient {
      * @param value the gauge value.
      * @param ts the timestamp of the point in seconds since Unix epoch.
      * @param tags the tags to attach to the point.
+     * @throws BufferOverflowException if the encoded metric exceeds the maximum payload size.
      */
     public void gauge(String name, double value, long ts, List<String> tags) {
         seriesBuilder
@@ -139,12 +142,14 @@ public class DirectHttpClient {
     /**
      * Records a count point.
      *
-     * <p>For compatibility with aggregated dogstatsd counts, assumes aggregation interval of 10s.
+     * <p>For compatibility with aggregated dogstatsd counts, assumes an aggregation interval of
+     * 10s.
      *
      * @param name the metric name, to which the client prefix is prepended.
      * @param value the count accumulated over the interval starting at {@code ts}.
      * @param ts the timestamp of the point in seconds since Unix epoch.
      * @param tags the tags to attach to the point.
+     * @throws BufferOverflowException if the encoded metric exceeds the maximum payload size.
      */
     public void count(String name, double value, long ts, List<String> tags) {
         seriesBuilder
@@ -163,6 +168,9 @@ public class DirectHttpClient {
      * @param sampleRate the sampling rate used to collect {@code values}, in {@code (0, 1]}.
      * @param ts the timestamp of the point in seconds since Unix epoch.
      * @param tags the tags to attach to the point.
+     * @throws IllegalArgumentException if {@code sampleRate} is {@code NaN}, not positive, or
+     *     greater than 1.
+     * @throws BufferOverflowException if the encoded metric exceeds the maximum payload size.
      */
     public void distribution(
             String name, double[] values, double sampleRate, long ts, List<String> tags) {
@@ -174,7 +182,11 @@ public class DirectHttpClient {
         return prefix.isEmpty() ? name : prefix + name;
     }
 
-    /** Completes any in-progress payloads and submits them to the forwarder. */
+    /**
+     * Completes any in-progress payloads and submits them to the forwarder.
+     *
+     * @throws BufferOverflowException if an encoded metric exceeds the maximum payload size.
+     */
     public void flush() {
         seriesBuilder.close();
         sketchesBuilder.close();

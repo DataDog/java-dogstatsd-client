@@ -76,6 +76,8 @@ public class Forwarder extends Thread {
     /**
      * Captures a snapshot of the forwarder's telemetry counters and queue state, clearing delta
      * counters so subsequent snapshots report activity since this call.
+     *
+     * @return a telemetry snapshot.
      */
     public Telemetry.Snapshot snapshot() {
         return telemetry.snapshot(queue);
@@ -102,14 +104,17 @@ public class Forwarder extends Thread {
     /**
      * Enqueues a payload for delivery to the given endpoint.
      *
-     * <p>If the queue is full, behaviour is determined by the {@link WhenFull} policy set with
+     * <p>If the queue is full, behavior is determined by the {@link WhenFull} policy set with
      * {@link Builder#whenFull}.
      *
-     * @param url the remote HTTP endpoint to POST the payload to
-     * @param payload the raw bytes to deliver
+     * @param url the remote HTTP endpoint to POST the payload to.
+     * @param payload the raw bytes to deliver.
      * @throws InterruptedException if the calling thread is interrupted while waiting for space
-     *     ({@link WhenFull#BLOCK} mode only)
-     * @throws IllegalStateException if the forwarder has been closed via {@link #close(Duration)}
+     *     ({@link WhenFull#BLOCK} mode only).
+     * @throws IllegalStateException if the forwarder has been closed via {@link #close(Duration)}.
+     * @throws IllegalArgumentException if {@code payload} is larger than the queue's {@link
+     *     Builder#maxRequestsBytes} limit, in which case it can never be delivered.
+     * @throws NullPointerException if {@code url} or {@code payload} is null.
      */
     public void send(URI url, byte[] payload) throws InterruptedException {
         Objects.requireNonNull(url, "url");
@@ -213,8 +218,8 @@ public class Forwarder extends Thread {
      * @param timeout maximum time to wait for the backlog to drain. {@code null} means wait
      *     forever.
      * @return {@code true} if the queue drained cleanly with no unsent payloads remaining; {@code
-     *     false} if the timeout elapsed with data still queued
-     * @throws InterruptedException if the calling thread is interrupted while waiting
+     *     false} if the timeout elapsed with data still queued.
+     * @throws InterruptedException if the calling thread is interrupted while waiting.
      */
     public boolean close(Duration timeout) throws InterruptedException {
         queue.close();
@@ -254,6 +259,7 @@ public class Forwarder extends Thread {
          *
          * @param val the maximum number of buffered bytes; must be positive.
          * @return this builder.
+         * @throws IllegalArgumentException if {@code val} is not positive.
          */
         public Builder maxRequestsBytes(final long val) {
             if (val <= 0) {
@@ -268,6 +274,7 @@ public class Forwarder extends Thread {
          *
          * @param val the maximum number of attempts; must be at least 1.
          * @return this builder.
+         * @throws IllegalArgumentException if {@code val} is less than 1.
          */
         public Builder maxTries(final long val) {
             if (val < 1) {
@@ -282,6 +289,7 @@ public class Forwarder extends Thread {
          *
          * @param val the action to take.
          * @return this builder.
+         * @throws NullPointerException if {@code val} is null.
          */
         public Builder whenFull(final WhenFull val) {
             whenFull = Objects.requireNonNull(val, "whenFull");
@@ -293,6 +301,8 @@ public class Forwarder extends Thread {
          *
          * @param val the connect timeout; must be positive.
          * @return this builder.
+         * @throws NullPointerException if {@code val} is null.
+         * @throws IllegalArgumentException if {@code val} is not positive.
          */
         public Builder connectTimeout(final Duration val) {
             Objects.requireNonNull(val, "connectTimeout");
@@ -310,6 +320,7 @@ public class Forwarder extends Thread {
          * @param val the request timeout, or {@code null} to disable it; must be positive when
          *     non-null.
          * @return this builder.
+         * @throws IllegalArgumentException if {@code val} is non-null and not positive.
          */
         public Builder requestTimeout(final Duration val) {
             if (val != null && (val.isNegative() || val.isZero())) {
@@ -326,6 +337,9 @@ public class Forwarder extends Thread {
          *
          * @param context the context to take the values from.
          * @return this builder.
+         * @throws NullPointerException if {@code context} is null.
+         * @throws IllegalArgumentException if the context's local or external data contains
+         *     characters that are not valid in an HTTP header value.
          */
         public Builder context(final ForwarderContext context) {
             contextSet = true;
@@ -341,6 +355,8 @@ public class Forwarder extends Thread {
          * started yet.
          *
          * @return a new forwarder.
+         * @throws IllegalStateException if no context was set with {@link #context} and the default
+         *     one cannot be built because {@code DD_DOGSTATSD_HTTP_URL} is not defined.
          */
         public Forwarder build() {
             if (!contextSet) {
