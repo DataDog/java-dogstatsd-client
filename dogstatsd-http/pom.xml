@@ -43,6 +43,17 @@
     </developers>
 
     <build>
+        <resources>
+            <resource>
+                <!-- Interpolated in context of child module, thus .. -->
+                <directory>${project.basedir}/..</directory>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
