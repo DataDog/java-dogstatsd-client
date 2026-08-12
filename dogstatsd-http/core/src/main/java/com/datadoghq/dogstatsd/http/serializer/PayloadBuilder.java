@@ -135,7 +135,7 @@ public class PayloadBuilder {
     Metric<?> metricInProgress;
 
     /**
-     * Create new PayloadBuilder.
+     * Create a new PayloadBuilder.
      *
      * @param consumer Is given payloads one by one as they are finished.
      */
@@ -145,12 +145,13 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new count metric.
+     * Begin encoding a new count metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
      * @param name Name of the metric.
-     * @return Builder instance.
+     * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public ScalarMetric count(String name) {
         ScalarMetric m = new ScalarMetric(this, 1, name);
@@ -159,12 +160,13 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new rate metric.
+     * Begin encoding a new rate metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public ScalarMetric rate(String name) {
         ScalarMetric m = new ScalarMetric(this, 2, name);
@@ -173,12 +175,13 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new gauge metric.
+     * Begin encoding a new gauge metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public ScalarMetric gauge(String name) {
         ScalarMetric m = new ScalarMetric(this, 3, name);
@@ -187,12 +190,13 @@ public class PayloadBuilder {
     }
 
     /**
-     * Begin encoding new sketch metric.
+     * Begin encoding a new sketch metric.
      *
      * <p>Only one metric can be encoded at a time.
      *
      * @param name Name of the metric.
      * @return New builder instance.
+     * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public SketchMetric sketch(String name) {
         SketchMetric m = new SketchMetric(this, 4, name);
@@ -333,7 +337,11 @@ public class PayloadBuilder {
         timestampsDelta.clear();
     }
 
-    /** Finish any pending data. */
+    /**
+     * Finish any pending data.
+     *
+     * @throws BufferOverflowException if finishing the in-progress metric overflows the payload.
+     */
     public void close() {
         endMetric();
         flushPayload();

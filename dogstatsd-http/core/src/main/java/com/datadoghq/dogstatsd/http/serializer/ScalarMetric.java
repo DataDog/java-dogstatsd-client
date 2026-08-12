@@ -19,7 +19,7 @@ public class ScalarMetric extends Metric<ScalarMetric> {
     }
 
     /**
-     * Add new data point to the timeseries.
+     * Add a new data point to the timeseries.
      *
      * @param timestamp Timestamp of the point in seconds since Unix epoch.
      * @param value Metric value at timestamp.
