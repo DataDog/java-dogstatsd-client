@@ -21,6 +21,9 @@ variables:
   variables:
     # Pom of the project to release, relative to the repository root.
     RELEASE_POM: ./pom.xml
+    # Extra arguments for the release build, e.g. a version override derived
+    # from the git tag. Set by the concrete job, usually in before_script.
+    RELEASE_ARGS: ""
 
   script:
     # Ensure we don't print commands being run to the logs during credential
@@ -47,7 +50,7 @@ variables:
     - set -x
 
     - echo "Building release of $RELEASE_POM..."
-    - mvn -DperformRelease=true --settings ./settings.xml -f "$RELEASE_POM" clean deploy
+    - mvn -DperformRelease=true --settings ./settings.xml -f "$RELEASE_POM" $RELEASE_ARGS clean deploy
 
 # From the tagged repo, push the release artifact
 deploy_to_sonatype:
@@ -64,10 +67,16 @@ deploy_to_sonatype:
       - ./target/*.sha256
       - ./target/*.sha512
 
+# Releasing from a dogstatsd-http/vX.Y.Z tag publishes that version, so no pom
+# edit is needed to cut a release. From any other ref the pom's own (snapshot)
+# version is published.
 deploy_dogstatsd_http:
   extends: .sonatype_release
   variables:
     RELEASE_POM: ./dogstatsd-http/pom.xml
+  before_script:
+    # dogstatsd-http/v1.2.3 -> -Dversion=1.2.3
+    - case "$CI_COMMIT_TAG" in dogstatsd-http/v*) export RELEASE_ARGS="-Dversion=${CI_COMMIT_TAG#dogstatsd-http/v}" ;; esac
   artifacts:
     expire_in: 6 mos
     paths:

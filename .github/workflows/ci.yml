@@ -72,3 +72,14 @@ jobs:
           diff
           <(awk 'f; /^package /{f=1}' src/main/java/com/timgroup/statsd/CgroupReader.java)
           <(awk 'f; /^package /{f=1}' dogstatsd-http/core/src/main/java/com/datadoghq/dogstatsd/http/CgroupReader.java)
+
+  merge-gate:
+    name: Merge gate
+    runs-on: ubuntu-latest
+    needs: [test, test-jnr-exclude, test-jnr-latest, check-vendored]
+    if: always()
+    steps:
+      - name: Fail if any upstream job did not succeed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: exit 1
+
