@@ -20,8 +20,8 @@
 
     <licenses>
         <license>
-            <name>The MIT License (MIT)</name>
-            <url>http://opensource.org/licenses/MIT</url>
+            <name>The Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -43,6 +43,17 @@
     </developers>
 
     <build>
+        <resources>
+            <resource>
+                <!-- Interpolated in context of child module, thus .. -->
+                <directory>${project.basedir}/..</directory>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -97,6 +108,20 @@
                         <version>2.45.0</version>
                         <configuration>
                             <java>
+                                <licenseHeader>
+                                    <!-- xml:space and CDATA are both needed: Maven trims element
+                                         text, which would drop the blank line before `package`,
+                                         and the CDATA stops an XML formatter from re-indenting
+                                         the body. Every space below is literal. -->
+                                    <content xml:space="preserve"><![CDATA[/* Unless explicitly stated otherwise all files in this repository are
+ * licensed under the Apache 2.0 License.
+ *
+ * This product includes software developed at Datadog
+ *  (https://www.datadoghq.com/) Copyright $YEAR Datadog, Inc.
+ */
+
+]]></content>
+                                </licenseHeader>
                                 <googleJavaFormat>
                                     <version>1.28.0</version>
                                     <style>AOSP</style>
