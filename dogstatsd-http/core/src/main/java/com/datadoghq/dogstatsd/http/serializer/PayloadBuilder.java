@@ -234,7 +234,21 @@ public class PayloadBuilder {
                 m.clearDependentFields();
                 m.encodeDependentFields();
             }
+
             payload.put(record);
+
+            nameStrInterner.commit();
+            tagStrInterner.commit();
+            tagsInterner.commit();
+            resourceStrInterner.commit();
+            resourcesInterner.commit();
+            originInfoInterner.commit();
+
+            nameRefsDelta.commit();
+            tagsetRefsDelta.commit();
+            resourcesRefsDelta.commit();
+            originInfoRefsDelta.commit();
+            timestampsDelta.commit();
         } finally {
             resetMetric();
         }
@@ -251,6 +265,20 @@ public class PayloadBuilder {
         timestamps.clear();
         values.clear();
         counts.clear();
+
+        nameStrInterner.revert();
+        tagStrInterner.revert();
+        tagsInterner.revert();
+        resourceStrInterner.revert();
+        resourcesInterner.revert();
+        originInfoInterner.revert();
+
+        nameRefsDelta.revert();
+        tagsetRefsDelta.revert();
+        resourcesRefsDelta.revert();
+        originInfoRefsDelta.revert();
+        timestampsDelta.revert();
+
         metricInProgress = null;
     }
 
