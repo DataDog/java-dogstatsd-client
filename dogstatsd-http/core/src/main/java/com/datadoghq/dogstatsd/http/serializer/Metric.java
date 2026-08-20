@@ -9,7 +9,15 @@ package com.datadoghq.dogstatsd.http.serializer;
 
 import java.util.List;
 
-abstract class Metric<T extends Metric<T>> {
+/**
+ * Common settings shared by all timeseries builders.
+ *
+ * <p>Instances are obtained from {@link PayloadBuilder}; this class cannot be subclassed outside of
+ * this package.
+ *
+ * @param <T> the concrete builder type returned by the setters, for chaining.
+ */
+public abstract class Metric<T extends Metric<T>> {
     final PayloadBuilder pb;
 
     final long type;
