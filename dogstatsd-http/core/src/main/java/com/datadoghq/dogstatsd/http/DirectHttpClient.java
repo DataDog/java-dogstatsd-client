@@ -11,6 +11,7 @@ import com.datadoghq.dogstatsd.Sketch;
 import com.datadoghq.dogstatsd.http.serializer.Metric;
 import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.PayloadConsumer;
+import com.datadoghq.dogstatsd.http.serializer.TagsCardinality;
 import java.net.URI;
 import java.nio.BufferOverflowException;
 import java.util.ArrayList;
@@ -21,8 +22,17 @@ import java.util.Objects;
 /**
  * Simple Dogstatsd HTTP client for sending pre-aggregated metrics.
  *
- * <p>A {@code host:} tag is not sent as a tag: it is removed from the tags and submitted as the
- * host resource of the timeseries.
+ * <p>Two tags are given special treatment: their value is submitted as a property of the
+ * timeseries.
+ *
+ * <ul>
+ *   <li>{@code host:} — the value of the first one becomes the host resource. Every {@code host:}
+ *       tag is removed from the tags.
+ *   <li>{@code dd.internal.card:} — the value of the first one becomes the tags cardinality. Values
+ *       the agent does not recognize ask for the cardinality the agent is configured to use. The
+ *       tags are sent unchanged, so that agents that only understand the tag keep working; agents
+ *       that understand the cardinality drop the tag themselves.
+ * </ul>
  *
  * <p>Not thread safe.
  *
@@ -38,6 +48,7 @@ public class DirectHttpClient {
     private static final int defaultInterval = 10;
     private static final String hostTagPrefix = "host:";
     private static final String hostResourceType = "host";
+    private static final String cardinalityTagPrefix = "dd.internal.card:";
 
     /**
      * Creates a builder for a client sending its payloads through the given forwarder.
@@ -135,13 +146,12 @@ public class DirectHttpClient {
      * @param name the metric name, to which the client prefix is prepended.
      * @param value the gauge value.
      * @param ts the timestamp of the point in seconds since Unix epoch.
-     * @param tags the tags to attach to the point. A {@code host:} tag is not attached as a tag:
-     *     the first one is submitted as the host resource of the timeseries, and any further {@code
-     *     host:} tags are dropped.
+     * @param tags the tags to attach to the point, see {@link DirectHttpClient} for the handling of
+     *     special values.
      * @throws BufferOverflowException if the encoded metric exceeds the maximum payload size.
      */
     public void gauge(String name, double value, long ts, List<String> tags) {
-        withTagsAndHost(seriesBuilder.gauge(prefixed(name)), tags)
+        withTagsHostAndCardinality(seriesBuilder.gauge(prefixed(name)), tags)
                 .setInterval(defaultInterval)
                 .addPoint(ts, value)
                 .close();
@@ -156,13 +166,12 @@ public class DirectHttpClient {
      * @param name the metric name, to which the client prefix is prepended.
      * @param value the count accumulated over the interval starting at {@code ts}.
      * @param ts the timestamp of the point in seconds since Unix epoch.
-     * @param tags the tags to attach to the point. A {@code host:} tag is not attached as a tag:
-     *     the first one is submitted as the host resource of the timeseries, and any further {@code
-     *     host:} tags are dropped.
+     * @param tags the tags to attach to the point, see {@link DirectHttpClient} for the handling of
+     *     special values.
      * @throws BufferOverflowException if the encoded metric exceeds the maximum payload size.
      */
     public void count(String name, double value, long ts, List<String> tags) {
-        withTagsAndHost(seriesBuilder.rate(prefixed(name)), tags)
+        withTagsHostAndCardinality(seriesBuilder.rate(prefixed(name)), tags)
                 .setInterval(defaultInterval)
                 .addPoint(ts, value / defaultInterval)
                 .close();
@@ -175,9 +184,8 @@ public class DirectHttpClient {
      * @param values the observations to summarize.
      * @param sampleRate the sampling rate used to collect {@code values}, in {@code (0, 1]}.
      * @param ts the timestamp of the point in seconds since Unix epoch.
-     * @param tags the tags to attach to the point. A {@code host:} tag is not attached as a tag:
-     *     the first one is submitted as the host resource of the timeseries, and any further {@code
-     *     host:} tags are dropped.
+     * @param tags the tags to attach to the point, see {@link DirectHttpClient} for the handling of
+     *     special values.
      * @throws IllegalArgumentException if {@code sampleRate} is {@code NaN}, not positive, or
      *     greater than 1.
      * @throws BufferOverflowException if the encoded metric exceeds the maximum payload size.
@@ -185,7 +193,7 @@ public class DirectHttpClient {
     public void distribution(
             String name, double[] values, double sampleRate, long ts, List<String> tags) {
         sketchBuffer.build(values, sampleRate);
-        withTagsAndHost(sketchesBuilder.sketch(prefixed(name)), tags)
+        withTagsHostAndCardinality(sketchesBuilder.sketch(prefixed(name)), tags)
                 .addPoint(ts, sketchBuffer)
                 .close();
     }
@@ -194,26 +202,62 @@ public class DirectHttpClient {
         return prefix.isEmpty() ? name : prefix + name;
     }
 
-    /** Applies the tags to the metric, extracting the host tag into the host resource. */
-    private static <T extends Metric<T>> T withTagsAndHost(
+    /**
+     * Applies the tags to the metric, extracting the host tag into the host resource and the
+     * cardinality tag into the tags cardinality. The cardinality tag itself is kept in the tags.
+     */
+    private static <T extends Metric<T>> T withTagsHostAndCardinality(
             final T metric, final List<String> tags) {
-        final String host = hostTag(tags);
-        return metric.setTags(host == null ? tags : withoutHostTags(tags))
-                .setResources(hostResource(host));
+        return metric.setTags(withoutHostTags(tags))
+                .setResources(hostResource(hostTag(tags)))
+                .setTagsCardinality(cardinality(cardinalityTag(tags)));
     }
 
     /** Returns the value of the first host tag, or null if there is none. */
     static String hostTag(final List<String> tags) {
+        return tagValue(tags, hostTagPrefix);
+    }
+
+    /** Returns the value of the first cardinality tag, or null if there is none. */
+    static String cardinalityTag(final List<String> tags) {
+        return tagValue(tags, cardinalityTagPrefix);
+    }
+
+    /** Returns the value of the first tag with the given prefix, or null if there is none. */
+    private static String tagValue(final List<String> tags, final String prefix) {
         if (tags == null) {
             return null;
         }
         for (int i = 0; i < tags.size(); i++) {
             final String tag = tags.get(i);
-            if (tag.startsWith(hostTagPrefix)) {
-                return tag.substring(hostTagPrefix.length());
+            if (tag.startsWith(prefix)) {
+                return tag.substring(prefix.length());
             }
         }
         return null;
+    }
+
+    /**
+     * Returns the cardinality constant matching the value of a cardinality tag. Values the agent
+     * does not recognize, including null, ask for the cardinality the agent is configured to use.
+     */
+    static TagsCardinality cardinality(final String value) {
+        if (value == null) {
+            return TagsCardinality.DEFAULT;
+        }
+        if (value.equalsIgnoreCase("none")) {
+            return TagsCardinality.NONE;
+        }
+        if (value.equalsIgnoreCase("low")) {
+            return TagsCardinality.LOW;
+        }
+        if (value.equalsIgnoreCase("orchestrator") || value.equalsIgnoreCase("orch")) {
+            return TagsCardinality.ORCHESTRATOR;
+        }
+        if (value.equalsIgnoreCase("high")) {
+            return TagsCardinality.HIGH;
+        }
+        return TagsCardinality.DEFAULT;
     }
 
     /** Returns the tags with every host tag removed, or the tags themselves if there was none. */

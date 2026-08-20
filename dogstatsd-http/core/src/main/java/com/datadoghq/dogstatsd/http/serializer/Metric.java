@@ -25,6 +25,7 @@ public abstract class Metric<T extends Metric<T>> {
     List<String> tags = null;
     List<String> resources = null;
     int interval = 0;
+    TagsCardinality cardinality = TagsCardinality.DEFAULT;
     Origin origin = Origin.dogstatsd;
 
     Metric(PayloadBuilder pb, int type, String name) {
@@ -71,6 +72,19 @@ public abstract class Metric<T extends Metric<T>> {
         return self();
     }
 
+    /**
+     * Set the cardinality of the origin tags the agent attaches to this metric.
+     *
+     * <p>Ignored by the intake, which does not attach origin tags.
+     *
+     * @param cardinality The cardinality to request, or null for {@link TagsCardinality#DEFAULT}.
+     * @return This.
+     */
+    public T setTagsCardinality(TagsCardinality cardinality) {
+        this.cardinality = cardinality == null ? TagsCardinality.DEFAULT : cardinality;
+        return self();
+    }
+
     abstract T self();
 
     abstract void encodeValues(ValueType valueType);
@@ -78,7 +92,7 @@ public abstract class Metric<T extends Metric<T>> {
     void encodeIndependentFields() {
         ColumnarBuffer r = pb.currentRecord();
         ValueType valueType = PointKind.of(pb.values).toValueType();
-        r.putUint64(Column.types, type | valueType.flag());
+        r.putUint64(Column.types, type | valueType.flag() | cardinality.flag());
         r.putUint64(Column.intervals, interval);
         r.putSint64(Column.sourceTypeNameRefs, 0);
         encodeValues(valueType);
