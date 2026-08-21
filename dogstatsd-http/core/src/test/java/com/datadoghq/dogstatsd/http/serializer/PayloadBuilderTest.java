@@ -10,11 +10,13 @@ package com.datadoghq.dogstatsd.http.serializer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.datadoghq.dogstatsd.Sketch;
 import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
@@ -438,5 +440,74 @@ public class PayloadBuilderTest {
         for (int i = 0; i < payloads1.size(); i++) {
             TestUtil.assertPayload(payloads2.get(i), payloads1.get(i));
         }
+    }
+
+    @Test
+    public void tagsCardinality() {
+        final ArrayList<byte[]> payloads = new ArrayList<>();
+        PayloadBuilder b =
+                new PayloadBuilder(
+                        new PayloadConsumer() {
+                            @Override
+                            public void handle(byte[] p) {
+                                payloads.add(p);
+                            }
+                        });
+
+        Sketch sketch = new Sketch();
+        sketch.build(new long[] {1, 2, 2}, 1.0);
+
+        b.gauge("default").addPoint(100, 1).close();
+        b.gauge("none").setTagsCardinality(TagsCardinality.NONE).addPoint(100, 1).close();
+        b.gauge("low").setTagsCardinality(TagsCardinality.LOW).addPoint(100, 1).close();
+        b.count("orch").setTagsCardinality(TagsCardinality.ORCHESTRATOR).addPoint(100, 1).close();
+        b.sketch("high").setTagsCardinality(TagsCardinality.HIGH).addPoint(100, sketch).close();
+        b.close();
+
+        assertEquals(1, payloads.size());
+        // The cardinality occupies the nibble above the metric flags, metric type and value type
+        // keep the low nibbles.
+        assertEquals(
+                Arrays.asList(
+                        Long.valueOf(0x0013),
+                        Long.valueOf(0x1013),
+                        Long.valueOf(0x2013),
+                        Long.valueOf(0x3011),
+                        Long.valueOf(0x4014)),
+                readUint64Column(payloads.get(0), 10));
+    }
+
+    /** Decodes the packed uint64 column stored in the MetricData field with the given id. */
+    private static List<Long> readUint64Column(byte[] payload, int fieldId) {
+        TestUtil.Varint var = new TestUtil.Varint();
+        var.read(payload, 0); // MetricData field header
+        int idx = var.len;
+        var.read(payload, idx); // MetricData length
+        int end = idx + var.len + var.val;
+        idx += var.len;
+
+        while (idx < end) {
+            var.read(payload, idx);
+            final int id = var.val >> 3;
+            idx += var.len;
+            var.read(payload, idx);
+            final int len = var.val;
+            idx += var.len;
+            if (id == fieldId) {
+                ArrayList<Long> vals = new ArrayList<>();
+                for (int i = idx; i < idx + len; i += var.len) {
+                    var.read(payload, i);
+                    vals.add(Long.valueOf(var.val));
+                }
+                return vals;
+            }
+            idx += len;
+        }
+
+        fail(
+                String.format(
+                        "field %d not found in payload:%n%s",
+                        fieldId, TestUtil.protodump(payload)));
+        return null;
     }
 }
