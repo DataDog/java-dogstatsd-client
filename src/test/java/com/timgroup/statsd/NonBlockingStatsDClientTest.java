@@ -1311,7 +1311,8 @@ public class NonBlockingStatsDClientTest {
                                     Callable<SocketAddress> addressLookup,
                                     int timeout,
                                     int connectionTimeout,
-                                    int bufferSize)
+                                    int bufferSize,
+                                    boolean enableJdkSocket)
                                     throws Exception {
                                 return new DatagramClientChannel(addressLookup.call()) {
                                     @Override
@@ -1363,7 +1364,8 @@ public class NonBlockingStatsDClientTest {
                                     Callable<SocketAddress> addressLookup,
                                     int timeout,
                                     int connectionTimeout,
-                                    int bufferSize)
+                                    int bufferSize,
+                                    boolean enableJdkSocket)
                                     throws Exception {
                                 return new DatagramClientChannel(addressLookup.call()) {
                                     @Override
