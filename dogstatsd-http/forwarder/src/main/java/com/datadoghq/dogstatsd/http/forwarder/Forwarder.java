@@ -126,8 +126,6 @@ public class Forwarder extends Thread {
     void runOnce(Map.Entry<BoundedQueue.Key, Payload> item) throws InterruptedException {
         Payload payload = item.getValue();
         final URI url = baseUri.resolve(payload.url);
-        logger.log(
-                Level.INFO, "sending {0} bytes to {1}", new Object[] {payload.bytes.length, url});
 
         HttpRequest.Builder builder =
                 HttpRequest.newBuilder(url).POST(BodyPublishers.ofByteArray(payload.bytes));
@@ -147,11 +145,16 @@ public class Forwarder extends Thread {
             res.body();
 
             logger.log(
-                    Level.INFO, "response {0}: {1}", new Object[] {res.statusCode(), res.body()});
+                    Level.FINER,
+                    "sending {0} bytes to {1}: {2} {3}",
+                    new Object[] {payload.bytes.length, url, res.statusCode(), res.body()});
 
             handleResponse(res.statusCode(), item);
         } catch (IOException ex) {
-            logger.log(Level.WARNING, "error sending request: {0}", ex.toString());
+            logger.log(
+                    Level.WARNING,
+                    "error sending {0} bytes to {1}: {2}",
+                    new Object[] {payload.bytes.length, url, ex.toString()});
             handleTransportError(item);
         } catch (InterruptedException ex) {
             // Wouldn't be retried, but will show up as a leftover in a telemetry snapshot.
@@ -203,7 +206,7 @@ public class Forwarder extends Thread {
     void backoff() throws InterruptedException {
         if (delay > 0) {
             int sleep = (int) (250.0 * delay * (0.5 + rng.nextDouble()));
-            logger.log(Level.INFO, "backoff={0}, sleeping {1}ms", new Object[] {delay, sleep});
+            logger.log(Level.FINEST, "backoff={0}, sleeping {1}ms", new Object[] {delay, sleep});
             Thread.sleep(sleep);
         }
     }
