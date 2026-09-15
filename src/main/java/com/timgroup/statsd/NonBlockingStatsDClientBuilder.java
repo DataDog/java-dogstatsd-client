@@ -53,6 +53,9 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     public boolean enableAggregation = NonBlockingStatsDClient.DEFAULT_ENABLE_AGGREGATION;
 
+    /** Enable native JDK support for UDS. Only available on Java 16+. */
+    public boolean enableJdkSocket = NonBlockingStatsDClient.DEFAULT_ENABLE_JDK_SOCKET;
+
     /** Telemetry flush interval, in milliseconds. */
     public int telemetryFlushInterval = Telemetry.DEFAULT_FLUSH_INTERVAL;
 
@@ -325,6 +328,11 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
         return this;
     }
 
+    public NonBlockingStatsDClientBuilder enableJdkSocket(boolean val) {
+        enableJdkSocket = val;
+        return this;
+    }
+
     /**
      * Request that all metrics from this client to be enriched to specified tag cardinality.
      *
@@ -473,7 +481,8 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             String uriPath = parsed.getPath();
             return staticUnixResolution(
                     uriPath,
-                    UnixSocketAddressWithTransport.TransportType.fromScheme(parsed.getScheme()));
+                    UnixSocketAddressWithTransport.TransportType.fromScheme(parsed.getScheme()),
+                    enableJdkSocket);
         }
 
         return null;
@@ -538,10 +547,24 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
 
     protected static Callable<SocketAddress> staticUnixResolution(
             final String path, final UnixSocketAddressWithTransport.TransportType transportType) {
+        return staticUnixResolution(path, transportType, false);
+    }
+
+    private static Callable<SocketAddress> staticUnixResolution(
+            final String path,
+            final UnixSocketAddressWithTransport.TransportType transportType,
+            final boolean enableJdkSocket) {
         return new Callable<SocketAddress>() {
             @Override
             public SocketAddress call() {
-                final UnixSocketAddress socketAddress = new UnixSocketAddress(path);
+                SocketAddress socketAddress =
+                        VersionUtils.isJavaVersionAtLeast(16)
+                                        && enableJdkSocket
+                                        && transportType
+                                                == UnixSocketAddressWithTransport.TransportType
+                                                        .UDS_STREAM
+                                ? VersionUtils.newUnixDomainSocketAddress(path)
+                                : new UnixSocketAddress(path);
                 return new UnixSocketAddressWithTransport(socketAddress, transportType);
             }
         };
