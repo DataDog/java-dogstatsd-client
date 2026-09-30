@@ -204,6 +204,81 @@ public class DirectHttpClientTest {
     }
 
     @Test
+    public void splitOnCommaSplitsTags() {
+        assertNull(DirectHttpClient.splitOnComma(null));
+
+        List<String> noComma = Arrays.asList("a:b", "", "c:d");
+        assertSame(noComma, DirectHttpClient.splitOnComma(noComma));
+
+        assertEquals(
+                Arrays.asList("a:b", "c:d", "e:f"),
+                DirectHttpClient.splitOnComma(Arrays.asList("a:b,c:d", "e:f")));
+        assertEquals(
+                Arrays.asList("x", "", "a", "b", "y", "z"),
+                DirectHttpClient.splitOnComma(Arrays.asList("x", "", "a,,b,", ",", ",y", "z")));
+    }
+
+    @Test
+    public void commaSeparatedTagsAreSplit() {
+        TestForwarder fwd = new TestForwarder();
+        DirectHttpClient client = DirectHttpClient.builder(fwd).build();
+        client.gauge("metric", 1.5, 100, Collections.singletonList("a:b,c:d"));
+        client.flush();
+
+        ArrayList<byte[]> expected = new ArrayList<>();
+        PayloadBuilder b = builderInto(expected);
+        b.gauge("metric")
+                .setTags(Arrays.asList("a:b", "c:d"))
+                .setInterval(10)
+                .addPoint(100, 1.5)
+                .close();
+        b.close();
+
+        assertSent(expected, fwd, seriesUri, "gauge with comma-separated tags");
+    }
+
+    @Test
+    public void hostAndCardinalityInsideCommaSeparatedTag() {
+        TestForwarder fwd = new TestForwarder();
+        DirectHttpClient client = DirectHttpClient.builder(fwd).build();
+        client.count(
+                "metric", 20, 100, Collections.singletonList("a:b,host:h1,dd.internal.card:low"));
+        client.flush();
+
+        ArrayList<byte[]> expected = new ArrayList<>();
+        PayloadBuilder b = builderInto(expected);
+        b.rate("metric")
+                .setTags(Arrays.asList("a:b", "dd.internal.card:low"))
+                .setResources(Arrays.asList("host", "h1"))
+                .setTagsCardinality(TagsCardinality.LOW)
+                .setInterval(10)
+                .addPoint(100, 2)
+                .close();
+        b.close();
+
+        assertSent(expected, fwd, seriesUri, "count with host and cardinality in a joined tag");
+    }
+
+    @Test
+    public void splitTagsCanBeDisabled() {
+        TestForwarder fwd = new TestForwarder();
+        DirectHttpClient client = DirectHttpClient.builder(fwd).splitTags(false).build();
+        client.gauge("metric", 1.5, 100, Collections.singletonList("a:b,host:h1"));
+        client.flush();
+
+        ArrayList<byte[]> expected = new ArrayList<>();
+        PayloadBuilder b = builderInto(expected);
+        b.gauge("metric")
+                .setTags(Collections.singletonList("a:b,host:h1"))
+                .setInterval(10)
+                .addPoint(100, 1.5)
+                .close();
+        b.close();
+
+        assertSent(expected, fwd, seriesUri, "gauge with splitting disabled");
+    }
+
+    @Test
     public void hostResourceIsATypeNamePair() {
         assertNull(DirectHttpClient.hostResource(null));
         assertEquals(Arrays.asList("host", "h1"), DirectHttpClient.hostResource("h1"));

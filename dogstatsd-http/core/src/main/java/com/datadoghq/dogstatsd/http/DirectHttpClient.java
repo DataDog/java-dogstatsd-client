@@ -22,6 +22,10 @@ import java.util.Objects;
 /**
  * Simple Dogstatsd HTTP client for sending pre-aggregated metrics.
  *
+ * <p>By default, tags containing commas are split into separate tags and empty pieces are dropped,
+ * like the agent does for tags received over UDP or UDS. Splitting happens before the special tags
+ * below are handled. It can be disabled with {@link Builder#splitTags}.
+ *
  * <p>Two tags are given special treatment: their value is submitted as a property of the
  * timeseries.
  *
@@ -45,6 +49,7 @@ public class DirectHttpClient {
     private final PayloadBuilder sketchesBuilder;
     private final Sketch sketchBuffer = new Sketch();
     private final String prefix;
+    private final boolean splitTags;
     private static final int defaultInterval = 10;
     private static final String hostTagPrefix = "host:";
     private static final String hostResourceType = "host";
@@ -69,6 +74,7 @@ public class DirectHttpClient {
         } else {
             prefix = "";
         }
+        splitTags = builder.splitTags;
 
         seriesBuilder =
                 new PayloadBuilder(
@@ -113,6 +119,7 @@ public class DirectHttpClient {
     public static class Builder {
         private final Forwarder forwarder;
         private String prefix;
+        private boolean splitTags = true;
 
         private Builder(final Forwarder forwarder) {
             this.forwarder = Objects.requireNonNull(forwarder, "forwarder");
@@ -127,6 +134,18 @@ public class DirectHttpClient {
          */
         public Builder prefix(final String val) {
             prefix = val;
+            return this;
+        }
+
+        /**
+         * Sets whether tags containing commas are split into separate tags, as the agent does for
+         * tags received over UDP or UDS. Enabled by default.
+         *
+         * @param val true to split tags on commas, false to send every tag unchanged.
+         * @return this builder.
+         */
+        public Builder splitTags(final boolean val) {
+            splitTags = val;
             return this;
         }
 
@@ -203,14 +222,50 @@ public class DirectHttpClient {
     }
 
     /**
-     * Applies the tags to the metric, extracting the host tag into the host resource and the
-     * cardinality tag into the tags cardinality. The cardinality tag itself is kept in the tags.
+     * Applies the tags to the metric, splitting comma-separated tags if enabled, then extracting
+     * the host tag into the host resource and the cardinality tag into the tags cardinality. The
+     * cardinality tag itself is kept in the tags.
      */
-    private static <T extends Metric<T>> T withTagsHostAndCardinality(
+    private <T extends Metric<T>> T withTagsHostAndCardinality(
             final T metric, final List<String> tags) {
-        return metric.setTags(withoutHostTags(tags))
-                .setResources(hostResource(hostTag(tags)))
-                .setTagsCardinality(cardinality(cardinalityTag(tags)));
+        final List<String> t = splitTags ? splitOnComma(tags) : tags;
+        return metric.setTags(withoutHostTags(t))
+                .setResources(hostResource(hostTag(t)))
+                .setTagsCardinality(cardinality(cardinalityTag(t)));
+    }
+
+    /**
+     * Returns the tags with every tag containing a comma split into separate tags, dropping empty
+     * pieces, or the tags themselves if none contains a comma.
+     */
+    static List<String> splitOnComma(final List<String> tags) {
+        if (tags == null) {
+            return null;
+        }
+        ArrayList<String> split = null;
+        for (int i = 0; i < tags.size(); i++) {
+            final String tag = tags.get(i);
+            int end = tag.indexOf(',');
+            if (end >= 0) {
+                if (split == null) {
+                    split = new ArrayList<>(tags.subList(0, i));
+                }
+                int start = 0;
+                while (end >= 0) {
+                    if (end > start) {
+                        split.add(tag.substring(start, end));
+                    }
+                    start = end + 1;
+                    end = tag.indexOf(',', start);
+                }
+                if (start < tag.length()) {
+                    split.add(tag.substring(start));
+                }
+            } else if (split != null) {
+                split.add(tag);
+            }
+        }
+        return split == null ? tags : split;
     }
 
     /** Returns the value of the first host tag, or null if there is none. */
