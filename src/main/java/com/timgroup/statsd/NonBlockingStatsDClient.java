@@ -92,6 +92,7 @@ public class NonBlockingStatsDClient implements StatsDClient {
     public static final int SOCKET_BUFFER_BYTES = -1;
     public static final boolean DEFAULT_BLOCKING = false;
     public static final boolean DEFAULT_ENABLE_TELEMETRY = true;
+    public static final boolean DEFAULT_ENABLE_JDK_SOCKET = true;
 
     public static final boolean DEFAULT_ENABLE_AGGREGATION = true;
     public static final boolean DEFAULT_ENABLE_ORIGIN_DETECTION = true;
@@ -246,7 +247,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                             builder.addressLookup,
                             builder.timeout,
                             builder.connectionTimeout,
-                            builder.socketBufferSize);
+                            builder.socketBufferSize,
+                            builder.enableJdkSocket);
 
             ThreadFactory threadFactory =
                     builder.threadFactory != null
@@ -294,7 +296,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
                                 builder.telemetryAddressLookup,
                                 builder.timeout,
                                 builder.connectionTimeout,
-                                builder.socketBufferSize);
+                                builder.socketBufferSize,
+                                builder.enableJdkSocket);
 
                 // similar settings, but a single worker and non-blocking.
                 telemetryStatsDProcessor =
@@ -480,7 +483,8 @@ public class NonBlockingStatsDClient implements StatsDClient {
             Callable<SocketAddress> addressLookup,
             int timeout,
             int connectionTimeout,
-            int bufferSize)
+            int bufferSize,
+            boolean enableJdkSocket)
             throws Exception {
         final SocketAddress address = addressLookup.call();
         if (address instanceof NamedPipeSocketAddress) {
@@ -495,7 +499,11 @@ public class NonBlockingStatsDClient implements StatsDClient {
             switch (unixAddr.getTransportType()) {
                 case UDS_STREAM:
                     return new UnixStreamClientChannel(
-                            unixAddr.getAddress(), timeout, connectionTimeout, bufferSize);
+                            unixAddr.getAddress(),
+                            timeout,
+                            connectionTimeout,
+                            bufferSize,
+                            enableJdkSocket);
                 case UDS_DATAGRAM:
                 case UDS:
                     return new UnixDatagramClientChannel(
