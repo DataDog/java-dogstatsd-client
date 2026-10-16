@@ -101,7 +101,7 @@ Though there are very few breaking changes in `3.x`, some code changes might be 
 |  final String entityID                          | NonBlockingStatsDClientBuilder entityID(String val)                         |
 |  final StatsDClientErrorHandler errorHandler                          | NonBlockingStatsDClientBuilder errorHandler(StatsDClientErrorHandler val)                         |
 |  final String hostname                          | NonBlockingStatsDClientBuilder hostname(String val)                         |
-|  final int maxPacketSizeBytes                          | NonBlockingStatsDClientBuilder maxPacketSizeBytes(String... val)                         |
+|  final int maxPacketSizeBytes                          | NonBlockingStatsDClientBuilder maxPacketSizeBytes(int val)                         |
 |  final int processorWorkers                          | NonBlockingStatsDClientBuilder processorWorkers(int val)                         |
 |  final int poolSize                          | NonBlockingStatsDClientBuilder bufferPoolSize(int val)                         |
 |  final int port                          | NonBlockingStatsDClientBuilder port(int val)                         |
