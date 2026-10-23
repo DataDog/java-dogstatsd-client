@@ -431,6 +431,13 @@ public class NonBlockingStatsDClientBuilder implements Cloneable {
             return staticAddress(hostname, port);
         }
 
+        // Next, try the system property, which can be set after the JVM has started.
+        String namedPipeFromProperty =
+                System.getProperty(NonBlockingStatsDClient.DD_NAMED_PIPE_SYSTEM_PROPERTY);
+        if (namedPipeFromProperty != null) {
+            return staticNamedPipeResolution(namedPipeFromProperty);
+        }
+
         // Next, try various environment variables.
         String url = env.get(NonBlockingStatsDClient.DD_DOGSTATSD_URL_ENV_VAR);
         if (url != null) {
