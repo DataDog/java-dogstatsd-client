@@ -104,7 +104,8 @@ public class NamedPipeTest implements StatsDClientErrorHandler {
             firstServer.waitForMessage();
             firstServer.close();
 
-            // Send until the client sees the broken pipe and closes its end.
+            // The server closes its pipe after its next read, so send until the client sees the
+            // broken pipe and closes its end.
             while (errorHandler.getExceptions().isEmpty()) {
                 restartClient.gauge("during", 1);
                 Thread.sleep(10);
