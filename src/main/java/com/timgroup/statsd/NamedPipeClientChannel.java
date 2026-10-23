@@ -3,6 +3,7 @@ package com.timgroup.statsd;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 
 /**
@@ -10,12 +11,14 @@ import java.nio.channels.FileChannel;
  *
  * <p>The pipe is opened on the first write, not when the client is built, so the client can start
  * before the server creates the pipe. After a failed write the pipe is closed and the next write
- * opens it again, so the client recovers when the server restarts.
+ * opens it again, so the client recovers when the server restarts. Once {@link #close()} is called,
+ * the channel stays closed and writes throw {@link ClosedChannelException}.
  */
 class NamedPipeClientChannel implements ClientChannel {
     private final String pipe;
     private RandomAccessFile randomAccessFile;
     private FileChannel fileChannel;
+    private boolean closed;
 
     /**
      * Creates a new NamedPipeClientChannel with the given address.
@@ -28,11 +31,14 @@ class NamedPipeClientChannel implements ClientChannel {
 
     @Override
     public synchronized boolean isOpen() {
-        return fileChannel != null && fileChannel.isOpen();
+        return !closed;
     }
 
     @Override
     public synchronized int write(ByteBuffer src) throws IOException {
+        if (closed) {
+            throw new ClosedChannelException();
+        }
         connectIfNeeded();
         try {
             return fileChannel.write(src);
@@ -68,6 +74,7 @@ class NamedPipeClientChannel implements ClientChannel {
 
     @Override
     public synchronized void close() throws IOException {
+        closed = true;
         disconnect();
     }
 
