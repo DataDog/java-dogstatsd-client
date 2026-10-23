@@ -80,7 +80,10 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
+        if (!isOpen) {
+            return;
+        }
         isOpen = false;
         Kernel32.INSTANCE.CloseHandle(hNamedPipe);
     }

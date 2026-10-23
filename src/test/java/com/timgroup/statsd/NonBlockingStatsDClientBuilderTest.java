@@ -5,12 +5,40 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
 public class NonBlockingStatsDClientBuilderTest {
+
+    @Test(timeout = 5000L)
+    public void missing_named_pipe_does_not_fail_build() throws Exception {
+        // A pipe inside a missing directory fails to open on every platform without creating a
+        // file.
+        final Map<String, String> env = new HashMap<>();
+        env.put(
+                NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR,
+                "missing-dir-" + new Random().nextInt(1000000) + "/pipe");
+        final RecordingErrorHandler errorHandler = new RecordingErrorHandler();
+        final NonBlockingStatsDClient client =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .enableAggregation(false)
+                        .errorHandler(errorHandler)
+                        .build();
+        try {
+            client.gauge("value", 42);
+            while (errorHandler.getExceptions().isEmpty()) {
+                Thread.sleep(10);
+            }
+            assertTrue(errorHandler.getExceptions().get(0) instanceof FileNotFoundException);
+        } finally {
+            client.stop();
+        }
+    }
 
     @Test(timeout = 5000L)
     public void origin_detection_env_false() throws Exception {
