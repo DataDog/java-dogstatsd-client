@@ -9,7 +9,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import jnr.unixsocket.UnixSocketAddress;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -196,6 +198,11 @@ public class BuilderAddressTest {
         set(NonBlockingStatsDClient.DD_NAMED_PIPE_ENV_VAR, pipe);
     }
 
+    @After
+    public void clearNamedPipeSystemProperty() {
+        System.clearProperty(NonBlockingStatsDClient.DD_NAMED_PIPE_SYSTEM_PROPERTY);
+    }
+
     void set(String name, String val) {
         if (val != null) {
             env.put(name, val);
@@ -244,5 +251,53 @@ public class BuilderAddressTest {
                         .namedPipe("ook")
                         .resolve();
         assertEquals(new NamedPipeSocketAddress("ook"), b.addressLookup.call());
+    }
+
+    @Test(timeout = 5000L)
+    public void system_property_named_pipe_resolution() throws Exception {
+        System.setProperty(NonBlockingStatsDClient.DD_NAMED_PIPE_SYSTEM_PROPERTY, "sysprop");
+        NonBlockingStatsDClientBuilder b;
+
+        // Default configuration uses the system property regardless of environment variables.
+        b = new NonBlockingStatsDClientBuilder().withEnvironmentVariables(env).resolve();
+        assertEquals(new NamedPipeSocketAddress("sysprop"), b.addressLookup.call());
+        assertEquals(b.addressLookup, b.telemetryAddressLookup);
+
+        // Explicit configuration is used regardless of the system property.
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .hostname("2.2.2.2")
+                        .port(2222)
+                        .resolve();
+        assertEquals(new InetSocketAddress("2.2.2.2", 2222), b.addressLookup.call());
+
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .namedPipe("ook")
+                        .resolve();
+        assertEquals(new NamedPipeSocketAddress("ook"), b.addressLookup.call());
+
+        final SocketAddress explicit = new InetSocketAddress("3.3.3.3", 3333);
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .addressLookup(
+                                new Callable<SocketAddress>() {
+                                    @Override
+                                    public SocketAddress call() {
+                                        return explicit;
+                                    }
+                                })
+                        .resolve();
+        assertEquals(explicit, b.addressLookup.call());
+
+        b =
+                new NonBlockingStatsDClientBuilder()
+                        .withEnvironmentVariables(env)
+                        .address("udp://4.4.4.4:4444")
+                        .resolve();
+        assertEquals(new InetSocketAddress("4.4.4.4", 4444), b.addressLookup.call());
     }
 }
