@@ -24,33 +24,41 @@ abstract class DummyStatsDServer implements Closeable {
                         new Runnable() {
                             @Override
                             public void run() {
-                                final ByteBuffer packet =
-                                        ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
-
-                                while (isOpen() && !Thread.interrupted()) {
-                                    if (freeze) {
-                                        try {
-                                            Thread.sleep(10);
-                                        } catch (InterruptedException e) {
-                                        }
-                                    } else {
-                                        try {
-                                            ((Buffer) packet)
-                                                    .clear(); // Cast necessary to handle Java9
-                                            // covariant return types
-                                            // see: https://jira.mongodb.org/browse/JAVA-2559 for
-                                            // ref.
-                                            receive(packet);
-                                            handlePacket(packet);
-                                        } catch (IOException e) {
-                                        }
-                                    }
+                                try {
+                                    readUntilClosed();
+                                } finally {
+                                    onListenStopped();
                                 }
                             }
                         });
         thread.setDaemon(true);
         thread.start();
     }
+
+    private void readUntilClosed() {
+        final ByteBuffer packet = ByteBuffer.allocate(DEFAULT_UDS_MAX_PACKET_SIZE_BYTES);
+
+        while (isOpen() && !Thread.interrupted()) {
+            if (freeze) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                }
+            } else {
+                try {
+                    // Cast necessary to handle Java9 covariant return types
+                    // see: https://jira.mongodb.org/browse/JAVA-2559 for ref.
+                    ((Buffer) packet).clear();
+                    receive(packet);
+                    handlePacket(packet);
+                } catch (IOException e) {
+                }
+            }
+        }
+    }
+
+    /** Called on the listening thread after it stops reading. */
+    protected void onListenStopped() {}
 
     protected boolean sleepIfFrozen() {
         if (freeze) {

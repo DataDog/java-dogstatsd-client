@@ -79,9 +79,21 @@ public class NamedPipeDummyStatsDServer extends DummyStatsDServer {
         packet.position(bytesRead.getValue());
     }
 
+    /**
+     * Stops the server. The listening thread closes the pipe once its current read returns, so a
+     * client that is still connected must send something before the pipe closes.
+     *
+     * <p>The handle isn't closed here because the pipe uses synchronous I/O, so {@code CloseHandle}
+     * from this thread can wait for the listening thread's pending {@code ReadFile}, which returns
+     * only when the client writes or disconnects.
+     */
     @Override
     public void close() throws IOException {
         isOpen = false;
+    }
+
+    @Override
+    protected void onListenStopped() {
         Kernel32.INSTANCE.CloseHandle(hNamedPipe);
     }
 }
