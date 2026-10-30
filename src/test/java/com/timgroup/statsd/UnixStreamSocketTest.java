@@ -10,6 +10,9 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
@@ -100,11 +103,14 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
 
     @Test(timeout = 5000L)
     public void sends_to_statsd() throws Exception {
+        Thread.sleep(100);
+        server.clear();
+
         for (long i = 0; i < 5; i++) {
             client.gauge("mycount", i);
             server.waitForMessage();
             String expected = String.format("my.prefix.mycount:%d|g", i);
-            assertThat(server.messagesReceived(), contains(expected));
+            assertThat(server.messagesReceived(), hasItem(expected));
             server.clear();
         }
         assertThat(lastException.getMessage(), nullValue());
@@ -188,6 +194,38 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
     }
 
     @Test(timeout = 5000L)
+    public void nativeSocketAcceptsLegacyUnixAddress() throws Exception {
+        Assume.assumeTrue(VersionUtils.isJavaVersionAtLeast(16));
+        UnixStreamClientChannel channel =
+                new UnixStreamClientChannel(
+                        legacyUnixSocketAddress(socketFile.getPath()), 500, 500, -1, true);
+
+        assertChannelSends(channel, "legacy.address:1|c");
+    }
+
+    @Test(timeout = 5000L)
+    public void fallsBackWhenNativeSocketCannotBeOpened() throws Exception {
+        Assume.assumeTrue(VersionUtils.isJavaVersionAtLeast(16));
+        UnixStreamClientChannel channel =
+                new UnixStreamClientChannel(
+                        legacyUnixSocketAddress(socketFile.getPath()), 500, 500, -1, true) {
+                    @Override
+                    SocketChannel openJdkSocketChannel() throws IOException {
+                        throw new IOException("Native UDS unavailable");
+                    }
+                };
+
+        assertChannelSends(channel, "fallback:1|c");
+    }
+
+    private static SocketAddress legacyUnixSocketAddress(String path) throws Exception {
+        return (SocketAddress)
+                Class.forName("jnr.unixsocket.UnixSocketAddress")
+                        .getConstructor(String.class)
+                        .newInstance(path);
+    }
+
+    @Test(timeout = 5000L)
     public void stream_uds_has_uds_buffer_size() throws Exception {
         final NonBlockingStatsDClient client =
                 new NonBlockingStatsDClientBuilder()
@@ -214,5 +252,17 @@ public class UnixStreamSocketTest implements StatsDClientErrorHandler {
                         .build();
 
         assertEquals(client.statsDProcessor.bufferPool.getBufferSize(), 576);
+    }
+
+    private static void assertChannelSends(UnixStreamClientChannel channel, String message)
+            throws Exception {
+        try {
+            channel.write(ByteBuffer.wrap(message.getBytes(NonBlockingStatsDClient.UTF_8)));
+            server.waitForMessage();
+            assertThat(server.messagesReceived(), hasItem(message));
+            server.clear();
+        } finally {
+            channel.close();
+        }
     }
 }
