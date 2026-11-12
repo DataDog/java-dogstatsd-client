@@ -164,7 +164,7 @@ public abstract class StatsDProcessor {
                     byteBuffer[blen++] = (byte) (128 | (decoded & 63));
                 }
 
-                if (blen >= maxPacketSizeBytes) {
+                if (blen > maxPacketSizeBytes) {
                     throw new BufferOverflowException();
                 }
             }

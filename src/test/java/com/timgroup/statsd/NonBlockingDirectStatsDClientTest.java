@@ -5,7 +5,9 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -149,5 +151,66 @@ public class NonBlockingDirectStatsDClientTest {
         assertThat(
                 server.messagesReceived(),
                 hasItem(comparesEqualTo("my.prefix.mydistribution:667|d|@0.400000|#baz,foo:bar")));
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_multivalued_distribution_chunk_that_exactly_fills_the_packet()
+            throws Exception {
+        // The first chunk, including its trailing newline, is exactly MAX_PACKET_SIZE bytes.
+        String first = "my.prefix.mydistribution:4234:2345:678|d|@0.400000|#baz,foo:bar";
+        String second = "my.prefix.mydistribution:1|d|@0.400000|#baz,foo:bar";
+        assertThat(first.length() + 1, comparesEqualTo(MAX_PACKET_SIZE));
+
+        RecordingErrorHandler errors = new RecordingErrorHandler();
+        DirectStatsDClient exactFitClient = buildClient(errors);
+        try {
+            exactFitClient.recordDistributionValues(
+                    "mydistribution", new long[] {4234L, 2345L, 678L, 1L}, 0.4, "foo:bar", "baz");
+            waitForMessages(errors, first, second);
+        } finally {
+            exactFitClient.stop();
+        }
+    }
+
+    @Test(timeout = 5000L)
+    public void sends_message_that_exactly_fills_the_packet() throws Exception {
+        String prefixAndSuffix = "my.prefix.:1|d\n";
+        char[] aspect = new char[MAX_PACKET_SIZE - prefixAndSuffix.length()];
+        Arrays.fill(aspect, 'x');
+        String expected = "my.prefix." + new String(aspect) + ":1|d";
+
+        RecordingErrorHandler errors = new RecordingErrorHandler();
+        DirectStatsDClient exactFitClient = buildClient(errors);
+        try {
+            exactFitClient.distribution(new String(aspect), 1L);
+            waitForMessages(errors, expected);
+        } finally {
+            exactFitClient.stop();
+        }
+    }
+
+    private static DirectStatsDClient buildClient(StatsDClientErrorHandler errorHandler) {
+        return new NonBlockingStatsDClientBuilder()
+                .withEnvironmentVariables(CLIENT_ENV)
+                .prefix("my.prefix")
+                .hostname("localhost")
+                .port(STATSD_SERVER_PORT)
+                .enableTelemetry(false)
+                .originDetectionEnabled(false)
+                .maxPacketSizeBytes(MAX_PACKET_SIZE)
+                .errorHandler(errorHandler)
+                .buildDirectStatsDClient();
+    }
+
+    private static void waitForMessages(RecordingErrorHandler errors, String... expected)
+            throws InterruptedException {
+        List<String> expectedMessages = Arrays.asList(expected);
+        while (!server.messagesReceived().containsAll(expectedMessages)) {
+            List<Exception> exceptions = errors.getExceptions();
+            if (!exceptions.isEmpty()) {
+                throw new AssertionError("client reported errors: " + exceptions);
+            }
+            Thread.sleep(10L);
+        }
     }
 }
