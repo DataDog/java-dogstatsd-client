@@ -99,7 +99,7 @@ public abstract class StatsDProcessor {
                             throw new InvalidMessageException(MESSAGE_TOO_LONG, builder.toString());
                         }
 
-                        if (sendBuffer.remaining() < (lowerBoundSize + 1)) {
+                        if (sendBuffer.remaining() < lowerBoundSize) {
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
                         }
@@ -107,6 +107,11 @@ public abstract class StatsDProcessor {
                         try {
                             writeBuilderToSendBuffer(sendBuffer);
                         } catch (BufferOverflowException boe) {
+                            if (sendBuffer.position() == 0) {
+                                // Multibyte characters made the message longer than a packet.
+                                throw new InvalidMessageException(
+                                        MESSAGE_TOO_LONG, builder.toString());
+                            }
                             outboundQueue.put(sendBuffer);
                             sendBuffer = bufferPool.borrow();
                             writeBuilderToSendBuffer(sendBuffer);

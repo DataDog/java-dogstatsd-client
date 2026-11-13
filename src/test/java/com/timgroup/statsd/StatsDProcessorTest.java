@@ -50,6 +50,27 @@ public class StatsDProcessorTest {
         assertEquals(Arrays.asList(first, second), process(new ChunkedMessage(first, second), 2));
     }
 
+    @Test(timeout = 5000L)
+    public void writes_message_that_exactly_fills_the_rest_of_a_packet() throws Exception {
+        String first = packet("", 20);
+        String second = packet("", MAX_PACKET_SIZE - 20);
+
+        assertEquals(Arrays.asList(first + second), process(new ChunkedMessage(first, second), 1));
+    }
+
+    @Test(timeout = 5000L)
+    public void rejects_multibyte_message_longer_than_the_packet() throws Exception {
+        // Exactly MAX_PACKET_SIZE chars, but 'é' takes two bytes in UTF-8.
+        processor = start();
+        assertTrue(processor.send(new ChunkedMessage(packet("é", MAX_PACKET_SIZE))));
+
+        while (errors.getExceptions().isEmpty()) {
+            Thread.sleep(10L);
+        }
+        assertEquals(InvalidMessageException.class, errors.getExceptions().get(0).getClass());
+        assertEquals(null, processor.getOutboundQueue().poll());
+    }
+
     /** A packet of {@code length} chars that starts with {@code head} and ends with a newline. */
     private static String packet(String head, int length) {
         char[] filler = new char[length - head.length() - 1];
@@ -57,11 +78,16 @@ public class StatsDProcessorTest {
         return head + new String(filler) + "\n";
     }
 
-    private List<String> process(Message message, int expectedPackets) throws Exception {
-        processor =
+    private StatsDProcessor start() throws Exception {
+        StatsDProcessor started =
                 new StatsDNonBlockingProcessor(
                         16, errors, MAX_PACKET_SIZE, 8, 1, 0, 1, Executors.defaultThreadFactory());
-        processor.startWorkers("StatsDProcessorTest-");
+        started.startWorkers("StatsDProcessorTest-");
+        return started;
+    }
+
+    private List<String> process(Message message, int expectedPackets) throws Exception {
+        processor = start();
         assertTrue(processor.send(message));
 
         List<String> packets = new ArrayList<>();
@@ -71,10 +97,11 @@ public class StatsDProcessorTest {
                 throw new AssertionError("processor reported errors: " + exceptions);
             }
             ByteBuffer buffer = processor.getOutboundQueue().poll(10, TimeUnit.MILLISECONDS);
-            // An exact fit makes the processor flush its current buffer first, even when it is
-            // still empty.
-            if (buffer == null || buffer.position() == 0) {
+            if (buffer == null) {
                 continue;
+            }
+            if (buffer.position() == 0) {
+                throw new AssertionError("processor flushed an empty buffer");
             }
             buffer.flip();
             packets.add(StandardCharsets.UTF_8.decode(buffer).toString());
