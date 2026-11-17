@@ -142,12 +142,12 @@ public abstract class StatsDProcessor {
     static final class Encoder {
         private final int maxPacketSizeBytes;
         private char[] charBuffer;
-        // + 4 so that we can check for buffer overflow without computing encoded length first
         private final byte[] byteBuffer;
 
         Encoder(int maxPacketSizeBytes) {
             this.maxPacketSizeBytes = maxPacketSizeBytes;
             this.charBuffer = new char[maxPacketSizeBytes];
+            // + 4 so that we can check for buffer overflow without computing encoded length first
             this.byteBuffer = new byte[maxPacketSizeBytes + 4];
         }
 
