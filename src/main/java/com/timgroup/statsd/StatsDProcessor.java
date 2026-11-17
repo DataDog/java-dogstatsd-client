@@ -34,9 +34,7 @@ public abstract class StatsDProcessor {
 
     protected abstract class ProcessingTask implements Runnable {
         protected StringBuilder builder = new StringBuilder();
-        char[] charBuffer = new char[maxPacketSizeBytes];
-        // + 4 so that we can check for buffer overflow without computing encoded length first
-        final byte[] byteBuffer = new byte[maxPacketSizeBytes + 4];
+        final Encoder encoder = new Encoder(maxPacketSizeBytes);
 
         public final void run() {
             try {
@@ -133,6 +131,33 @@ public abstract class StatsDProcessor {
         abstract Message getMessage() throws InterruptedException;
 
         protected void writeBuilderToSendBuffer(ByteBuffer sendBuffer) {
+            encoder.encode(builder, sendBuffer);
+        }
+    }
+
+    /**
+     * Encodes messages as UTF-8 into send buffers. Each processing task has its own, because it
+     * reuses its scratch arrays between messages.
+     */
+    static final class Encoder {
+        private final int maxPacketSizeBytes;
+        private char[] charBuffer;
+        private final byte[] byteBuffer;
+
+        Encoder(int maxPacketSizeBytes) {
+            this.maxPacketSizeBytes = maxPacketSizeBytes;
+            this.charBuffer = new char[maxPacketSizeBytes];
+            // + 4 so that we can check for buffer overflow without computing encoded length first
+            this.byteBuffer = new byte[maxPacketSizeBytes + 4];
+        }
+
+        /**
+         * Appends the UTF-8 encoding of {@code builder} to {@code sendBuffer}.
+         *
+         * @throws BufferOverflowException if the encoding is longer than a packet or than the space
+         *     left in {@code sendBuffer}. Nothing is written in that case.
+         */
+        void encode(StringBuilder builder, ByteBuffer sendBuffer) {
             int length = builder.length();
             if (length > charBuffer.length) {
                 charBuffer = new char[length];
@@ -164,7 +189,7 @@ public abstract class StatsDProcessor {
                     byteBuffer[blen++] = (byte) (128 | (decoded & 63));
                 }
 
-                if (blen >= maxPacketSizeBytes) {
+                if (blen > maxPacketSizeBytes) {
                     throw new BufferOverflowException();
                 }
             }
