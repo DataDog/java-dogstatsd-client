@@ -2,8 +2,11 @@ package com.timgroup.statsd;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import jnr.unixsocket.UnixSocketAddress;
 import jnr.unixsocket.UnixSocketChannel;
@@ -11,10 +14,11 @@ import jnr.unixsocket.UnixSocketOptions;
 
 /** A ClientChannel for Unix domain sockets. */
 public class UnixStreamClientChannel implements ClientChannel {
-    private final UnixSocketAddress address;
+    private final SocketAddress address;
     private final int timeout;
     private final int connectionTimeout;
     private final int bufferSize;
+    private final boolean enableJdkSocket;
 
     private SocketChannel delegate;
     private final ByteBuffer delimiterBuffer =
@@ -26,13 +30,18 @@ public class UnixStreamClientChannel implements ClientChannel {
      * @param address Location of named pipe
      */
     UnixStreamClientChannel(
-            SocketAddress address, int timeout, int connectionTimeout, int bufferSize)
+            SocketAddress address,
+            int timeout,
+            int connectionTimeout,
+            int bufferSize,
+            boolean enableJdkSocket)
             throws IOException {
         this.delegate = null;
-        this.address = (UnixSocketAddress) address;
+        this.address = address;
         this.timeout = timeout;
         this.connectionTimeout = connectionTimeout;
         this.bufferSize = bufferSize;
+        this.enableJdkSocket = enableJdkSocket;
     }
 
     @Override
@@ -54,7 +63,7 @@ public class UnixStreamClientChannel implements ClientChannel {
         delimiterBuffer.flip();
 
         try {
-            long deadline = System.nanoTime() + timeout * 1_000_000L;
+            long deadline = timeout > 0 ? System.nanoTime() + timeout * 1_000_000L : 0;
             written = writeAll(delimiterBuffer, true, deadline);
             if (written > 0) {
                 written += writeAll(src, false, deadline);
@@ -87,19 +96,47 @@ public class UnixStreamClientChannel implements ClientChannel {
             throws IOException {
         int remaining = bb.remaining();
         int written = 0;
+        long timeoutMs = timeout;
+
         while (remaining > 0) {
             int read = delegate.write(bb);
-
-            // If we haven't written anything yet, we can still return
-            if (read == 0 && canReturnOnTimeout && written == 0) {
-                return written;
+            if (read > 0) {
+                remaining -= read;
+                written += read;
+                if (deadline > 0 && System.nanoTime() >= deadline) {
+                    throw new IOException("Write timed out");
+                }
+                continue;
             }
 
-            remaining -= read;
-            written += read;
+            if (read == 0) {
+                if (delegate.isBlocking()) {
+                    if (canReturnOnTimeout && written == 0) {
+                        return written;
+                    }
+                    throw new IOException("Write timed out");
+                }
 
-            if (deadline > 0 && System.nanoTime() > deadline) {
-                throw new IOException("Write timed out");
+                try (Selector selector = Selector.open()) {
+                    delegate.register(selector, SelectionKey.OP_WRITE);
+                    long selectTimeout = timeoutMs;
+
+                    if (deadline > 0) {
+                        long remainingNs = deadline - System.nanoTime();
+                        if (remainingNs <= 0) {
+                            throw new IOException("Write timed out");
+                        }
+                        long remainingMs = Math.max(1L, remainingNs / 1_000_000L);
+                        selectTimeout =
+                                timeoutMs > 0 ? Math.min(timeoutMs, remainingMs) : remainingMs;
+                    }
+
+                    int selected =
+                            selectTimeout > 0 ? selector.select(selectTimeout) : selector.select();
+                    if (selected == 0) {
+                        throw new IOException("Write timed out after " + selectTimeout + "ms");
+                    }
+                }
             }
         }
         return written;
@@ -127,40 +164,129 @@ public class UnixStreamClientChannel implements ClientChannel {
             }
         }
 
-        UnixSocketChannel delegate = UnixSocketChannel.create();
-
+        // Use native JDK support for UDS on Java 16+ and jnr-unixsocket otherwise
+        if (VersionUtils.isJavaVersionAtLeast(16) && enableJdkSocket && connectWithJdkSocket()) {
+            return;
+        }
+        // Default to jnr-unixsocket if Java version is < 16 or native support is disabled
+        UnixSocketChannel channel = UnixSocketChannel.create();
         long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+
         if (connectionTimeout > 0) {
             // Set connect timeout, this should work at least on linux
             // https://elixir.bootlin.com/linux/v5.7.4/source/net/unix/af_unix.c#L1696
-            // We'd have better timeout support if we used Java 16's native Unix domain socket
-            // support (JEP 380)
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
+            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, connectionTimeout);
         }
+
         try {
-            if (!delegate.connect(address)) {
+            UnixSocketAddress unixAddress;
+            if (address instanceof UnixSocketAddress) {
+                unixAddress = (UnixSocketAddress) address;
+            } else {
+                unixAddress = new UnixSocketAddress(address.toString());
+            }
+
+            if (!channel.connect(unixAddress)) {
                 if (connectionTimeout > 0 && System.nanoTime() > deadline) {
                     throw new IOException("Connection timed out");
                 }
-                if (!delegate.finishConnect()) {
+                if (!channel.finishConnect()) {
                     throw new IOException("Connection failed");
                 }
             }
 
-            delegate.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
+            channel.setOption(UnixSocketOptions.SO_SNDTIMEO, Math.max(timeout, 0));
             if (bufferSize > 0) {
-                delegate.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
+                channel.setOption(UnixSocketOptions.SO_SNDBUF, bufferSize);
             }
         } catch (Exception e) {
             try {
-                delegate.close();
+                channel.close();
             } catch (IOException __) {
                 // ignore
             }
             throw e;
         }
 
-        this.delegate = delegate;
+        this.delegate = channel;
+    }
+
+    private boolean connectWithJdkSocket() throws IOException {
+        SocketChannel channel = null;
+        SocketAddress connectAddress;
+
+        try {
+            // Only SocketChannel.open(ProtocolFamily) needs reflection; connect/finishConnect
+            // have existed since Java 1.4 and are called directly once we have the channel.
+            channel = openJdkSocketChannel();
+            connectAddress = nativeSocketAddress(address);
+            if (bufferSize > 0) {
+                channel.setOption(StandardSocketOptions.SO_SNDBUF, bufferSize);
+            }
+        } catch (Exception | LinkageError e) {
+            closeQuietly(channel);
+            return false;
+        }
+
+        try {
+            if (connectionTimeout <= 0) {
+                channel.configureBlocking(true);
+                channel.connect(connectAddress);
+                channel.configureBlocking(false);
+            } else {
+                channel.configureBlocking(false);
+                long deadline = System.nanoTime() + connectionTimeout * 1_000_000L;
+                if (!channel.connect(connectAddress)) {
+                    try (Selector selector = Selector.open()) {
+                        channel.register(selector, SelectionKey.OP_CONNECT);
+                        while (!channel.finishConnect()) {
+                            long remainingNs = deadline - System.nanoTime();
+                            if (remainingNs <= 0) {
+                                throw new IOException(
+                                        "Connection timed out after " + connectionTimeout + "ms");
+                            }
+                            long selectTimeout = Math.max(1L, remainingNs / 1_000_000L);
+                            if (selector.select(selectTimeout) == 0
+                                    && System.nanoTime() >= deadline) {
+                                throw new IOException(
+                                        "Connection timed out after " + connectionTimeout + "ms");
+                            }
+                            selector.selectedKeys().clear();
+                        }
+                    }
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            closeQuietly(channel);
+            throw e;
+        }
+
+        this.delegate = channel;
+        return true;
+    }
+
+    SocketChannel openJdkSocketChannel() throws IOException {
+        return VersionUtils.openUnixSocketChannel();
+    }
+
+    private static SocketAddress nativeSocketAddress(SocketAddress address) {
+        if (address instanceof UnixSocketAddressWithTransport) {
+            address = ((UnixSocketAddressWithTransport) address).getAddress();
+        }
+        if (address instanceof UnixSocketAddress) {
+            return VersionUtils.newUnixDomainSocketAddress(((UnixSocketAddress) address).path());
+        }
+        return address;
+    }
+
+    private static void closeQuietly(SocketChannel channel) {
+        if (channel != null) {
+            try {
+                channel.close();
+            } catch (IOException ignored) {
+                // ignore
+            }
+        }
     }
 
     @Override
