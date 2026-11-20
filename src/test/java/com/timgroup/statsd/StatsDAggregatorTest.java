@@ -254,17 +254,15 @@ public class StatsDAggregatorTest {
 
         for (int i = 0; i < StatsDAggregator.DEFAULT_SHARDS; i++) {
             Map<Message, Message> map = fakeProcessor.aggregator.aggregateMetrics.get(i);
-            synchronized (map) {
-                Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
-                int count = 0;
-                while (iter.hasNext()) {
-                    count++;
-                    iter.next();
-                }
-
-                // sharding should be balanced
-                assertEquals(iterations, count);
+            Iterator<Map.Entry<Message, Message>> iter = map.entrySet().iterator();
+            int count = 0;
+            while (iter.hasNext()) {
+                count++;
+                iter.next();
             }
+
+            // sharding should be balanced
+            assertEquals(iterations, count);
         }
     }
 
