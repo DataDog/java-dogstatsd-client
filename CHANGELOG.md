@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 4.4.6 / 2026.11.20
+
+* [FEATURE] Add `NonBlockingStatsDClientBuilder.withEnvironmentVariables` to supply the environment variables the client reads its configuration from, instead of the process environment. See [#317][]
+* [FEATURE] Read the default named pipe name from the `dd.dogstatsd.pipe.name` system property, which takes precedence over environment variables. See [#344][]
+* [IMPROVEMENT] Open the named pipe on first write and reopen it after a write failure, matching Unix stream socket behavior. A missing pipe no longer makes `build()` fail. Instead, each dropped write goes to the error handler. See [#345][]
+* [BUGFIX] Accept messages that exactly fill the send buffer. These were dropped since 4.4.4. See [#346][]
+* [BUGFIX] Don't flush empty buffers. See [#347][]
+
 ## 4.4.5 / 2025.08.15
 
 * [IMPROVEMENT] Only send externalEnv when origin detection is enabled. See [#279][]
@@ -277,6 +285,11 @@ Fork from [indeedeng/java-dogstatsd-client] (https://github.com/indeedeng/java-d
 [#276]: https://github.com/DataDog/java-dogstatsd-client/issues/276
 [#277]: https://github.com/DataDog/java-dogstatsd-client/issues/277
 [#279]: https://github.com/DataDog/java-dogstatsd-client/issues/279
+[#317]: https://github.com/DataDog/java-dogstatsd-client/issues/317
+[#344]: https://github.com/DataDog/java-dogstatsd-client/issues/344
+[#345]: https://github.com/DataDog/java-dogstatsd-client/issues/345
+[#346]: https://github.com/DataDog/java-dogstatsd-client/issues/346
+[#347]: https://github.com/DataDog/java-dogstatsd-client/issues/347
 
 [@PatrickAuld]: https://github.com/PatrickAuld
 [@blevz]: https://github.com/blevz
