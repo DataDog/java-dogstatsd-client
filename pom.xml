@@ -7,11 +7,13 @@
     <artifactId>java-dogstatsd-client</artifactId>
     <packaging>jar</packaging>
     <name>java-dogstatsd-client</name>
-    <version>4.4.6</version>
+    <version>${version}</version>
     <description>A tiny library allowing Java applications to communicate with DataDog statsd instances easily.</description>
     <url>https://github.com/DataDog/java-dogstatsd-client</url>
 
     <properties>
+        <!-- Release builds override this from the git tag, see .gitlab-ci.yml -->
+        <version>5.0.0-SNAPSHOT</version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.scm.id>github</project.scm.id>
         <jdk.module.illegalAccess>deny</jdk.module.illegalAccess>
@@ -414,6 +416,30 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Replace ${version} with its value in the installed and published pom -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.8.0</version>
+                <configuration>
+                    <flattenMode>ossrh</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <goals>
+                            <goal>clean</goal>
                         </goals>
                     </execution>
                 </executions>
