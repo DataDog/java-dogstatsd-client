@@ -8,8 +8,8 @@
 package com.datadoghq.dogstatsd.http;
 
 import com.datadoghq.dogstatsd.Sketch;
+import com.datadoghq.dogstatsd.http.serializer.DirectPayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.Metric;
-import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.PayloadConsumer;
 import com.datadoghq.dogstatsd.http.serializer.TagsCardinality;
 import java.net.URI;
@@ -45,8 +45,8 @@ import java.util.Objects;
 public class DirectHttpClient {
     private static URI seriesUri = URI.create("series");
     private static URI sketchesUri = URI.create("sketches");
-    private final PayloadBuilder seriesBuilder;
-    private final PayloadBuilder sketchesBuilder;
+    private final DirectPayloadBuilder seriesBuilder;
+    private final DirectPayloadBuilder sketchesBuilder;
     private final Sketch sketchBuffer = new Sketch();
     private final String prefix;
     private final boolean splitTags;
@@ -77,7 +77,7 @@ public class DirectHttpClient {
         splitTags = builder.splitTags;
 
         seriesBuilder =
-                new PayloadBuilder(
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] payload) {
@@ -89,7 +89,7 @@ public class DirectHttpClient {
                             }
                         });
         sketchesBuilder =
-                new PayloadBuilder(
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] payload) {

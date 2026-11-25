@@ -11,13 +11,13 @@ import com.datadoghq.dogstatsd.Sketch;
 import java.nio.BufferOverflowException;
 
 /** Builder for sketch timeseries. */
-public class SketchMetric extends Metric<SketchMetric> {
-    SketchMetric(PayloadBuilder pb, int type, String name) {
+public class DirectSketch extends Metric<DirectSketch> {
+    DirectSketch(DirectPayloadBuilder pb, int type, String name) {
         super(pb, type, name);
     }
 
     @Override
-    protected SketchMetric self() {
+    protected DirectSketch self() {
         return this;
     }
 
@@ -28,10 +28,10 @@ public class SketchMetric extends Metric<SketchMetric> {
      * @param sketch Sketch supplying the summary statistics and bin distribution.
      * @return This.
      * @throws BufferOverflowException if the sketch's bin data alone would exceed the maximum
-     *     payload size. The metric is no longer valid; call {@link PayloadBuilder#resetMetric()}
-     *     before encoding any further metrics.
+     *     payload size. The metric is no longer valid; call {@link
+     *     DirectPayloadBuilder#resetMetric()} before encoding any further metrics.
      */
-    public SketchMetric addPoint(long timestamp, Sketch sketch) {
+    public DirectSketch addPoint(long timestamp, Sketch sketch) {
         SketchBinConsumer.putBins(pb.currentRecord(), pb.maxPayloadSize, sketch);
 
         pb.timestamps.put(timestamp);

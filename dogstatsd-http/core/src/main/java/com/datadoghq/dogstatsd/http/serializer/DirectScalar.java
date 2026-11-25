@@ -8,13 +8,13 @@
 package com.datadoghq.dogstatsd.http.serializer;
 
 /** Builder for scalar timeseries. */
-public class ScalarMetric extends Metric<ScalarMetric> {
-    ScalarMetric(PayloadBuilder pb, int type, String name) {
+public class DirectScalar extends Metric<DirectScalar> {
+    DirectScalar(DirectPayloadBuilder pb, int type, String name) {
         super(pb, type, name);
     }
 
     @Override
-    protected ScalarMetric self() {
+    protected DirectScalar self() {
         return this;
     }
 
@@ -25,7 +25,7 @@ public class ScalarMetric extends Metric<ScalarMetric> {
      * @param value Metric value at timestamp.
      * @return This.
      */
-    public ScalarMetric addPoint(long timestamp, double value) {
+    public DirectScalar addPoint(long timestamp, double value) {
         pb.timestamps.put(timestamp);
         pb.values.put(value);
         return this;

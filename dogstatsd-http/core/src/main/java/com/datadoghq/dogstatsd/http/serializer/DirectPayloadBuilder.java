@@ -17,18 +17,18 @@ import java.nio.BufferOverflowException;
  * metrics. Metrics that are ended without any successfully-added points are silently dropped from
  * the payload.
  */
-public class PayloadBuilder extends BasePayloadBuilder {
+public class DirectPayloadBuilder extends BasePayloadBuilder {
     final LongBuffer timestamps = new LongBuffer();
     final LongBuffer counts = new LongBuffer();
 
     final DeltaEncoder timestampsDelta = new DeltaEncoder();
 
     /**
-     * Create a new PayloadBuilder.
+     * Create a new DirectPayloadBuilder.
      *
      * @param consumer Is given payloads one by one as they are finished.
      */
-    public PayloadBuilder(PayloadConsumer consumer) {
+    public DirectPayloadBuilder(PayloadConsumer consumer) {
         super(consumer);
     }
 
@@ -41,8 +41,8 @@ public class PayloadBuilder extends BasePayloadBuilder {
      * @return New builder instance.
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
-    public ScalarMetric count(String name) {
-        ScalarMetric m = new ScalarMetric(this, 1, name);
+    public DirectScalar count(String name) {
+        DirectScalar m = new DirectScalar(this, 1, name);
         beginMetric(m);
         return m;
     }
@@ -56,8 +56,8 @@ public class PayloadBuilder extends BasePayloadBuilder {
      * @return New builder instance.
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
-    public ScalarMetric rate(String name) {
-        ScalarMetric m = new ScalarMetric(this, 2, name);
+    public DirectScalar rate(String name) {
+        DirectScalar m = new DirectScalar(this, 2, name);
         beginMetric(m);
         return m;
     }
@@ -71,8 +71,8 @@ public class PayloadBuilder extends BasePayloadBuilder {
      * @return New builder instance.
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
-    public ScalarMetric gauge(String name) {
-        ScalarMetric m = new ScalarMetric(this, 3, name);
+    public DirectScalar gauge(String name) {
+        DirectScalar m = new DirectScalar(this, 3, name);
         beginMetric(m);
         return m;
     }
@@ -86,8 +86,8 @@ public class PayloadBuilder extends BasePayloadBuilder {
      * @return New builder instance.
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
-    public SketchMetric sketch(String name) {
-        SketchMetric m = new SketchMetric(this, 4, name);
+    public DirectSketch sketch(String name) {
+        DirectSketch m = new DirectSketch(this, 4, name);
         beginMetric(m);
         return m;
     }
