@@ -89,6 +89,11 @@ public abstract class Metric<T extends Metric<T>> {
 
     abstract void encodeValues(ValueType valueType);
 
+    /** Whether the metric has anything to encode; metrics without data are dropped. */
+    boolean hasData() {
+        return pb.timestamps.length() > 0;
+    }
+
     void encodeIndependentFields() {
         ColumnarBuffer r = pb.currentRecord();
         ValueType valueType = PointKind.of(pb.values).toValueType();
