@@ -20,12 +20,12 @@ import java.util.List;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
-public class PayloadBuilderTest {
+public class DirectPayloadBuilderTest {
     @Test
     public void simple() {
         final ArrayList<byte[]> payloads = new ArrayList<>();
-        PayloadBuilder b =
-                new PayloadBuilder(
+        DirectPayloadBuilder b =
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] p) {
@@ -350,8 +350,8 @@ public class PayloadBuilderTest {
     @Test
     public void split() {
         final ArrayList<byte[]> payloads = new ArrayList<>();
-        PayloadBuilder b =
-                new PayloadBuilder(
+        DirectPayloadBuilder b =
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] p) {
@@ -360,7 +360,7 @@ public class PayloadBuilderTest {
                         });
 
         for (int i = 0; i < 1000; i++) {
-            ScalarMetric g = b.gauge(String.format("custom.metric.%d", i));
+            DirectScalar g = b.gauge(String.format("custom.metric.%d", i));
             g.setTags(Arrays.asList(new String[] {String.format("foobar.%d", i)}));
             for (int j = 0; j < 100; j++) {
                 g.addPoint(100 + j * 10, (double) j);
@@ -380,8 +380,8 @@ public class PayloadBuilderTest {
     // Make sure we leave builder in consistent state on error.
     public void rollback() {
         final ArrayList<byte[]> payloads1 = new ArrayList<>();
-        PayloadBuilder pb1 =
-                new PayloadBuilder(
+        DirectPayloadBuilder pb1 =
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] p) {
@@ -390,8 +390,8 @@ public class PayloadBuilderTest {
                         });
 
         final ArrayList<byte[]> payloads2 = new ArrayList<>();
-        PayloadBuilder pb2 =
-                new PayloadBuilder(
+        DirectPayloadBuilder pb2 =
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] p) {
@@ -409,7 +409,7 @@ public class PayloadBuilderTest {
                 .close();
 
         // 40k * 8 bytes = 320 KB > 256 KB payload limit.
-        final ScalarMetric huge =
+        final DirectScalar huge =
                 pb2.gauge("m.huge").setTags(Arrays.asList(new String[] {"env:prod", "kind:huge"}));
         for (int i = 0; i < 40000; i++) {
             huge.addPoint(1000, 3.14);
@@ -445,8 +445,8 @@ public class PayloadBuilderTest {
     @Test
     public void tagsCardinality() {
         final ArrayList<byte[]> payloads = new ArrayList<>();
-        PayloadBuilder b =
-                new PayloadBuilder(
+        DirectPayloadBuilder b =
+                new DirectPayloadBuilder(
                         new PayloadConsumer() {
                             @Override
                             public void handle(byte[] p) {
