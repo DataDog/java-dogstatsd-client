@@ -8,7 +8,7 @@
 package com.datadoghq.dogstatsd.http.serializer;
 
 /** Builder for scalar timeseries. */
-public class DirectScalar extends Metric<DirectScalar> {
+public class DirectScalar extends DirectMetric<DirectScalar> {
     DirectScalar(DirectPayloadBuilder pb, int type, String name) {
         super(pb, type, name);
     }

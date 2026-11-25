@@ -71,6 +71,22 @@ class ColumnarBuffer {
         column(dst).putFloat64(val);
     }
 
+    void putValue(ValueType vt, double val) {
+        switch (vt) {
+            case zero:
+                break;
+            case sint64:
+                putSint64(Column.valsSint64, (long) val);
+                break;
+            case float32:
+                putFloat32(Column.valsFloat32, (float) val);
+                break;
+            case float64:
+                putFloat64(Column.valsFloat64, val);
+                break;
+        }
+    }
+
     int length() {
         int n = 0;
         for (int i = 0; i < buffers.length; i++) {

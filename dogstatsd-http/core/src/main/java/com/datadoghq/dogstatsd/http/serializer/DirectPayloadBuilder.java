@@ -42,7 +42,7 @@ public class DirectPayloadBuilder extends BasePayloadBuilder {
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public DirectScalar count(String name) {
-        DirectScalar m = new DirectScalar(this, 1, name);
+        DirectScalar m = new DirectScalar(this, MetricType.COUNT, name);
         beginMetric(m);
         return m;
     }
@@ -57,7 +57,7 @@ public class DirectPayloadBuilder extends BasePayloadBuilder {
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public DirectScalar rate(String name) {
-        DirectScalar m = new DirectScalar(this, 2, name);
+        DirectScalar m = new DirectScalar(this, MetricType.RATE, name);
         beginMetric(m);
         return m;
     }
@@ -72,7 +72,7 @@ public class DirectPayloadBuilder extends BasePayloadBuilder {
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public DirectScalar gauge(String name) {
-        DirectScalar m = new DirectScalar(this, 3, name);
+        DirectScalar m = new DirectScalar(this, MetricType.GAUGE, name);
         beginMetric(m);
         return m;
     }
@@ -87,7 +87,7 @@ public class DirectPayloadBuilder extends BasePayloadBuilder {
      * @throws BufferOverflowException if finishing the previous metric overflows the payload.
      */
     public DirectSketch sketch(String name) {
-        DirectSketch m = new DirectSketch(this, 4, name);
+        DirectSketch m = new DirectSketch(this, MetricType.SKETCH, name);
         beginMetric(m);
         return m;
     }

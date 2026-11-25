@@ -12,23 +12,22 @@ import java.util.List;
 /**
  * Common settings shared by all timeseries builders.
  *
- * <p>Instances are obtained from {@link DirectPayloadBuilder}; this class cannot be subclassed
- * outside of this package.
+ * <p>Instances are obtained from {@link DirectPayloadBuilder} or {@link AggregationPayloadBuilder};
+ * this class cannot be subclassed outside of this package.
  *
  * @param <T> the concrete builder type returned by the setters, for chaining.
  */
 public abstract class Metric<T extends Metric<T>> {
-    final DirectPayloadBuilder pb;
+    final BasePayloadBuilder pb;
 
     final long type;
     final String name;
     List<String> tags = null;
     List<String> resources = null;
-    int interval = 0;
     TagsCardinality cardinality = TagsCardinality.DEFAULT;
     Origin origin = Origin.dogstatsd;
 
-    Metric(DirectPayloadBuilder pb, int type, String name) {
+    Metric(BasePayloadBuilder pb, int type, String name) {
         this.pb = pb;
         this.type = type;
         this.name = name;
@@ -62,17 +61,6 @@ public abstract class Metric<T extends Metric<T>> {
     }
 
     /**
-     * Set aggregation interval setting for this metric.
-     *
-     * @param interval Aggregation interval in seconds.
-     * @return This.
-     */
-    public T setInterval(int interval) {
-        this.interval = interval;
-        return self();
-    }
-
-    /**
      * Set the cardinality of the origin tags the agent attaches to this metric.
      *
      * <p>Ignored by the intake, which does not attach origin tags.
@@ -87,19 +75,18 @@ public abstract class Metric<T extends Metric<T>> {
 
     abstract T self();
 
-    abstract void encodeValues(ValueType valueType);
-
     /** Whether the metric has anything to encode; metrics without data are dropped. */
-    boolean hasData() {
-        return pb.timestamps.length() > 0;
-    }
+    abstract boolean hasData();
+
+    /** Value column used by this metric, selected from its buffered values. */
+    abstract ValueType valueType();
+
+    abstract void encodeValues(ValueType valueType);
 
     void encodeIndependentFields() {
         ColumnarBuffer r = pb.currentRecord();
-        ValueType valueType = PointKind.of(pb.values).toValueType();
+        ValueType valueType = valueType();
         r.putUint64(Column.types, type | valueType.flag() | cardinality.flag());
-        r.putUint64(Column.intervals, interval);
-        r.putSint64(Column.sourceTypeNameRefs, 0);
         encodeValues(valueType);
     }
 
@@ -115,7 +102,6 @@ public abstract class Metric<T extends Metric<T>> {
         r.clear(Column.dictResourceType);
         r.clear(Column.dictResourceName);
         r.clear(Column.resourcesRefs);
-        r.clear(Column.timestamps);
         r.clear(Column.dictOriginInfo);
         r.clear(Column.originInfoRefs);
     }
@@ -124,7 +110,6 @@ public abstract class Metric<T extends Metric<T>> {
         pb.encodeName(name);
         pb.encodeTags(tags);
         pb.encodeResources(resources);
-        pb.encodeTimestamps();
         pb.encodeOrigin(origin);
     }
 
@@ -132,8 +117,8 @@ public abstract class Metric<T extends Metric<T>> {
      * Finish this timeseries and add it to the payload.
      *
      * @throws java.nio.BufferOverflowException if the encoded metric exceeds the maximum payload
-     *     size. The in-progress metric is discarded, so no {@link
-     *     DirectPayloadBuilder#resetMetric()} is needed before encoding further metrics.
+     *     size. The in-progress metric is discarded, so no {@code resetMetric()} call is needed
+     *     before encoding further metrics.
      */
     public void close() {
         pb.endMetric();

@@ -11,7 +11,7 @@ import com.datadoghq.dogstatsd.Sketch;
 import java.nio.BufferOverflowException;
 
 /** Builder for sketch timeseries. */
-public class DirectSketch extends Metric<DirectSketch> {
+public class DirectSketch extends DirectMetric<DirectSketch> {
     DirectSketch(DirectPayloadBuilder pb, int type, String name) {
         super(pb, type, name);
     }

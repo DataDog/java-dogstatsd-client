@@ -12,7 +12,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** Dictionaries, columns and payload splitting shared by payload builders. */
+/**
+ * Dictionaries, columns and payload splitting shared by {@link DirectPayloadBuilder} and {@link
+ * AggregationPayloadBuilder}.
+ */
 abstract class BasePayloadBuilder {
     private static final int DEFAULT_MAX_PAYLOAD_SIZE = 256 * 1024;
     private static final int METRIC_DATA_FIELD_ID = 3;

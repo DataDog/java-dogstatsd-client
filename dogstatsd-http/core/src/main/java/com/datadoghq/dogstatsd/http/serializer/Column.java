@@ -31,9 +31,11 @@ enum Column {
     sketchBinKeys(21),
     sketchBinCnts(22),
     sourceTypeNameRefs(23),
-    originInfoRefs(24);
+    originInfoRefs(24),
+    valsUint64(31),
+    setStrs(64);
 
-    static final int MAX = 24;
+    static final int MAX = 64;
 
     final int id;
 
