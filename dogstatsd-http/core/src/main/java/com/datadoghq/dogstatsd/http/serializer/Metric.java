@@ -12,13 +12,13 @@ import java.util.List;
 /**
  * Common settings shared by all timeseries builders.
  *
- * <p>Instances are obtained from {@link PayloadBuilder}; this class cannot be subclassed outside of
- * this package.
+ * <p>Instances are obtained from {@link DirectPayloadBuilder}; this class cannot be subclassed
+ * outside of this package.
  *
  * @param <T> the concrete builder type returned by the setters, for chaining.
  */
 public abstract class Metric<T extends Metric<T>> {
-    final PayloadBuilder pb;
+    final DirectPayloadBuilder pb;
 
     final long type;
     final String name;
@@ -28,7 +28,7 @@ public abstract class Metric<T extends Metric<T>> {
     TagsCardinality cardinality = TagsCardinality.DEFAULT;
     Origin origin = Origin.dogstatsd;
 
-    Metric(PayloadBuilder pb, int type, String name) {
+    Metric(DirectPayloadBuilder pb, int type, String name) {
         this.pb = pb;
         this.type = type;
         this.name = name;
@@ -132,8 +132,8 @@ public abstract class Metric<T extends Metric<T>> {
      * Finish this timeseries and add it to the payload.
      *
      * @throws java.nio.BufferOverflowException if the encoded metric exceeds the maximum payload
-     *     size. The in-progress metric is discarded, so no {@link PayloadBuilder#resetMetric()} is
-     *     needed before encoding further metrics.
+     *     size. The in-progress metric is discarded, so no {@link
+     *     DirectPayloadBuilder#resetMetric()} is needed before encoding further metrics.
      */
     public void close() {
         pb.endMetric();

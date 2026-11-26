@@ -14,7 +14,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 import com.datadoghq.dogstatsd.Sketch;
-import com.datadoghq.dogstatsd.http.serializer.PayloadBuilder;
+import com.datadoghq.dogstatsd.http.serializer.DirectPayloadBuilder;
 import com.datadoghq.dogstatsd.http.serializer.PayloadConsumer;
 import com.datadoghq.dogstatsd.http.serializer.TagsCardinality;
 import java.net.URI;
@@ -39,8 +39,8 @@ public class DirectHttpClientTest {
         }
     }
 
-    private static PayloadBuilder builderInto(final List<byte[]> payloads) {
-        return new PayloadBuilder(
+    private static DirectPayloadBuilder builderInto(final List<byte[]> payloads) {
+        return new DirectPayloadBuilder(
                 new PayloadConsumer() {
                     @Override
                     public void handle(byte[] p) {
@@ -64,7 +64,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("pfx.metric")
                 .setTags(Collections.singletonList("a:b"))
                 .setResources(Arrays.asList("host", "h1"))
@@ -84,7 +84,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.rate("metric")
                 .setTags(Collections.singletonList("a:b"))
                 .setResources(Arrays.asList("host", "h1"))
@@ -109,7 +109,7 @@ public class DirectHttpClientTest {
         sketch.build(values, 1.0);
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.sketch("metric")
                 .setTags(Collections.singletonList("a:b"))
                 .setResources(Arrays.asList("host", "h1"))
@@ -128,7 +128,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
                 .setTags(Arrays.asList("a:b", "hostname:h1"))
                 .setInterval(10)
@@ -147,7 +147,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
                 .setTags(Collections.singletonList("a:b"))
                 .setResources(Arrays.asList("host", ""))
@@ -160,7 +160,7 @@ public class DirectHttpClientTest {
 
         // An empty host resource must still be encoded, unlike a metric with no resources at all.
         ArrayList<byte[]> noResources = new ArrayList<>();
-        PayloadBuilder nb = builderInto(noResources);
+        DirectPayloadBuilder nb = builderInto(noResources);
         nb.gauge("metric")
                 .setTags(Collections.singletonList("a:b"))
                 .setInterval(10)
@@ -226,7 +226,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
                 .setTags(Arrays.asList("a:b", "c:d"))
                 .setInterval(10)
@@ -246,7 +246,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.rate("metric")
                 .setTags(Arrays.asList("a:b", "dd.internal.card:low"))
                 .setResources(Arrays.asList("host", "h1"))
@@ -267,7 +267,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
                 .setTags(Collections.singletonList("a:b,host:h1"))
                 .setInterval(10)
@@ -293,7 +293,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
                 .setTags(Collections.singletonList("a:b"))
                 .setTagsCardinality(TagsCardinality.DEFAULT)
@@ -318,7 +318,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("gauge")
                 .setTags(Arrays.asList("a:b", "dd.internal.card:high", "dd.internal.card:low"))
                 .setResources(Arrays.asList("host", "h1"))
@@ -351,7 +351,7 @@ public class DirectHttpClientTest {
         sketch.build(values, 1.0);
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.sketch("metric")
                 .setTags(Arrays.asList("dd.internal.card:orch", "a:b"))
                 .setTagsCardinality(TagsCardinality.ORCHESTRATOR)
@@ -370,7 +370,7 @@ public class DirectHttpClientTest {
         client.flush();
 
         ArrayList<byte[]> expected = new ArrayList<>();
-        PayloadBuilder b = builderInto(expected);
+        DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
                 .setTags(Arrays.asList("a:b", "dd.internal.card:bogus"))
                 .setInterval(10)
