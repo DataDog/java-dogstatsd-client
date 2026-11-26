@@ -12,32 +12,6 @@ import java.nio.BufferOverflowException;
 
 /** Builder for sketch timeseries. */
 public class SketchMetric extends Metric<SketchMetric> {
-    static final long maxBinCount = (1L << 32) - 1;
-    static final long maxBinBytes = ProtoUtil.varintLen(maxBinCount);
-
-    static class BinConsumer implements Sketch.BinConsumer {
-        int numBins;
-        ColumnarBuffer r;
-        DeltaEncoder dk = new DeltaEncoder();
-
-        BinConsumer(ColumnarBuffer record) {
-            r = record;
-        }
-
-        @Override
-        public void consumeBin(short key, long count) {
-            while (count > maxBinCount) {
-                r.putSint64(Column.sketchBinKeys, dk.encode(key));
-                r.putUint64(Column.sketchBinCnts, maxBinCount);
-                count -= maxBinCount;
-                numBins++;
-            }
-            r.putSint64(Column.sketchBinKeys, dk.encode(key));
-            r.putUint64(Column.sketchBinCnts, count);
-            numBins++;
-        }
-    }
-
     SketchMetric(PayloadBuilder pb, int type, String name) {
         super(pb, type, name);
     }
@@ -58,22 +32,13 @@ public class SketchMetric extends Metric<SketchMetric> {
      *     before encoding any further metrics.
      */
     public SketchMetric addPoint(long timestamp, Sketch sketch) {
-        // Skip doing the work if just the bin data would exceed payload size limit.
-        if (sketch.count() / maxBinCount * maxBinBytes >= pb.maxPayloadSize) {
-            throw new BufferOverflowException();
-        }
+        SketchBinConsumer.putBins(pb.currentRecord(), pb.maxPayloadSize, sketch);
 
         pb.timestamps.put(timestamp);
         pb.values.put(sketch.sum());
         pb.values.put(sketch.min());
         pb.values.put(sketch.max());
         pb.counts.put(sketch.count());
-
-        final ColumnarBuffer r = pb.currentRecord();
-        final BinConsumer bc = new BinConsumer(r);
-
-        sketch.bins(bc);
-        r.putUint64(Column.sketchNumBins, bc.numBins);
 
         return this;
     }
