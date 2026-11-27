@@ -33,9 +33,8 @@ import java.util.Objects;
  *   <li>{@code host:} — the value of the first one becomes the host resource. Every {@code host:}
  *       tag is removed from the tags.
  *   <li>{@code dd.internal.card:} — the value of the first one becomes the tags cardinality. Values
- *       the agent does not recognize ask for the cardinality the agent is configured to use. The
- *       tags are sent unchanged, so that agents that only understand the tag keep working; agents
- *       that understand the cardinality drop the tag themselves.
+ *       the agent does not recognize ask for the cardinality the agent is configured to use. Every
+ *       {@code dd.internal.card:} tag is removed from the tags.
  * </ul>
  *
  * <p>Not thread safe.
@@ -223,13 +222,13 @@ public class DirectHttpClient {
 
     /**
      * Applies the tags to the metric, splitting comma-separated tags if enabled, then extracting
-     * the host tag into the host resource and the cardinality tag into the tags cardinality. The
-     * cardinality tag itself is kept in the tags.
+     * the host tag into the host resource and the cardinality tag into the tags cardinality. Both
+     * are removed from the tags.
      */
     private <T extends Metric<T>> T withTagsHostAndCardinality(
             final T metric, final List<String> tags) {
         final List<String> t = splitTags ? splitOnComma(tags) : tags;
-        return metric.setTags(withoutHostTags(t))
+        return metric.setTags(withoutExtractedTags(t))
                 .setResources(hostResource(hostTag(t)))
                 .setTagsCardinality(cardinality(cardinalityTag(t)));
     }
@@ -315,15 +314,18 @@ public class DirectHttpClient {
         return TagsCardinality.DEFAULT;
     }
 
-    /** Returns the tags with every host tag removed, or the tags themselves if there was none. */
-    static List<String> withoutHostTags(final List<String> tags) {
+    /**
+     * Returns the tags with every host and cardinality tag removed, or the tags themselves if there
+     * was none.
+     */
+    static List<String> withoutExtractedTags(final List<String> tags) {
         if (tags == null) {
             return null;
         }
         ArrayList<String> rest = null;
         for (int i = 0; i < tags.size(); i++) {
             final String tag = tags.get(i);
-            if (tag.startsWith(hostTagPrefix)) {
+            if (tag.startsWith(hostTagPrefix) || tag.startsWith(cardinalityTagPrefix)) {
                 if (rest == null) {
                     rest = new ArrayList<>(tags.subList(0, i));
                 }
