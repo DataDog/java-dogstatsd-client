@@ -184,23 +184,32 @@ public class DirectHttpClientTest {
     }
 
     @Test
-    public void withoutHostTagsRemovesEveryHostTag() {
-        assertNull(DirectHttpClient.withoutHostTags(null));
+    public void extractedTagsAreRemoved() {
+        assertNull(DirectHttpClient.withoutExtractedTags(null));
 
-        List<String> noHost = Arrays.asList("a:b", "hostname:h1");
-        assertSame(noHost, DirectHttpClient.withoutHostTags(noHost));
+        List<String> none = Arrays.asList("a:b", "hostname:h1", "dd.internal.cardx:low");
+        assertSame(none, DirectHttpClient.withoutExtractedTags(none));
 
         assertEquals(
                 Collections.<String>emptyList(),
-                DirectHttpClient.withoutHostTags(Arrays.asList("host:h1", "host:")));
+                DirectHttpClient.withoutExtractedTags(Arrays.asList("host:h1", "host:")));
         assertEquals(
                 Arrays.asList("a:b", "c:d"),
-                DirectHttpClient.withoutHostTags(
+                DirectHttpClient.withoutExtractedTags(
                         Arrays.asList("a:b", "host:h1", "c:d", "host:h2")));
-
-        // The cardinality tag is sent to the agent as a tag as well.
-        List<String> card = Arrays.asList("a:b", "dd.internal.card:low");
-        assertSame(card, DirectHttpClient.withoutHostTags(card));
+        assertEquals(
+                Collections.<String>emptyList(),
+                DirectHttpClient.withoutExtractedTags(
+                        Arrays.asList("dd.internal.card:low", "dd.internal.card:")));
+        assertEquals(
+                Arrays.asList("a:b", "c:d"),
+                DirectHttpClient.withoutExtractedTags(
+                        Arrays.asList(
+                                "dd.internal.card:low",
+                                "a:b",
+                                "host:h1",
+                                "c:d",
+                                "dd.internal.card:high")));
     }
 
     @Test
@@ -248,7 +257,7 @@ public class DirectHttpClientTest {
         ArrayList<byte[]> expected = new ArrayList<>();
         DirectPayloadBuilder b = builderInto(expected);
         b.rate("metric")
-                .setTags(Arrays.asList("a:b", "dd.internal.card:low"))
+                .setTags(Collections.singletonList("a:b"))
                 .setResources(Arrays.asList("host", "h1"))
                 .setTagsCardinality(TagsCardinality.LOW)
                 .setInterval(10)
@@ -320,14 +329,14 @@ public class DirectHttpClientTest {
         ArrayList<byte[]> expected = new ArrayList<>();
         DirectPayloadBuilder b = builderInto(expected);
         b.gauge("gauge")
-                .setTags(Arrays.asList("a:b", "dd.internal.card:high", "dd.internal.card:low"))
+                .setTags(Collections.singletonList("a:b"))
                 .setResources(Arrays.asList("host", "h1"))
                 .setTagsCardinality(TagsCardinality.HIGH)
                 .setInterval(10)
                 .addPoint(100, 1.5)
                 .close();
         b.rate("count")
-                .setTags(Arrays.asList("dd.internal.card:none", "a:b"))
+                .setTags(Collections.singletonList("a:b"))
                 .setTagsCardinality(TagsCardinality.NONE)
                 .setInterval(10)
                 .addPoint(100, 2)
@@ -353,7 +362,7 @@ public class DirectHttpClientTest {
         ArrayList<byte[]> expected = new ArrayList<>();
         DirectPayloadBuilder b = builderInto(expected);
         b.sketch("metric")
-                .setTags(Arrays.asList("dd.internal.card:orch", "a:b"))
+                .setTags(Collections.singletonList("a:b"))
                 .setTagsCardinality(TagsCardinality.ORCHESTRATOR)
                 .addPoint(100, sketch)
                 .close();
@@ -372,7 +381,7 @@ public class DirectHttpClientTest {
         ArrayList<byte[]> expected = new ArrayList<>();
         DirectPayloadBuilder b = builderInto(expected);
         b.gauge("metric")
-                .setTags(Arrays.asList("a:b", "dd.internal.card:bogus"))
+                .setTags(Collections.singletonList("a:b"))
                 .setInterval(10)
                 .addPoint(100, 1.5)
                 .close();
